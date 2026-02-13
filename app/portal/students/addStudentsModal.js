@@ -20,7 +20,7 @@ export default function AddStudentsModal({ open, onClose }) {
   const handleSubmit = async () => {
     setLoading(true)
     setError('')
-    
+
     try {
       // Validate required fields
       if (!formData.firstName || !formData.lastName || !formData.gender || !formData.dateOfBirth || !formData.address || !formData.admissionDate) {
@@ -36,13 +36,13 @@ export default function AddStudentsModal({ open, onClose }) {
         },
         body: JSON.stringify(formData),
       })
-      
+
       const data = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to add student')
       }
-      
+
       // Reset form and close modal
       setFormData({
         firstName: '',
@@ -55,7 +55,7 @@ export default function AddStudentsModal({ open, onClose }) {
         studentId: '',
       })
       setError('')
-      
+
       // Dispatch custom event to notify parent
       window.dispatchEvent(new Event('studentAdded'))
       onClose()
@@ -85,13 +85,13 @@ export default function AddStudentsModal({ open, onClose }) {
                   <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
                     Add New Student
                   </DialogTitle>
-                  
+
                   {error && (
                     <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
                       {error}
                     </div>
                   )}
-                  
+
                   <div className="mt-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
