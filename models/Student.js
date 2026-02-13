@@ -1,11 +1,17 @@
 import mongoose from 'mongoose';
 
-// ⚠️ SIMPLE TEST SCHEMA (Matches your current frontend)
 const StudentSchema = new mongoose.Schema({
-  name: { type: String, required: true },      // Matches "name" from frontend
-  studentId: { type: String, required: true }, // Matches "studentId" from frontend
-  dateEnrolled: { type: Date, default: Date.now }
+   // Everything should match the front end
+  firstName: { type: String, required: [true, "First name is required"]},
+  lastName: { type: String, required: [true, "Last name is required"] },
+  middleName: { type: String, required: false },
+  gender: {type: String, required: [true, "Gender is required"] },
+  dateOfBirth: { type: Date, required: [true, "Date of birth is required"] },
+  address: { type: String, required: [true, "Address is required"] },
+  admissionDate: { type: Date, required: [true, "Admission date is required"] },
+  studentId: { type: String, required: [true, "Student ID is required"] },
 });
 
+
 // Check if model exists before compiling to prevent overwrite errors in dev mode
-export default mongoose.models.Student || mongoose.model('Student', StudentSchema);
+export default mongoose.models.Student || mongoose.model('Student', StudentSchema, 'students');

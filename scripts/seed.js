@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 // 👇 UPDATE THIS IF USING LOCALHOST OR ATLAS
-const MONGODB_URI = "mongodb+srv://admin:admin123@cluster0.snmmasx.mongodb.net/?appName=Cluster0";
+const MONGODB_URI = "mongodb://admin:admin123@ac-nzerx24-shard-00-00.qhp2v7e.mongodb.net:27017,ac-nzerx24-shard-00-02.qhp2v7e.mongodb.net:27017,ac-nzerx24-shard-00-01.qhp2v7e.mongodb.net:27017/mvba-database?ssl=true&authSource=admin&retryWrites=true&w=majority";
 
 const seedDB = async () => {
   try {
