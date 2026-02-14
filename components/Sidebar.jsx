@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
+  GraduationCap, // 1. Imported new icon
   Wallet,
   School,
   Settings,
@@ -13,20 +14,22 @@ import {
 
 export default function Sidebar() {
   const router = useRouter();
-  const pathname = usePathname(); // Hook to get current URL for highlighting
+  const pathname = usePathname();
 
   const handleLogout = async () => {
+    // In a real app, ensure this endpoint exists
     await fetch('/api/logout', { method: 'POST' });
     router.refresh();
     router.push('/');
   };
 
-  // Helper to check if a link is active
   const isActive = (path) => pathname === path || pathname.startsWith(`${path}/`);
 
   const menuItems = [
     { name: 'Dashboard', href: '/portal/dashboard', icon: LayoutDashboard },
     { name: 'Student Management', href: '/portal/students', icon: Users },
+    // 2. Added Teacher Management here
+    { name: 'Teacher Management', href: '/portal/teachers', icon: GraduationCap },
     { name: 'Financials', href: '/portal/financials', icon: Wallet },
     { name: 'Class & Section', href: '/portal/classes', icon: School },
     { name: 'System Settings', href: '/portal/system', icon: Settings },
@@ -36,9 +39,8 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 shadow-sm z-50">
 
-      {/* 1. BRAND HEADER (Dark Blue) */}
+      {/* 1. BRAND HEADER */}
       <div className="h-16 bg-blue-900 flex items-center px-6 gap-3">
-        {/* Placeholder for School Logo - You can replace src with your actual logo file */}
         <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-xs">
           Logo
         </div>
@@ -55,8 +57,8 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
                 active
-                  ? 'bg-blue-50 text-blue-700 font-medium' // Active Style
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' // Inactive Style
+                  ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`}
             >
               <item.icon size={20} className={active ? "text-blue-700" : "text-gray-500"} />
@@ -66,7 +68,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* 3. FOOTER (Logout) */}
+      {/* 3. FOOTER */}
       <div className="p-4 border-t border-gray-100">
         <button
           onClick={handleLogout}
