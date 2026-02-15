@@ -1,0 +1,2098 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+app/
+  api/
+    financials/
+      route.js
+    login/
+      route.js
+    logout/
+      route.js
+    students/
+      route.js
+    teachers/
+      route.js
+  portal/
+    classes/
+      page.js
+    dashboard/
+      page.js
+    financials/
+      newRecordModal.js
+      page.js
+    help/
+      page.js
+    students/
+      addStudentsModal.js
+      page.js
+    system/
+      page.js
+    teachers/
+      addTeachersModal.js
+      page.js
+    layout.js
+    page.js
+  favicon.ico
+  globals.css
+  layout.js
+  page.js
+components/
+  Sidebar.jsx
+lib/
+  mongodb.js
+models/
+  Account.js
+  Financial.js
+  Student.js
+  Teachers.js
+public/
+  file.svg
+  globe.svg
+  next.svg
+  vercel.svg
+  window.svg
+scripts/
+  reveal_url.js
+  seed.js
+.gitignore
+eslint.config.mjs
+jsconfig.json
+middleware.js
+next.config.mjs
+package.json
+postcss.config.mjs
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="app/api/financials/route.js">
+import dbConnect from '@/lib/mongodb';
+import Financial from '@/models/Financial';
+import { NextResponse } from 'next/server';
+
+export async function GET(request) {
+  try {
+    await dbConnect();
+    const financials = await Financial.find({});
+    return NextResponse.json({ success: true, data: financials }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  try {
+    await dbConnect();
+    const body = await request.json();
+    
+    // Ensure all required fields are present
+    const financialData = {
+      paymentId: body.paymentId,
+      studentId: body.studentId,
+      amountPaid: body.amountPaid,
+      dateOfPayment: body.dateOfPayment,
+      paymentMethod: body.paymentMethod,
+      referenceNumber: body.referenceNumber,
+      status: body.status,
+      remarks: body.remarks || '',
+      receivedBy: body.receivedBy,
+    };
+    
+    const financial = await Financial.create(financialData);
+    return NextResponse.json({ success: true, data: financial }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+</file>
+
+<file path="app/api/login/route.js">
+import dbConnect from '@/lib/mongodb';
+import Account from '@/models/Account';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers'; // Import cookies
+
+export async function POST(request) {
+  try {
+    await dbConnect();
+    const { username, password } = await request.json();
+
+    const user = await Account.findOne({ username });
+
+    if (!user || user.password !== password) {
+      return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 });
+    }
+
+    // ✅ LOGIN SUCCESS: Issue the "Badge" (Cookie)
+    // We set a cookie named 'auth_token' that lasts for 1 day
+    const cookieStore = await cookies();
+    cookieStore.set('auth_token', JSON.stringify({ role: user.role, name: user.fullName }), {
+      httpOnly: true, // Javascript cannot read this (Security)
+      secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
+      maxAge: 60 * 60 * 24, // 1 Day
+      path: '/',
+    });
+
+    return NextResponse.json({ success: true, user: { name: user.fullName, role: user.role } });
+
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+// import dbConnect from '@/lib/mongodb';
+
+// import Account from '@/models/Account';
+// import { NextResponse } from 'next/server';
+
+// export async function POST(request) {
+//   try {
+//     await dbConnect();
+//     const { username, password } = await request.json();
+
+//     // 1. Find the user
+//     const user = await Account.findOne({ username });
+
+//     // 2. Check if user exists and password matches
+//     if (!user || user.password !== password) {
+//       return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 });
+//     }
+
+//     // 3. Login Success! (Return the user info so frontend knows who it is)
+//     // In a real app, we would set a "Cookie" here. For now, we just return "True".
+//     return NextResponse.json({
+//       success: true,
+//       user: { name: user.fullName, role: user.role }
+//     });
+
+//   } catch (error) {
+//     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+//   }
+// }
+</file>
+
+<file path="app/api/logout/route.js">
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+
+export async function POST() {
+  // Destroy the cookie
+  const cookieStore = await cookies();
+  cookieStore.delete('auth_token');
+
+  return NextResponse.json({ success: true });
+}
+</file>
+
+<file path="app/api/students/route.js">
+import dbConnect from '@/lib/mongodb';
+import Student from '@/models/Student';
+import { NextResponse } from 'next/server';
+
+export async function GET(request) {
+  try {
+    await dbConnect();
+    const students = await Student.find({});
+    return NextResponse.json({ success: true, data: students }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  try {
+    await dbConnect();
+    const body = await request.json();
+    
+    // Map form field names to database field names
+    const studentData = {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      middleName: body.middleName,
+      gender: body.gender,
+      dateOfBirth: body.dateOfBirth,
+      address: body.address,
+      admissionDate: body.admissionDate,
+      studentId: body.studentId || `S-${Date.now()}`, // Auto-generate if not provided
+    };
+    
+    const student = await Student.create(studentData);
+    return NextResponse.json({ success: true, data: student }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+</file>
+
+<file path="app/api/teachers/route.js">
+import dbConnect from '@/lib/mongodb';
+import Teacher from '@/models/Teachers';
+import { NextResponse } from 'next/server';
+
+export async function GET(request) {
+    try {
+        await dbConnect();
+        const teachers = await Teacher.find({});
+        return NextResponse.json({ success: true, data: teachers }, { status: 200 });
+    } catch (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+export async function POST(request) {
+    try {
+        await dbConnect();
+        const body = await request.json();
+
+        const teacherData = {
+            firstName: body.firstName,
+            lastName: body.lastName,
+            middleName: body.middleName || '',
+            phoneNumber: body.phoneNumber,
+            email: body.email,
+            hireDate: body.hireDate,
+            teacherId: body.teacherId || `T-${Date.now()}`, // Auto-generate if not provided
+        };
+
+        const teacher = await Teacher.create(teacherData);
+        return NextResponse.json({ success: true, data: teacher }, { status: 201 });
+    } catch (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+</file>
+
+<file path="app/portal/classes/page.js">
+export default function Dashboard() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-800">Welcome Back, Admin</h1>
+      <p className="mt-2 text-gray-600">Select a module from the sidebar to start.</p>
+    </div>
+  );
+}
+</file>
+
+<file path="app/portal/dashboard/page.js">
+export default function Dashboard() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-800">Welcome Back, Admin</h1>
+      <p className="mt-2 text-gray-600">Select a module from the sidebar to start.</p>
+    </div>
+  );
+}
+</file>
+
+<file path="app/portal/help/page.js">
+export default function Dashboard() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-800">Welcome Back, Admin</h1>
+      <p className="mt-2 text-gray-600">Select a module from the sidebar to start.</p>
+    </div>
+  );
+}
+</file>
+
+<file path="app/portal/system/page.js">
+export default function Dashboard() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-800">Welcome Back, Admin</h1>
+      <p className="mt-2 text-gray-600">Select a module from the sidebar to start.</p>
+    </div>
+  );
+}
+</file>
+
+<file path="app/portal/teachers/addTeachersModal.js">
+'use client';
+
+import { useState } from 'react'
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+
+export default function AddTeachersModal({ isOpen, onClose }) {
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        middleName: '',
+        phoneNumber: '',
+        email: '',
+        hireDate: '',
+        teacherId: '',
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleSubmit = async () => {
+        setLoading(true)
+        setError('')
+
+        try {
+            if (!formData.firstName || !formData.lastName || !formData.email || !formData.hireDate || !formData.phoneNumber || !formData.teacherId) {
+                setError('Please fill in all required fields.');
+                setLoading(false);
+                return;
+            }
+
+            const response = await fetch('/api/teachers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.message || 'An error occurred while adding the teacher.');
+            }
+
+            setFormData({
+                firstName: '',
+                lastName: '',
+                middleName: '',
+                phoneNumber: '',
+                email: '',
+                hireDate: '',
+                teacherId: '',
+            });
+            setError(null);
+            window.dispatchEvent(new Event('teacherAdded'));
+            onClose();
+        } catch (err) {
+            setError(err.message || 'An error occurred while adding the teacher.');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <Dialog open={isOpen} onClose={onClose} className="relative z-10">
+            <DialogBackdrop
+                transition
+                className="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
+            />
+
+            <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+                <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                    <DialogPanel
+                        transition
+                        className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl data-closed:sm:translate-y-0 data-closed:sm:scale-95"
+                    >
+                        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div className="sm:flex sm:items-start">
+                                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                    <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
+                                        Add New Teacher
+                                    </DialogTitle>
+
+                                    {error && (
+                                        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                                            {error}
+                                        </div>
+                                    )}
+
+                                    <div className="mt-4">
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">First Name *</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="First name"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    value={formData.firstName}
+                                                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Last Name *</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Last name"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    value={formData.lastName}
+                                                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Email *</label>
+                                                <input
+                                                    type="email"
+                                                    placeholder="Email"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
+                                                <input
+                                                    type="tel"
+                                                    placeholder="Phone number"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    value={formData.phoneNumber}
+                                                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Middle Name</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Middle name"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    value={formData.middleName}
+                                                    onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Teacher ID *</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Teacher ID"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    value={formData.teacherId}
+                                                    onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700">Hire Date *</label>
+                                            <input
+                                                type="date"
+                                                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                value={formData.hireDate}
+                                                onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                                                disabled={loading}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
+                            >
+                                {loading ? 'Adding...' : 'Add Teacher'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                disabled={loading}
+                                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:opacity-50 sm:mt-0 sm:w-auto"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </DialogPanel>
+                </div>
+            </div>
+        </Dialog>)
+
+}
+</file>
+
+<file path="app/portal/teachers/page.js">
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import AddTeachersModal from './addTeachersModal';
+
+export default function Dashboard() {
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  useEffect(() => {
+    fetchTeachers();
+
+    // Listen for teacher added event
+    window.addEventListener('teacherAdded', fetchTeachers);
+
+    return () => window.removeEventListener('teacherAdded', fetchTeachers);
+  }, []);
+
+  const fetchTeachers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/teachers');
+      const data = await response.json();
+
+      if(data.success) {
+        setTeachers(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch teachers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter logic for search
+    const filteredTeachers = teachers.filter(teacher =>
+      `${teacher.firstName} ${teacher.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.teacherId.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+
+    return (
+      <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
+        {/* Header Section */}
+        <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">teacher Management</h1>
+          <button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+            <Plus size={18} />
+            Add New Teacher
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search Teachers by name or ID..."
+                className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm transition duration-150 ease-in-out"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          {/* Teachers Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      ID
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Phone Number
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Hire Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {!loading && filteredTeachers.length > 0 ? (
+                    filteredTeachers.map((teacher) => (
+                      <tr key={teacher._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                          {teacher.teacherId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                          {teacher.firstName} {teacher.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.phoneNumber}
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(teacher.hireDate).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))
+                  ) : loading ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                        Loading teachers...
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                        No teachers found matching your search.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer / Pagination mock */}
+            <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                Showing <span className="font-medium">{filteredTeachers.length}</span> of <span className="font-medium">{teachers.length}</span> teachers
+              </span>
+            </div>
+          </div>
+        </div>
+        {/* Add Teacher Modal */}
+        <AddTeachersModal isOpen={isModalOpen} onClose={closeModal} />
+      </div>
+    );
+  }
+</file>
+
+<file path="app/portal/layout.js">
+import Sidebar from '@/components/Sidebar';
+
+export default function DashboardLayout({ children }) {
+  return (
+    <div className="flex bg-gray-100 min-h-screen">
+      {/* The Sidebar is fixed on the left */}
+      <Sidebar />
+
+      {/* The Page Content is pushed to the right */}
+      <main className="flex-1 ml-64 p-8">
+        {children}
+      </main>
+    </div>
+  );
+}
+</file>
+
+<file path="app/portal/page.js">
+export default function Dashboard() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-800">Welcome Back, Admin</h1>
+      <p className="mt-2 text-gray-600">Select a module from the sidebar to start.</p>
+    </div>
+  );
+}
+</file>
+
+<file path="app/globals.css">
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+</file>
+
+<file path="app/layout.js">
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
+</file>
+
+<file path="models/Teachers.js">
+import mongoose from 'mongoose';
+
+const TeacherSchema = new mongoose.Schema({
+firstName: { type: String, required: [true, "First name is required"]},
+lastName: { type: String, required: [true, "Last name is required"] },
+middleName: { type: String, required: false },
+phoneNumber: { type: String, required: [true, "Phone number is required"] },
+email: { type: String, required: [true, "Email is required"] },
+hireDate: { type: Date, required: [true, "Hire date is required"] },
+teacherId: { type: String, required: [true, "Teacher ID is required"], unique: true },
+});
+
+export default mongoose.models.Teacher || mongoose.model('Teacher', TeacherSchema, 'teachers');
+</file>
+
+<file path="public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="public/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path=".gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="jsconfig.json">
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
+</file>
+
+<file path="middleware.js">
+import { NextResponse } from 'next/server';
+
+export function middleware(request) {
+  // 1. Get the path the user is trying to visit
+  const path = request.nextUrl.pathname;
+
+  // 2. Check if they have the "Badge" (Cookie)
+  const token = request.cookies.get('auth_token')?.value;
+
+  // 3. DEFINE RULES:
+
+  // Rule A: If they are on the Login Page ('/') but ALREADY have a token...
+  // Kick them into the portal immediately.
+  if (path === '/' && token) {
+    return NextResponse.redirect(new URL('/portal', request.url));
+  }
+
+  // Rule B: If they are trying to visit '/portal' but have NO token...
+  // Kick them back to the Login Page.
+  if (path.startsWith('/portal') && !token) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // 4. If none of the above, let them pass.
+  return NextResponse.next();
+}
+
+// 5. Configure which paths this middleware affects
+export const config = {
+  matcher: [
+    '/',              // Match Login Page
+    '/portal/:path*' // Match portal and EVERYTHING inside it
+  ],
+};
+</file>
+
+<file path="next.config.mjs">
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="README.md">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+</file>
+
+<file path="app/portal/financials/newRecordModal.js">
+'use client'
+
+import { useState } from 'react'
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+
+export default function AddNewRecord({ open, onClose }) {
+  const [formData, setFormData] = useState({
+    paymentId: '',
+    studentId: '',
+    amountPaid: '',
+    dateOfPayment: '',
+    paymentMethod: '',
+    referenceNumber: '',
+    status: 'Pending',
+    remarks: '',
+    receivedBy: '',
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    setError('')
+    
+    try {
+      // Validate required fields
+      if (!formData.paymentId || !formData.studentId || !formData.amountPaid || !formData.dateOfPayment || !formData.paymentMethod || !formData.referenceNumber || !formData.status || !formData.receivedBy) {
+        setError('Please fill in all required fields')
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch('/api/financials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          amountPaid: parseFloat(formData.amountPaid),
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to record payment')
+      }
+      
+      // Reset form and close modal
+      setFormData({
+        paymentId: '',
+        studentId: '',
+        amountPaid: '',
+        dateOfPayment: '',
+        paymentMethod: '',
+        referenceNumber: '',
+        status: 'Pending',
+        remarks: '',
+        receivedBy: '',
+      })
+      setError('')
+      
+      // Dispatch custom event to notify parent
+      window.dispatchEvent(new Event('paymentRecorded'))
+      onClose()
+    } catch (err) {
+      setError(err.message || 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} className="relative z-10">
+      <DialogBackdrop
+        transition
+        className="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
+      />
+
+      <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <DialogPanel
+            transition
+            className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl data-closed:sm:translate-y-0 data-closed:sm:scale-95"
+          >
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                  <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
+                    Record New Payment
+                  </DialogTitle>
+                  
+                  {error && (
+                    <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                      {error}
+                    </div>
+                  )}
+                  
+                  <div className="mt-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Payment ID *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., PAY-001"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.paymentId}
+                          onChange={(e) => setFormData({ ...formData, paymentId: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Student ID *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., S-001"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.studentId}
+                          onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Amount Paid (₱) *</label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.amountPaid}
+                          onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
+                          disabled={loading}
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Date of Payment *</label>
+                        <input
+                          type="date"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.dateOfPayment}
+                          onChange={(e) => setFormData({ ...formData, dateOfPayment: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Payment Method *</label>
+                        <select
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.paymentMethod}
+                          onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                          disabled={loading}
+                        >
+                          <option value="">Select payment method</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Check">Check</option>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Online Payment">Online Payment</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Reference Number *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., CHK-12345"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.referenceNumber}
+                          onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Status *</label>
+                        <select
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          disabled={loading}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Failed">Failed</option>
+                          <option value="Cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Received By *</label>
+                        <input
+                          type="text"
+                          placeholder="Name of receiver"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.receivedBy}
+                          onChange={(e) => setFormData({ ...formData, receivedBy: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700">Remarks (Optional)</label>
+                      <textarea
+                        placeholder="Any additional notes..."
+                        rows="2"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={formData.remarks}
+                        onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-green-500 disabled:bg-green-400 sm:ml-3 sm:w-auto"
+              >
+                {loading ? 'Recording...' : 'Record Payment'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:opacity-50 sm:mt-0 sm:w-auto"
+              >
+                Cancel
+              </button>
+            </div>
+          </DialogPanel>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+</file>
+
+<file path="app/portal/students/addStudentsModal.js">
+'use client'
+
+import { useState } from 'react'
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+
+export default function AddStudentsModal({ open, onClose }) {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    middleName: '',
+    gender: '',
+    dateOfBirth: '',
+    address: '',
+    admissionDate: '',
+    studentId: '',
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      // Validate required fields
+      if (!formData.firstName || !formData.lastName || !formData.gender || !formData.dateOfBirth || !formData.address || !formData.admissionDate) {
+        setError('Please fill in all required fields')
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch('/api/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add student')
+      }
+
+      // Reset form and close modal
+      setFormData({
+        firstName: '',
+        lastName: '',
+        middleName: '',
+        gender: '',
+        dateOfBirth: '',
+        address: '',
+        admissionDate: '',
+        studentId: '',
+      })
+      setError('')
+
+      // Dispatch custom event to notify parent
+      window.dispatchEvent(new Event('studentAdded'))
+      onClose()
+    } catch (err) {
+      setError(err.message || 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} className="relative z-10">
+      <DialogBackdrop
+        transition
+        className="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
+      />
+
+      <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <DialogPanel
+            transition
+            className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-2xl data-closed:sm:translate-y-0 data-closed:sm:scale-95"
+          >
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                  <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
+                    Add New Student
+                  </DialogTitle>
+
+                  {error && (
+                    <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="mt-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">First Name *</label>
+                        <input
+                          type="text"
+                          placeholder="First name"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.firstName}
+                          onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Last Name *</label>
+                        <input
+                          type="text"
+                          placeholder="Last name"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.lastName}
+                          onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Middle Name</label>
+                        <input
+                          type="text"
+                          placeholder="Middle name"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.middleName}
+                          onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Gender *</label>
+                        <select
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.gender}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          disabled={loading}
+                        >
+                          <option value="">Select gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Date of Birth *</label>
+                        <input
+                          type="date"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.dateOfBirth}
+                          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Admission Date *</label>
+                        <input
+                          type="date"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.admissionDate}
+                          onChange={(e) => setFormData({ ...formData, admissionDate: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700">Student ID (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="Leave empty for auto-generate"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={formData.studentId}
+                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700">Address *</label>
+                      <textarea
+                        placeholder="Street address"
+                        rows="2"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
+              >
+                {loading ? 'Adding...' : 'Add Student'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:opacity-50 sm:mt-0 sm:w-auto"
+              >
+                Cancel
+              </button>
+            </div>
+          </DialogPanel>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+</file>
+
+<file path="app/portal/students/page.js">
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import AddStudentsModal from '../students/addStudentsModal';
+
+export default function App() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  useEffect(() => {
+    fetchStudents();
+    
+    // Listen for student added event
+    window.addEventListener('studentAdded', fetchStudents);
+    
+    return () => window.removeEventListener('studentAdded', fetchStudents);
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/students');
+      const data = await response.json();
+      
+      if (data.success) {
+        setStudents(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter logic for search
+  const filteredStudents = students.filter(student =>
+    `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Helper for status badge styling
+  const getStatusColor = (status) => {
+    if (status === 'Enrolled') {
+      return 'bg-green-100 text-green-600';
+    } else if (status === 'Pending') {
+      return 'bg-yellow-100 text-yellow-600';
+    }
+    return 'bg-gray-100 text-gray-600';
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
+      {/* Header Section */}
+      <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Student Management</h1>
+        <button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+          <Plus size={18} />
+          Add New Student
+        </button>
+      </div>
+
+      {/* Main Content Card */}
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Search Bar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search students by name or ID..."
+              className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm transition duration-150 ease-in-out"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Date of Birth
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Admission Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {!loading && filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
+                    <tr key={student._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                        {student.studentId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                        {student.firstName} {student.lastName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {student.gender}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(student.dateOfBirth).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(student.admissionDate).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))
+                ) : loading ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                      Loading students...
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                      No students found matching your search.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Footer / Pagination mock */}
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+            <span className="text-sm text-gray-500">
+              Showing <span className="font-medium">{filteredStudents.length}</span> of <span className="font-medium">{students.length}</span> students
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <AddStudentsModal open={isModalOpen} onClose={closeModal} />
+    </div>
+  );
+}
+</file>
+
+<file path="components/Sidebar.jsx">
+"use client";
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap, // 1. Imported new icon
+  Wallet,
+  School,
+  Settings,
+  HelpCircle,
+  LogOut
+} from 'lucide-react';
+
+export default function Sidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLogout = async () => {
+    // In a real app, ensure this endpoint exists
+    await fetch('/api/logout', { method: 'POST' });
+    router.refresh();
+    router.push('/');
+  };
+
+  const isActive = (path) => pathname === path || pathname.startsWith(`${path}/`);
+
+  const menuItems = [
+    { name: 'Dashboard', href: '/portal/dashboard', icon: LayoutDashboard },
+    { name: 'Student Management', href: '/portal/students', icon: Users },
+    // 2. Added Teacher Management here
+    { name: 'Teacher Management', href: '/portal/teachers', icon: GraduationCap },
+    { name: 'Financials', href: '/portal/financials', icon: Wallet },
+    { name: 'Class & Section', href: '/portal/classes', icon: School },
+    { name: 'System Settings', href: '/portal/system', icon: Settings },
+    { name: 'Help & Manual', href: '/portal/help', icon: HelpCircle },
+  ];
+
+  return (
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 shadow-sm z-50">
+
+      {/* 1. BRAND HEADER */}
+      <div className="h-16 bg-blue-900 flex items-center px-6 gap-3">
+        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-xs">
+          Logo
+        </div>
+        <h1 className="text-white font-bold text-lg tracking-wide">Admin Portal</h1>
+      </div>
+
+      {/* 2. NAVIGATION MENU */}
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        {menuItems.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+                active
+                  ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <item.icon size={20} className={active ? "text-blue-700" : "text-gray-500"} />
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* 3. FOOTER */}
+      <div className="p-4 border-t border-gray-100">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full text-left p-3 text-red-500 hover:bg-red-50 rounded-lg transition-all font-medium"
+        >
+          <LogOut size={20} />
+          <span>Log Out</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+</file>
+
+<file path="models/Account.js">
+import mongoose from 'mongoose';
+
+const AccountSchema = new mongoose.Schema({
+  // The Login Credentials
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true }, // In real app, we encrypt this. For now, plain text is fine for testing.
+
+  // Who are they?
+  fullName: { type: String, required: true },
+  role: {
+    type: String,
+    enum: ['Admin', 'Registrar', 'Cashier'], // Only these 3 roles allowed
+    required: true
+  },
+
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+export default mongoose.models.Account || mongoose.model('Account', AccountSchema);
+</file>
+
+<file path="models/Financial.js">
+import mongoose from 'mongoose';
+
+const FinancialSchema = new mongoose.Schema({
+    amountPaid: { type: Number, required: [true, "Amount paid is required"] },
+    dateOfPayment: { type: Date, required: [true, "Date of payment is required"] },
+    paymentMethod: { type: String, required: [true, "Payment method is required"] },
+    referenceNumber: { type: String, required: [true, "Reference number is required"] },
+    status: { type: String, required: [true, "Payment status is required"] },
+    remarks: { type: String, required: false },
+    receivedBy: { type: String, required: [true, "Receiver's name is required"] },
+    paymentId: { type: String, required: [true, "Payment ID is required"] },    
+    studentId: { type: String, required: [true, "Student ID is required"] },
+});
+
+export default mongoose.models.Financial || mongoose.model('Financial', FinancialSchema, 'financials');
+</file>
+
+<file path="app/portal/financials/page.js">
+'use client';
+
+import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import AddNewRecord from '../financials/newRecordModal';
+
+export default function Financials() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [financials, setFinancials] = useState([]);
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  useEffect(() => {
+    fetchFinancials();
+    
+    // Listen for payment recorded event
+    window.addEventListener('paymentRecorded', fetchFinancials);
+    
+    return () => window.removeEventListener('paymentRecorded', fetchFinancials);
+  }, []);
+
+  const fetchFinancials = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/financials');
+      const data = await response.json();
+
+      if (data.success) {
+        setFinancials(data.data);
+      }
+    }
+    catch (error) {
+      console.error('Failed to fetch financial records:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
+      {/* Header Section */}
+      <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Financial Management</h1>
+        <button onClick={openModal} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+          <Plus size={18} />
+          Record New Payment
+        </button>
+      </div>
+
+      {/* Main Content Card */}
+      <div className="max-w-7xl mx-auto">
+
+        {/* Table Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Payment ID
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Student ID
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Amount Paid
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Date of Payment
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Method
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Received By
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {!loading && financials.length > 0 ? (
+                  financials.map((record) => (
+                    <tr key={record._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                        {record.paymentId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                        {record.studentId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold text-green-600">
+                        ₱{record.amountPaid.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(record.dateOfPayment).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {record.paymentMethod}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          record.status === 'Completed' ? 'bg-green-100 text-green-600' :
+                          record.status === 'Pending' ? 'bg-yellow-100 text-yellow-600' :
+                          record.status === 'Failed' ? 'bg-red-100 text-red-600' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {record.receivedBy}
+                      </td>
+                    </tr>
+                  ))
+                ) : loading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      Loading payment records...
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      No payment records found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer / Pagination mock */}
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+            <span className="text-sm text-gray-500">
+              Showing <span className="font-medium">{financials.length}</span> payment records
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+      <AddNewRecord open={isModalOpen} onClose={closeModal} />
+    </div>
+  );
+}
+</file>
+
+<file path="app/page.js">
+"use client";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function LoginPage() {
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      body: JSON.stringify(formData),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      // Redirect to the Dashboard "Private World"
+      router.push('/portal/dashboard');
+    } else {
+      setError(data.message);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-blue-900">
+      <div className="bg-white p-8 rounded-lg shadow-2xl w-96">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">MVBA System Login</h2>
+
+        {error && <div className="bg-red-100 text-red-600 p-2 text-sm rounded mb-4">{error}</div>}
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="text"
+            placeholder="Username"
+            className="w-full border p-2 rounded"
+            onChange={(e) => setFormData({...formData, username: e.target.value})}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full border p-2 rounded"
+            onChange={(e) => setFormData({...formData, password: e.target.value})}
+          />
+          <button className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">
+            Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+// "use client";
+
+// import { useState } from 'react';
+
+// export default function Home() {
+//   const [formData, setFormData] = useState({ name: '', studentId: '' });
+//   const [status, setStatus] = useState('');
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setStatus('Saving...');
+
+//     try {
+//       const res = await fetch('/api/enroll', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify(formData),
+//       });
+
+//       if (res.ok) {
+//         setStatus('✅ Saved to Cloud!');
+//         setFormData({ name: '', studentId: '' });
+//       } else {
+//         setStatus('❌ Error Saving');
+//       }
+//     } catch (err) {
+//       setStatus('❌ Connection Failed');
+//     }
+//   };
+
+//   return (
+//     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+//       <div className="bg-white p-8 rounded-lg shadow-xl w-96">
+//         <h1 className="text-2xl font-bold mb-6 text-blue-900">MBA Enrollment</h1>
+
+//         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700">Student Name</label>
+//             <input
+//               type="text"
+//               className="mt-1 block w-full border border-gray-300 rounded-md p-2 text-black"
+//               placeholder="e.g. Darwin Lapid"
+//               value={formData.name}
+//               onChange={(e) => setFormData({...formData, name: e.target.value})}
+//               required
+//             />
+//           </div>
+
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700">Student ID</label>
+//             <input
+//               type="text"
+//               className="mt-1 block w-full border border-gray-300 rounded-md p-2 text-black"
+//               placeholder="e.g. 2025-001"
+//               value={formData.studentId}
+//               onChange={(e) => setFormData({...formData, studentId: e.target.value})}
+//               required
+//             />
+//           </div>
+
+//           <button
+//             type="submit"
+//             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
+//           >
+//             Enroll Student
+//           </button>
+//         </form>
+
+//         <p className="mt-4 text-center text-sm font-semibold text-gray-600">
+//           {status}
+//         </p>
+//       </div>
+//     </div>
+//   );
+// }
+</file>
+
+<file path="models/Student.js">
+import mongoose from 'mongoose';
+
+const StudentSchema = new mongoose.Schema({
+   // Everything should match the front end
+  firstName: { type: String, required: [true, "First name is required"]},
+  lastName: { type: String, required: [true, "Last name is required"] },
+  middleName: { type: String, required: false },
+  gender: {type: String, required: [true, "Gender is required"] },
+  dateOfBirth: { type: Date, required: [true, "Date of birth is required"] },
+  address: { type: String, required: [true, "Address is required"] },
+  admissionDate: { type: Date, required: [true, "Admission date is required"] },
+  studentId: { type: String, required: [true, "Student ID is required"] },
+});
+
+
+// Check if model exists before compiling to prevent overwrite errors in dev mode
+export default mongoose.models.Student || mongoose.model('Student', StudentSchema, 'students');
+</file>
+
+<file path="package.json">
+{
+  "name": "mba-final",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@heroicons/react": "^2.2.0",
+    "lucide-react": "^0.563.0",
+    "mongoose": "^9.1.6",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "tailwindcss": "^4"
+  }
+}
+</file>
+
+</files>

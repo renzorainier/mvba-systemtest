@@ -15,10 +15,10 @@ export default function App() {
 
   useEffect(() => {
     fetchStudents();
-    
+
     // Listen for student added event
     window.addEventListener('studentAdded', fetchStudents);
-    
+
     return () => window.removeEventListener('studentAdded', fetchStudents);
   }, []);
 
@@ -27,7 +27,7 @@ export default function App() {
       setLoading(true);
       const response = await fetch('/api/students');
       const data = await response.json();
-      
+
       if (data.success) {
         setStudents(data.data);
       }
@@ -67,7 +67,7 @@ export default function App() {
 
       {/* Main Content Card */}
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Search Bar */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6">
           <div className="relative">
@@ -144,7 +144,7 @@ export default function App() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Footer / Pagination mock */}
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
             <span className="text-sm text-gray-500">
