@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react' // Added useEffect
+import { useState, useEffect } from 'react' 
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
 export default function AddSectionsModal({ isOpen, onClose }) {
@@ -11,13 +11,15 @@ export default function AddSectionsModal({ isOpen, onClose }) {
         schoolYear: '',
         teacherId: '',
         roomNumber: '',
+        schedules: '', // Added to initial state tracking
     });
 
-    const [teachers, setTeachers] = useState([]); // State to store fetched teachers
+    const [teachers, setTeachers] = useState([]); 
+    const [schedules, setSchedules] = useState([]); 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Fetch teachers when the component mounts or modal opens
+    // Fetch teachers and schedules when the component mounts or modal opens
     useEffect(() => {
         const fetchTeachers = async () => {
             try {
@@ -32,8 +34,24 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                 console.error("Error fetching teachers:", err);
             }
         };
+
+        const fetchSchedules = async () => {
+            try {
+                const response = await fetch('/api/schedules');
+                const data = await response.json();
+                if (data.success) {
+                    setSchedules(data.data);
+                } else {
+                    console.error("Failed to fetch schedules:", data.error);
+                }
+            } catch (err) {
+                console.error("Error fetching schedules:", err);
+            }
+        };
+
         if (isOpen) {
             fetchTeachers();
+            fetchSchedules(); // Trigger the schedule fetch
         }
     }, [isOpen]);
 
@@ -41,7 +59,7 @@ export default function AddSectionsModal({ isOpen, onClose }) {
         setLoading(true)
         setError('')
 
-        // Validate
+        // Validate (You might want to add !formData.schedules here too if it is required)
         if (!formData.sectionName || !formData.sectionId || !formData.gradeLevel || 
             !formData.schoolYear || !formData.teacherId || !formData.roomNumber) {
             setError('Please fill in all required fields.');
@@ -72,6 +90,7 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                     schoolYear: '',
                     teacherId: '',
                     roomNumber: '',
+                    schedules: '',
                 });
                 setError(null);
                 window.dispatchEvent(new Event('sectionAdded'));
@@ -192,6 +211,24 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                                                     onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
                                                     disabled={loading}
                                                 />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Schedules *</label>
+                                                <select
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                    value={formData.schedules}
+                                                    onChange={(e) => setFormData({ ...formData, schedules: e.target.value })}
+                                                    disabled={loading}
+                                                >
+                                                    <option value="">Select a Schedule</option>
+                                                    {schedules.map((schedule) => (
+                                                        <option key={schedule._id} value={schedule.scheduleId}>
+                                                            {schedule.name} ({schedule.scheduleId})
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
