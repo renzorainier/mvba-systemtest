@@ -1,67 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react' 
+import { useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
 export default function AddSectionsModal({ isOpen, onClose }) {
+    const gradeLevel = ['Kinder 1', 'Kinder 2', 'Kinder 3', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+
     const [formData, setFormData] = useState({
         sectionName: '',
         sectionId: '',
-        gradeLevel: '',
+        gradeLevel: '', // Starts empty, which is correct
         schoolYear: '',
-        teacherId: '',
         roomNumber: '',
-        schedules: '', // Added to initial state tracking
     });
 
-    const [teachers, setTeachers] = useState([]); 
-    const [schedules, setSchedules] = useState([]); 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Fetch teachers and schedules when the component mounts or modal opens
-    useEffect(() => {
-        const fetchTeachers = async () => {
-            try {
-                const response = await fetch('/api/teachers');
-                const data = await response.json();
-                if (data.success) {
-                    setTeachers(data.data);
-                } else {
-                    console.error("Failed to fetch teachers:", data.error);
-                }
-            } catch (err) {
-                console.error("Error fetching teachers:", err);
-            }
-        };
-
-        const fetchSchedules = async () => {
-            try {
-                const response = await fetch('/api/schedules');
-                const data = await response.json();
-                if (data.success) {
-                    setSchedules(data.data);
-                } else {
-                    console.error("Failed to fetch schedules:", data.error);
-                }
-            } catch (err) {
-                console.error("Error fetching schedules:", err);
-            }
-        };
-
-        if (isOpen) {
-            fetchTeachers();
-            fetchSchedules(); // Trigger the schedule fetch
-        }
-    }, [isOpen]);
+    // Note: I removed selectedGrade entirely because we are using formData.gradeLevel now
 
     const handleSubmit = async () => {
         setLoading(true)
         setError('')
 
-        // Validate (You might want to add !formData.schedules here too if it is required)
-        if (!formData.sectionName || !formData.sectionId || !formData.gradeLevel || 
-            !formData.schoolYear || !formData.teacherId || !formData.roomNumber) {
+        // Validation check
+        if (!formData.sectionName || !formData.sectionId || !formData.gradeLevel ||
+            !formData.schoolYear || !formData.roomNumber) {
             setError('Please fill in all required fields.');
             setLoading(false);
             return;
@@ -82,15 +46,13 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                 const errorMessage = data.error || data.message || 'An error occurred while adding the section.';
                 setError(errorMessage);
             } else {
-                // Success
+                // Success - Reset the form completely
                 setFormData({
                     sectionName: '',
                     sectionId: '',
                     gradeLevel: '',
                     schoolYear: '',
-                    teacherId: '',
                     roomNumber: '',
-                    schedules: '',
                 });
                 setError(null);
                 window.dispatchEvent(new Event('sectionAdded'));
@@ -161,14 +123,16 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. Grade 10"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                                    value={formData.gradeLevel}
-                                                    onChange={(e) => setFormData({ ...formData, gradeLevel: e.target.value })}
+                                                <select
+                                                    value={formData.gradeLevel} // FIXED: Now uses formData directly
+                                                    onChange={(e) => setFormData({ ...formData, gradeLevel: e.target.value })} // FIXED: Updates formData directly
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
                                                     disabled={loading}
-                                                />
+                                                >
+                                                    {/* FIXED: Added a default empty option so the user HAS to click it */}
+                                                    <option value="">Select a Grade...</option> 
+                                                    {gradeLevel.map(g => <option key={g} value={g}>{g}</option>)}
+                                                </select>
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">School Year *</label>
@@ -183,24 +147,8 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                                             </div>
                                         </div>
 
-                                        {/* Row 3: Teacher Dropdown & Room Number */}
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Teacher *</label>
-                                                <select
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                    value={formData.teacherId}
-                                                    onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
-                                                    disabled={loading}
-                                                >
-                                                    <option value="">Select a Teacher</option>
-                                                    {teachers.map((teacher) => (
-                                                        <option key={teacher._id} value={teacher.teacherId}>
-                                                            {teacher.firstName} {teacher.lastName} ({teacher.teacherId})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
+                                        {/* Row 3: Room Number */}
+                                        <div className="grid grid-cols-1 gap-4 mb-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Room Number *</label>
                                                 <input
@@ -211,24 +159,6 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                                                     onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
                                                     disabled={loading}
                                                 />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">Schedules *</label>
-                                                <select
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                    value={formData.schedules}
-                                                    onChange={(e) => setFormData({ ...formData, schedules: e.target.value })}
-                                                    disabled={loading}
-                                                >
-                                                    <option value="">Select a Schedule</option>
-                                                    {schedules.map((schedule) => (
-                                                        <option key={schedule._id} value={schedule.scheduleId}>
-                                                            {schedule.name} ({schedule.scheduleId})
-                                                        </option>
-                                                    ))}
-                                                </select>
                                             </div>
                                         </div>
                                     </div>

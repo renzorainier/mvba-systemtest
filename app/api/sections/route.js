@@ -20,7 +20,6 @@ export async function POST(request) {
             sectionName: body.sectionName,
             gradeLevel: body.gradeLevel,
             schoolYear: body.schoolYear,
-            teacherId: body.teacherId,
             roomNumber: body.roomNumber,
             sectionId: body.sectionId || `S-${Date.now()}`, // Auto-generate if not provided
         };
