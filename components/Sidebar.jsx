@@ -30,7 +30,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
     { name: 'Dashboard', href: '/portal/dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Registrar', 'Cashier'] },
     { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Teacher Management', href: '/portal/teachers', icon: GraduationCap, allowedRoles: ['Admin', 'Registrar'] },
-    { name: 'Class & Section', href: '/portal/classes', icon: School, allowedRoles: ['Admin', 'Registrar'] },
+    { name: 'Section Management', href: '/portal/sections', icon: School, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Schedule Management', href: '/portal/schedules', icon: Calendar, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Financials', href: '/portal/financials', icon: Wallet, allowedRoles: ['Admin', 'Cashier'] },
     { name: 'System Settings', href: '/portal/system', icon: Settings, allowedRoles: ['Admin'] },
