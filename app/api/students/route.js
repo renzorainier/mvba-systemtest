@@ -26,7 +26,7 @@ export async function POST(request) {
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       admissionDate: body.admissionDate,
-      studentId: body.studentId || `S-${Date.now()}`, // Auto-generate if not provided
+      learnersReferenceNumber: body.learnersReferenceNumber,
     };
     
     const student = await Student.create(studentData);

@@ -32,7 +32,7 @@ export default function App() {
         setStudents(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch students:', error);
+      console.error('Failed to fetch  s:', error);
     } finally {
       setLoading(false);
     }
@@ -41,18 +41,8 @@ export default function App() {
   // Filter logic for search
   const filteredStudents = students.filter(student =>
     `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+    student.learnersReferenceNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Helper for status badge styling
-  const getStatusColor = (status) => {
-    if (status === 'Enrolled') {
-      return 'bg-green-100 text-green-600';
-    } else if (status === 'Pending') {
-      return 'bg-yellow-100 text-yellow-600';
-    }
-    return 'bg-gray-100 text-gray-600';
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
@@ -112,7 +102,7 @@ export default function App() {
                   filteredStudents.map((student) => (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                        {student.studentId}
+                        {student.learnersReferenceNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                         {student.firstName} {student.lastName}

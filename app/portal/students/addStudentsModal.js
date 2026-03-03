@@ -12,7 +12,7 @@ export default function AddStudentsModal({ open, onClose }) {
     dateOfBirth: '',
     address: '',
     admissionDate: '',
-    studentId: '',
+    learnersReferenceNumber: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -52,7 +52,7 @@ export default function AddStudentsModal({ open, onClose }) {
         dateOfBirth: '',
         address: '',
         admissionDate: '',
-        studentId: '',
+        learnersReferenceNumber: '',
       })
       setError('')
 
@@ -170,13 +170,13 @@ export default function AddStudentsModal({ open, onClose }) {
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700">Student ID (Optional)</label>
+                      <label className="block text-sm font-medium text-gray-700">Learner's Reference Number (LRN) *</label>
                       <input
                         type="text"
-                        placeholder="Leave empty for auto-generate"
+                        placeholder="Enter LRN"
                         className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        value={formData.studentId}
-                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                        value={formData.learnersReferenceNumber}
+                        onChange={(e) => setFormData({ ...formData, learnersReferenceNumber: e.target.value })}
                         disabled={loading}
                       />
                     </div>

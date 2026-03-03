@@ -9,7 +9,7 @@ const StudentSchema = new mongoose.Schema({
   dateOfBirth: { type: Date, required: [true, "Date of birth is required"] },
   address: { type: String, required: [true, "Address is required"] },
   admissionDate: { type: Date, required: [true, "Admission date is required"] },
-  studentId: { type: String, required: [true, "Student ID is required"] },
+  learnersReferenceNumber: { type: String, required: [true, "LRN is required"] },
 });
 
 
