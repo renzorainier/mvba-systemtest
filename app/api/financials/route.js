@@ -19,7 +19,7 @@ export async function POST(request) {
     
     // Ensure all required fields are present
     const financialData = {
-      paymentId: body.paymentId,
+      paymentId: body.paymentId || `P-${Date.now()}`, // Auto-generate if not provided`,
       studentId: body.studentId,
       amountPaid: body.amountPaid,
       dateOfPayment: body.dateOfPayment,

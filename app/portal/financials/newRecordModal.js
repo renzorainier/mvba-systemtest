@@ -5,7 +5,6 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/re
 
 export default function AddNewRecord({ open, onClose }) {
   const [formData, setFormData] = useState({
-    paymentId: '',
     studentId: '',
     amountPaid: '',
     dateOfPayment: '',
@@ -24,7 +23,7 @@ export default function AddNewRecord({ open, onClose }) {
     
     try {
       // Validate required fields
-      if (!formData.paymentId || !formData.studentId || !formData.amountPaid || !formData.dateOfPayment || !formData.paymentMethod || !formData.referenceNumber || !formData.status || !formData.receivedBy) {
+      if (!formData.studentId || !formData.amountPaid || !formData.dateOfPayment || !formData.paymentMethod || !formData.referenceNumber || !formData.status || !formData.receivedBy) {
         setError('Please fill in all required fields')
         setLoading(false)
         return
@@ -49,7 +48,6 @@ export default function AddNewRecord({ open, onClose }) {
       
       // Reset form and close modal
       setFormData({
-        paymentId: '',
         studentId: '',
         amountPaid: '',
         dateOfPayment: '',
@@ -98,17 +96,8 @@ export default function AddNewRecord({ open, onClose }) {
                   )}
                   
                   <div className="mt-4">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Payment ID *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., PAY-001"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.paymentId}
-                          onChange={(e) => setFormData({ ...formData, paymentId: e.target.value })}
-                          disabled={loading}
-                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Student ID *</label>
