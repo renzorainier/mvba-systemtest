@@ -16,21 +16,7 @@ export default function App() {
   useEffect(() => {
     fetchEnrollments();
 
-    fetch('/api/students')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setStudents(data.data)
-      })
-      .catch(err => console.error("Failed to fetch students:", err))
 
-    // Fetch Sections
-    fetch('/api/sections')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setSections(data.data)
-      })
-      .catch(err => console.error("Failed to fetch sections:", err))
-      
     window.addEventListener('enrollmentAdded', fetchEnrollments);
 
     return () => window.removeEventListener('enrollmentAdded', fetchEnrollments);
