@@ -130,7 +130,7 @@ export default function App() {
                         {enrollment.enrollmentId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {enrollment.studentId}
+                        {enrollment.learnersReferenceNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {enrollment.sectionId}

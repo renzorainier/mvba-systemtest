@@ -19,7 +19,7 @@ export async function POST(request) {
 
         const enrollmentData = {
             enrollmentId: body.enrollmentId || `E-${Date.now()}`,
-            studentId: body.studentId,
+            learnersReferenceNumber: body.learnersReferenceNumber,
             sectionId: body.sectionId,
             enrollmentDate: body.enrollmentDate,
             schoolYear: body.schoolYear,
