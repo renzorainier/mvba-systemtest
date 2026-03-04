@@ -6,7 +6,7 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/re
 export default function AddEnrollmentsModal({ open, onClose }) {
   const [formData, setFormData] = useState({
     studentId: '',
-    SectionId: '',
+    sectionId: '',
     schoolYear: '',
     enrollmentDate: '',
     status: ''
@@ -46,7 +46,7 @@ export default function AddEnrollmentsModal({ open, onClose }) {
 
     try {
       // Validate required fields
-      if (!formData.studentId || !formData.SectionId || !formData.schoolYear || !formData.enrollmentDate || !formData.status) {
+      if (!formData.studentId || !formData.sectionId || !formData.schoolYear || !formData.enrollmentDate || !formData.status) {
         setError('Please fill in all required fields')
         setLoading(false)
         return
@@ -69,7 +69,7 @@ export default function AddEnrollmentsModal({ open, onClose }) {
       // Reset form and close modal
       setFormData({
         studentId: '',
-        SectionId: '',
+        sectionId: '',
         schoolYear: '',
         enrollmentDate: '',
         status: ''
@@ -137,8 +137,8 @@ export default function AddEnrollmentsModal({ open, onClose }) {
                         <label className="block text-sm font-medium text-gray-700">Section *</label>
                         <select
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.SectionId}
-                          onChange={(e) => setFormData({ ...formData, SectionId: e.target.value })}
+                          value={formData.sectionId}
+                          onChange={(e) => setFormData({ ...formData, sectionId: e.target.value })}
                           disabled={loading || sections.length === 0}
                         >
                           <option value="">Select a section</option>
