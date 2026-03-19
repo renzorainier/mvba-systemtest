@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import AddEnrollmentsModal from '../enrollments/addEnrollmentsModal';
 
 export default function App() {
@@ -39,11 +39,12 @@ export default function App() {
   };
 
   const filteredEnrollments = enrollments.filter(enrollment => {
-    const fullName = `${enrollment.firstName} ${enrollment.lastName}`.toLowerCase();
+    const fullName = (enrollment.studentName || '').toLowerCase();
+    const sectionName = (enrollment.sectionName || '').toLowerCase();
     const enrollmentId = enrollment.enrollmentId?.toLowerCase() || '';
     const searchLower = searchTerm.toLowerCase();
 
-    return fullName.includes(searchLower) || enrollmentId.includes(searchLower);
+    return fullName.includes(searchLower) || sectionName.includes(searchLower) || enrollmentId.includes(searchLower);
   });
 
   const getStatusColor = (status) => {
@@ -116,10 +117,10 @@ export default function App() {
                         {enrollment.enrollmentId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {enrollment.learnersReferenceNumber}
+                        {enrollment.studentName || enrollment.learnersReferenceNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {enrollment.sectionId}
+                        {enrollment.sectionName || enrollment.sectionId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {enrollment.schoolYear}
