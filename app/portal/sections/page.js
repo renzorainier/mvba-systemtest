@@ -9,9 +9,20 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState(null);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => {
+    setEditingSection(null);
+    setIsModalOpen(true);
+  };
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingSection(null);
+  };
+  const openEditModal = (section) => {
+    setEditingSection(section);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchSections();
@@ -93,6 +104,9 @@ export default function Dashboard() {
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                       Room Number
                     </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -114,17 +128,25 @@ export default function Dashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {section.roomNumber}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => openEditModal(section)}
+                            className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : loading ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                         Loading sections...
                       </td>
                     </tr>
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                         No Sections found matching your search.
                       </td>
                     </tr>
@@ -142,7 +164,7 @@ export default function Dashboard() {
           </div>
         </div>
         {/* Add Sections Modal */}
-        <AddSectionsModal isOpen={isModalOpen} onClose={closeModal} />
+        <AddSectionsModal isOpen={isModalOpen} onClose={closeModal} editingSection={editingSection} />
       </div>
     );
   }

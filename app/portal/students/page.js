@@ -9,9 +9,20 @@ export default function App() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingStudent, setEditingStudent] = useState(null);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => {
+    setEditingStudent(null);
+    setIsModalOpen(true);
+  };
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingStudent(null);
+  };
+  const openEditModal = (student) => {
+    setEditingStudent(student);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchStudents();
@@ -95,6 +106,9 @@ export default function App() {
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Admission Date
                   </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -116,17 +130,25 @@ export default function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(student.admissionDate).toLocaleDateString()}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => openEditModal(student)}
+                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                       Loading students...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                       No students found matching your search.
                     </td>
                   </tr>
@@ -145,7 +167,7 @@ export default function App() {
 
       </div>
 
-      <AddStudentsModal open={isModalOpen} onClose={closeModal} />
+      <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} />
     </div>
   );
 }

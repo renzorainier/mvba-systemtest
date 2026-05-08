@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-export default function AddEnrollmentsModal({ open, onClose }) {
+export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }) {
   const [formData, setFormData] = useState({
     learnersReferenceNumber: '',
-    sectionId: '',
+    sectionId: 'TBA',
     schoolYear: '',
     enrollmentDate: '',
     status: ''
@@ -18,6 +18,27 @@ export default function AddEnrollmentsModal({ open, onClose }) {
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingEnrollment) {
+      setFormData({
+        learnersReferenceNumber: editingEnrollment.learnersReferenceNumber || '',
+        sectionId: editingEnrollment.sectionId || 'TBA',
+        schoolYear: editingEnrollment.schoolYear || '',
+        enrollmentDate: editingEnrollment.enrollmentDate?.split('T')[0] || '',
+        status: editingEnrollment.status || ''
+      })
+    } else {
+      setFormData({
+        learnersReferenceNumber: '',
+        sectionId: 'TBA',
+        schoolYear: '',
+        enrollmentDate: '',
+        status: ''
+      })
+    }
+  }, [editingEnrollment, open])
 
   // Fetch students and sections when the modal opens
   useEffect(() => {
@@ -46,14 +67,17 @@ export default function AddEnrollmentsModal({ open, onClose }) {
 
     try {
       // Validate required fields
-      if (!formData.learnersReferenceNumber || !formData.sectionId || !formData.schoolYear || !formData.enrollmentDate || !formData.status) {
+      if (!formData.learnersReferenceNumber || !formData.schoolYear || !formData.enrollmentDate || !formData.status) {
         setError('Please fill in all required fields')
         setLoading(false)
         return
       }
 
-      const response = await fetch('/api/enrollments', {
-        method: 'POST',
+      const method = editingEnrollment ? 'PUT' : 'POST'
+      const url = editingEnrollment ? `/api/enrollments/${editingEnrollment._id}` : '/api/enrollments'
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -63,13 +87,13 @@ export default function AddEnrollmentsModal({ open, onClose }) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to add enrollment')
+        throw new Error(data.error || 'Failed to save enrollment')
       }
 
       // Reset form and close modal
       setFormData({
         learnersReferenceNumber: '',
-        sectionId: '',
+        sectionId: 'TBA',
         schoolYear: '',
         enrollmentDate: '',
         status: ''
@@ -103,7 +127,7 @@ export default function AddEnrollmentsModal({ open, onClose }) {
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                   <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
-                    Add New Enrollment
+                    {editingEnrollment ? 'Edit Enrollment' : 'Add New Enrollment'}
                   </DialogTitle>
 
                   {error && (
@@ -139,9 +163,9 @@ export default function AddEnrollmentsModal({ open, onClose }) {
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.sectionId}
                           onChange={(e) => setFormData({ ...formData, sectionId: e.target.value })}
-                          disabled={loading || sections.length === 0}
+                          disabled={loading}
                         >
-                          <option value="">Select a section</option>
+                          <option value="TBA">TBA</option>
                           {sections.map((section) => (
                             <option key={section._id} value={section.sectionId || section._id}>
                               {section.sectionName || section.name}
@@ -202,7 +226,7 @@ export default function AddEnrollmentsModal({ open, onClose }) {
                 disabled={loading}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
-                {loading ? 'Adding...' : 'Add Enrollment'}
+                {loading ? (editingEnrollment ? 'Updating...' : 'Adding...') : (editingEnrollment ? 'Update Enrollment' : 'Add Enrollment')}
               </button>
               <button
                 type="button"

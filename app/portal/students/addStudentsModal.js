@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-export default function AddStudentsModal({ open, onClose }) {
+export default function AddStudentsModal({ open, onClose, editingStudent }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -14,6 +14,33 @@ export default function AddStudentsModal({ open, onClose }) {
     admissionDate: '',
     learnersReferenceNumber: '',
   })
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingStudent) {
+      setFormData({
+        firstName: editingStudent.firstName || '',
+        lastName: editingStudent.lastName || '',
+        middleName: editingStudent.middleName || '',
+        gender: editingStudent.gender || '',
+        dateOfBirth: editingStudent.dateOfBirth?.split('T')[0] || '',
+        address: editingStudent.address || '',
+        admissionDate: editingStudent.admissionDate?.split('T')[0] || '',
+        learnersReferenceNumber: editingStudent.learnersReferenceNumber || '',
+      })
+    } else {
+      setFormData({
+        firstName: '',
+        lastName: '',
+        middleName: '',
+        gender: '',
+        dateOfBirth: '',
+        address: '',
+        admissionDate: '',
+        learnersReferenceNumber: '',
+      })
+    }
+  }, [editingStudent, open])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,8 +56,11 @@ export default function AddStudentsModal({ open, onClose }) {
         return
       }
 
-      const response = await fetch('/api/students', {
-        method: 'POST',
+      const method = editingStudent ? 'PUT' : 'POST'
+      const url = editingStudent ? `/api/students/${editingStudent._id}` : '/api/students'
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -40,7 +70,7 @@ export default function AddStudentsModal({ open, onClose }) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to add student')
+        throw new Error(data.error || 'Failed to save student')
       }
 
       // Reset form and close modal
@@ -83,7 +113,7 @@ export default function AddStudentsModal({ open, onClose }) {
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                   <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
-                    Add New Student
+                    {editingStudent ? 'Edit Student' : 'Add New Student'}
                   </DialogTitle>
 
                   {error && (
@@ -203,7 +233,7 @@ export default function AddStudentsModal({ open, onClose }) {
                 disabled={loading}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
-                {loading ? 'Adding...' : 'Add Student'}
+                {loading ? (editingStudent ? 'Updating...' : 'Adding...') : (editingStudent ? 'Update Student' : 'Add Student')}
               </button>
               <button
                 type="button"

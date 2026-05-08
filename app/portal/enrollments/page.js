@@ -9,9 +9,20 @@ export default function App() {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingEnrollment, setEditingEnrollment] = useState(null);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => {
+    setEditingEnrollment(null);
+    setIsModalOpen(true);
+  };
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingEnrollment(null);
+  };
+  const openEditModal = (enrollment) => {
+    setEditingEnrollment(enrollment);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchEnrollments();
@@ -107,6 +118,9 @@ export default function App() {
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -133,17 +147,25 @@ export default function App() {
                           {enrollment.status}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => openEditModal(enrollment)}
+                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       Loading enrollments...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       No enrollments found matching your search.
                     </td>
                   </tr>
@@ -161,7 +183,7 @@ export default function App() {
 
       </div>
 
-      <AddEnrollmentsModal open={isModalOpen} onClose={closeModal} />
+      <AddEnrollmentsModal open={isModalOpen} onClose={closeModal} editingEnrollment={editingEnrollment} />
     </div>
   );
 }

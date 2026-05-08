@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-export default function AddSectionsModal({ isOpen, onClose }) {
+export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
     const gradeLevel = ['Kinder 1', 'Kinder 2', 'Kinder 3', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
     const [formData, setFormData] = useState({
         sectionName: '',
         sectionId: '',
-        gradeLevel: '', // Starts empty, which is correct
+        gradeLevel: '',
         schoolYear: '',
         roomNumber: '',
     });
@@ -17,7 +17,65 @@ export default function AddSectionsModal({ isOpen, onClose }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Note: I removed selectedGrade entirely because we are using formData.gradeLevel now
+    // Auto-generate section ID based on grade level, section name, and school year
+    const generateSectionId = (grade, name, year) => {
+        if (!grade || !name || !year) return '';
+        
+        // Extract grade number
+        let gradeCode = '';
+        if (grade.toLowerCase().includes('kinder')) {
+            const num = grade.replace(/[^\d]/g, '');
+            gradeCode = 'K' + num;
+        } else {
+            const num = grade.replace(/[^\d]/g, '');
+            gradeCode = 'G' + num;
+        }
+        
+        // Get first 3 letters of section name
+        const sectionCode = name.substring(0, 3).toUpperCase();
+        
+        // Extract year code (e.g., "2025-2026" -> "2526")
+        const yearMatch = year.match(/\d{4}-\d{4}/);
+        let yearCode = '';
+        if (yearMatch) {
+            const [year1, year2] = yearMatch[0].split('-');
+            yearCode = year1.substring(2) + year2.substring(2);
+        }
+        
+        return `${gradeCode}-${sectionCode}-${yearCode}`;
+    };
+
+    // Populate form when editing
+    useEffect(() => {
+        if (editingSection) {
+            setFormData({
+                sectionName: editingSection.sectionName || '',
+                sectionId: editingSection.sectionId || '',
+                gradeLevel: editingSection.gradeLevel || '',
+                schoolYear: editingSection.schoolYear || '',
+                roomNumber: editingSection.roomNumber || '',
+            });
+        } else {
+            setFormData({
+                sectionName: '',
+                sectionId: '',
+                gradeLevel: '',
+                schoolYear: '',
+                roomNumber: '',
+            });
+        }
+    }, [editingSection, isOpen]);
+
+    // Auto-generate section ID when dependencies change
+    useEffect(() => {
+        if (!editingSection) {
+            const newSectionId = generateSectionId(formData.gradeLevel, formData.sectionName, formData.schoolYear);
+            setFormData(prev => ({
+                ...prev,
+                sectionId: newSectionId
+            }));
+        }
+    }, [formData.gradeLevel, formData.sectionName, formData.schoolYear, editingSection])
 
     const handleSubmit = async () => {
         setLoading(true)
@@ -32,8 +90,11 @@ export default function AddSectionsModal({ isOpen, onClose }) {
         }
 
         try {
-            const response = await fetch('/api/sections', {
-                method: 'POST',
+            const method = editingSection ? 'PUT' : 'POST';
+            const url = editingSection ? `/api/sections/${editingSection._id}` : '/api/sections';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -43,7 +104,7 @@ export default function AddSectionsModal({ isOpen, onClose }) {
             const data = await response.json();
 
             if (!response.ok) {
-                const errorMessage = data.error || data.message || 'An error occurred while adding the section.';
+                const errorMessage = data.error || data.message || 'An error occurred while saving the section.';
                 setError(errorMessage);
             } else {
                 // Success - Reset the form completely
@@ -60,7 +121,7 @@ export default function AddSectionsModal({ isOpen, onClose }) {
             }
         } catch (err) {
             console.error("Network Error:", err);
-            setError(err.message || 'An error occurred while adding the section.');
+            setError(err.message || 'An error occurred while saving the section.');
         } finally {
             setLoading(false);
         }
@@ -83,7 +144,7 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                             <div className="sm:flex sm:items-start">
                                 <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                                     <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
-                                        Add New Section
+                                        {editingSection ? 'Edit Section' : 'Add New Section'}
                                     </DialogTitle>
 
                                     {error && (
@@ -107,14 +168,12 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Section ID *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Section ID (Auto-generated) *</label>
                                                 <input
                                                     type="text"
-                                                    placeholder="e.g. SEC-101"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-gray-100 focus:outline-none"
                                                     value={formData.sectionId}
-                                                    onChange={(e) => setFormData({ ...formData, sectionId: e.target.value })}
-                                                    disabled={loading}
+                                                    disabled={true}
                                                 />
                                             </div>
                                         </div>
@@ -172,7 +231,7 @@ export default function AddSectionsModal({ isOpen, onClose }) {
                                 disabled={loading}
                                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
                             >
-                                {loading ? 'Adding...' : 'Add Section'}
+                                {loading ? (editingSection ? 'Updating...' : 'Adding...') : (editingSection ? 'Update Section' : 'Add Section')}
                             </button>
                             <button
                                 type="button"
