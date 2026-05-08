@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-export default function AddTeachersModal({ isOpen, onClose }) {
+export default function AddTeachersModal({ isOpen, onClose, editingTeacher }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -16,6 +16,31 @@ export default function AddTeachersModal({ isOpen, onClose }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Populate form when editing
+    useEffect(() => {
+        if (editingTeacher) {
+            setFormData({
+                firstName: editingTeacher.firstName || '',
+                lastName: editingTeacher.lastName || '',
+                middleName: editingTeacher.middleName || '',
+                phoneNumber: editingTeacher.phoneNumber || '',
+                email: editingTeacher.email || '',
+                hireDate: editingTeacher.hireDate?.split('T')[0] || '',
+                teacherId: editingTeacher.teacherId || '',
+            });
+        } else {
+            setFormData({
+                firstName: '',
+                lastName: '',
+                middleName: '',
+                phoneNumber: '',
+                email: '',
+                hireDate: '',
+                teacherId: '',
+            });
+        }
+    }, [editingTeacher, isOpen]);
+
     const handleSubmit = async () => {
         setLoading(true)
         setError('')
@@ -27,8 +52,11 @@ export default function AddTeachersModal({ isOpen, onClose }) {
                 return;
             }
 
-            const response = await fetch('/api/teachers', {
-                method: 'POST',
+            const method = editingTeacher ? 'PUT' : 'POST';
+            const url = editingTeacher ? `/api/teachers/${editingTeacher._id}` : '/api/teachers';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -38,7 +66,7 @@ export default function AddTeachersModal({ isOpen, onClose }) {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.message || 'An error occurred while adding the teacher.');
+                setError(data.message || 'An error occurred while saving the teacher.');
             }
 
             setFormData({
@@ -54,7 +82,7 @@ export default function AddTeachersModal({ isOpen, onClose }) {
             window.dispatchEvent(new Event('teacherAdded'));
             onClose();
         } catch (err) {
-            setError(err.message || 'An error occurred while adding the teacher.');
+            setError(err.message || 'An error occurred while saving the teacher.');
         } finally {
             setLoading(false);
         }
@@ -77,7 +105,7 @@ export default function AddTeachersModal({ isOpen, onClose }) {
                             <div className="sm:flex sm:items-start">
                                 <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                                     <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
-                                        Add New Teacher
+                                        {editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}
                                     </DialogTitle>
 
                                     {error && (
@@ -183,7 +211,7 @@ export default function AddTeachersModal({ isOpen, onClose }) {
                                 disabled={loading}
                                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
                             >
-                                {loading ? 'Adding...' : 'Add Teacher'}
+                                {loading ? (editingTeacher ? 'Updating...' : 'Adding...') : (editingTeacher ? 'Update Teacher' : 'Add Teacher')}
                             </button>
                             <button
                                 type="button"
