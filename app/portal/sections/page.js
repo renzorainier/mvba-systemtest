@@ -113,7 +113,7 @@ export default function Dashboard() {
                   {!loading && filteredSections.length > 0 ? (
                     filteredSections.map((section) => (
                       <tr key={section._id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                           {section.sectionId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">

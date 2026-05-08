@@ -127,7 +127,7 @@ export default function App() {
                 {!loading && filteredEnrollments.length > 0 ? (
                   filteredEnrollments.map((enrollment) => (
                     <tr key={enrollment._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                         {enrollment.enrollmentId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
