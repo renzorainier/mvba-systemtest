@@ -1,4 +1,5 @@
 import dbConnect from '@/lib/mongodb';
+import Account from '@/models/Account';
 import SystemSettings, {
   calculateTotalFromBreakdown,
   DEFAULT_SETTINGS_PAYLOAD,
@@ -21,6 +22,27 @@ const isAdminRequest = async () => {
     return parsed?.role === 'Admin';
   } catch {
     return false;
+  }
+};
+
+const getAuthenticatedAdmin = async () => {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token')?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(token);
+
+    if (parsed?.role !== 'Admin' || !parsed?.name) {
+      return null;
+    }
+
+    return Account.findOne({ fullName: parsed.name, role: 'Admin', isActive: true });
+  } catch {
+    return null;
   }
 };
 
@@ -81,6 +103,17 @@ export async function PUT(request) {
 
     const body = await request.json();
     const sanitizedBreakdown = sanitizeBreakdown(body.breakdown);
+    const currentPassword = String(body.currentPassword || '').trim();
+
+    if (!currentPassword) {
+      return NextResponse.json({ success: false, error: 'Current password is required.' }, { status: 400 });
+    }
+
+    const authenticatedAdmin = await getAuthenticatedAdmin();
+
+    if (!authenticatedAdmin || authenticatedAdmin.password !== currentPassword) {
+      return NextResponse.json({ success: false, error: 'Current password is incorrect.' }, { status: 401 });
+    }
 
     if (sanitizedBreakdown.length === 0) {
       return NextResponse.json({ success: false, error: 'Breakdown must have at least one item.' }, { status: 400 });

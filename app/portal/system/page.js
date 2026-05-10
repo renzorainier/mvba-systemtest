@@ -15,7 +15,10 @@ export default function SystemSettingsPage() {
   const [title, setTitle] = useState("");
   const [breakdown, setBreakdown] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmingPassword, setConfirmingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -50,7 +53,26 @@ export default function SystemSettingsPage() {
     fetchSettings();
   }, []);
 
+  const openEditMode = () => {
+    setError("");
+    setSuccess("");
+    setIsEditing(true);
+  };
+
+  const cancelEditMode = () => {
+    setIsEditing(false);
+    setConfirmingPassword(false);
+    setCurrentPassword("");
+    setError("");
+    setSuccess("");
+    fetchSettings();
+  };
+
   const updateItem = (index, key, value) => {
+    if (!isEditing) {
+      return;
+    }
+
     setBreakdown((prev) =>
       prev.map((item, i) =>
         i === index
@@ -80,6 +102,10 @@ export default function SystemSettingsPage() {
         throw new Error("Breakdown must have at least one item.");
       }
 
+      if (!currentPassword.trim()) {
+        throw new Error("Current password is required for confirmation.");
+      }
+
       const response = await fetch("/api/system-settings", {
         method: "PUT",
         headers: {
@@ -89,6 +115,7 @@ export default function SystemSettingsPage() {
           title,
           currency: "PHP",
           breakdown: cleanedBreakdown,
+          currentPassword,
         }),
       });
 
@@ -103,6 +130,9 @@ export default function SystemSettingsPage() {
         amount: Number(item.amount || 0),
       })));
       setTitle(data.data.title || "");
+      setIsEditing(false);
+      setConfirmingPassword(false);
+      setCurrentPassword("");
       setSuccess("System settings updated successfully.");
     } catch (err) {
       setError(err.message || "An error occurred while saving settings.");
@@ -126,14 +156,45 @@ export default function SystemSettingsPage() {
           <div className="mt-6 text-sm text-slate-500">Loading system settings...</div>
         ) : (
           <>
-            <div className="mt-6">
-              <label className="mb-2 block text-sm font-medium text-slate-700">Breakdown Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+            <div className="mt-6 flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <label className="mb-2 block text-sm font-medium text-slate-700">Breakdown Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-7">
+                {!isEditing ? (
+                  <button
+                    type="button"
+                    onClick={openEditMode}
+                    className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={cancelEditMode}
+                      className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingPassword(true)}
+                      className="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                    >
+                      Save Changes
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 overflow-x-auto rounded-lg border border-gray-200">
@@ -152,7 +213,8 @@ export default function SystemSettingsPage() {
                           type="text"
                           value={item.label}
                           onChange={(e) => updateItem(index, "label", e.target.value)}
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={!isEditing}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -161,7 +223,8 @@ export default function SystemSettingsPage() {
                           min="0"
                           value={item.amount}
                           onChange={(e) => updateItem(index, "amount", e.target.value)}
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-right text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={!isEditing}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-right text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                         />
                       </td>
                     </tr>
@@ -175,15 +238,43 @@ export default function SystemSettingsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total Estimated Cost</p>
                 <p className="mt-1 text-2xl font-bold text-slate-900">{formatPhp(totalEstimatedCost)}</p>
               </div>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-              >
-                {saving ? "Saving..." : "Save Breakdown"}
-              </button>
+              <div className="text-sm text-slate-500">
+                {isEditing ? "Editing is enabled. Save requires password confirmation." : "Click Edit to modify the breakdown."}
+              </div>
             </div>
+
+            {confirmingPassword && isEditing && (
+              <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
+                <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                  <h2 className="text-lg font-semibold text-slate-900">Confirm Your Password</h2>
+                  <p className="mt-2 text-sm text-slate-600">Enter your current password to save the updated system settings.</p>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="mt-4 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Current password"
+                  />
+                  <div className="mt-5 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingPassword(false)}
+                      className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-400"
+                    >
+                      {saving ? "Saving..." : "Confirm and Save"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
