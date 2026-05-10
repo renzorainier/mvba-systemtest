@@ -58,7 +58,7 @@ export default function App() {
           />
           <StatCard
             title="Outstanding Balance"
-            value="₱13,700"
+            value="₱To be connect"
             subtitle="Total unpaid fees across all students"
             valueColor="text-rose-600"
             borderColor="border-rose-500"
@@ -67,7 +67,7 @@ export default function App() {
           />
           <StatCard
             title="Total Payments"
-            value="₱11,000"
+            value="₱To be connect"
             subtitle="Total payments recorded this semester"
             valueColor="text-emerald-700"
             borderColor="border-emerald-500"
