@@ -1,0 +1,65 @@
+import dbConnect from '@/lib/mongodb';
+import Financial from '@/models/Financial';
+import Student from '@/models/Student';
+import mongoose from 'mongoose';
+import { NextResponse } from 'next/server';
+
+const findStudentByIdentifier = async (studentId) => {
+  const studentSearchFilters = [{ learnersReferenceNumber: studentId }];
+
+  if (mongoose.Types.ObjectId.isValid(studentId)) {
+    studentSearchFilters.push({ _id: studentId });
+  }
+
+  return Student.findOne({ $or: studentSearchFilters });
+};
+
+export async function PATCH(request, { params }) {
+  try {
+    await dbConnect();
+
+    const { id } = await params;
+    const body = await request.json();
+    const nextStatus = String(body.status || '').trim();
+
+    if (!nextStatus) {
+      return NextResponse.json({ success: false, error: 'Status is required.' }, { status: 400 });
+    }
+
+    const financial = await Financial.findById(id);
+
+    if (!financial) {
+      return NextResponse.json({ success: false, error: 'Payment record not found.' }, { status: 404 });
+    }
+
+    const previousStatus = String(financial.status || '').toLowerCase();
+    const normalizedNextStatus = nextStatus.toLowerCase();
+    const amountPaid = Number(financial.amountPaid || 0);
+
+    if (previousStatus !== normalizedNextStatus && amountPaid > 0) {
+      const student = await findStudentByIdentifier(financial.studentId);
+
+      if (student) {
+        const currentBalance = Number(student.remainingBalance || 0);
+
+        if (previousStatus !== 'completed' && normalizedNextStatus === 'completed') {
+          student.remainingBalance = Math.max(0, currentBalance - amountPaid);
+          await student.save();
+        }
+
+        if (previousStatus === 'completed' && normalizedNextStatus !== 'completed') {
+          const maxBalance = Number(student.totalEstimatedCost || currentBalance + amountPaid);
+          student.remainingBalance = Math.min(maxBalance, currentBalance + amountPaid);
+          await student.save();
+        }
+      }
+    }
+
+    financial.status = nextStatus;
+    await financial.save();
+
+    return NextResponse.json({ success: true, data: financial }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

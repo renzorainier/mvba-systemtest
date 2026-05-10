@@ -1,5 +1,7 @@
 import dbConnect from '@/lib/mongodb';
 import Financial from '@/models/Financial';
+import Student from '@/models/Student';
+import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
@@ -31,6 +33,23 @@ export async function POST(request) {
     };
     
     const financial = await Financial.create(financialData);
+
+    if (String(financialData.status).toLowerCase() === 'completed' && Number(financialData.amountPaid) > 0) {
+      const studentSearchFilters = [{ learnersReferenceNumber: financialData.studentId }];
+
+      if (mongoose.Types.ObjectId.isValid(financialData.studentId)) {
+        studentSearchFilters.push({ _id: financialData.studentId });
+      }
+
+      const student = await Student.findOne({ $or: studentSearchFilters });
+
+      if (student) {
+        const currentBalance = Number(student.remainingBalance || 0);
+        student.remainingBalance = Math.max(0, currentBalance - Number(financialData.amountPaid));
+        await student.save();
+      }
+    }
+
     return NextResponse.json({ success: true, data: financial }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -16,22 +16,74 @@ const StatCard = ({ title, value, subtitle, valueColor, borderColor, icon: Icon,
 
 export default function App() {
   const [studentCount, setStudentCount] = useState(null);
+  const [totalTuition, setTotalTuition] = useState(null);
+  const [outstandingBalance, setOutstandingBalance] = useState(null);
+  const [totalPayments, setTotalPayments] = useState(null);
+
+  const formatPhp = (value) =>
+    new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
 
   useEffect(() => {
-    const fetchStudentCount = async () => {
+    const fetchDashboardMetrics = async () => {
       try {
-        const response = await fetch('/api/students');
-        const data = await response.json();
+        const [studentsResponse, financialsResponse, settingsResponse] = await Promise.all([
+          fetch('/api/students'),
+          fetch('/api/financials'),
+          fetch('/api/system-settings'),
+        ]);
 
-        if (data.success) {
-          setStudentCount(data.data.length);
+        const studentsData = await studentsResponse.json();
+        const financialsData = await financialsResponse.json();
+        const settingsData = await settingsResponse.json();
+
+        if (!studentsData.success) {
+          throw new Error(studentsData.error || 'Failed to load students');
+        }
+
+        const students = studentsData.data || [];
+        setStudentCount(students.length);
+
+        const settingsTotal = Number(settingsData?.data?.totalEstimatedCost || 0);
+
+        const computedTotalTuition = students.reduce(
+          (sum, student) => sum + Number(student.totalEstimatedCost || settingsTotal || 0),
+          0
+        );
+        const computedOutstandingBalance = students.reduce(
+          (sum, student) => sum + Number(student.remainingBalance || 0),
+          0
+        );
+
+        setTotalTuition(computedTotalTuition);
+        setOutstandingBalance(computedOutstandingBalance);
+
+        if (financialsData.success) {
+          const completedPayments = (financialsData.data || []).filter(
+            (record) => String(record.status).toLowerCase() === 'completed'
+          );
+          const computedTotalPayments = completedPayments.reduce(
+            (sum, record) => sum + Number(record.amountPaid || 0),
+            0
+          );
+          setTotalPayments(computedTotalPayments);
+        } else {
+          setTotalPayments(0);
         }
       } catch (error) {
-        console.error('Failed to fetch student count:', error);
+        console.error('Failed to fetch dashboard metrics:', error);
+        setStudentCount(0);
+        setTotalTuition(0);
+        setOutstandingBalance(0);
+        setTotalPayments(0);
       }
     };
 
-    fetchStudentCount();
+    fetchDashboardMetrics();
   }, []);
 
   return (
@@ -57,9 +109,9 @@ export default function App() {
             accentBg="bg-sky-100"
           />
           <StatCard
-            title="Outstanding Balance"
-            value="₱To be connect"
-            subtitle="Total unpaid fees across all students"
+            title="Total Tuition"
+            value={totalTuition === null ? '...' : formatPhp(totalTuition)}
+            subtitle={outstandingBalance === null ? 'Overall tuition for all enrolled students' : `Outstanding: ${formatPhp(outstandingBalance)}`}
             valueColor="text-rose-600"
             borderColor="border-rose-500"
             icon={Wallet}
@@ -67,7 +119,7 @@ export default function App() {
           />
           <StatCard
             title="Total Payments"
-            value="₱To be connect"
+            value={totalPayments === null ? '...' : formatPhp(totalPayments)}
             subtitle="Total payments recorded this semester"
             valueColor="text-emerald-700"
             borderColor="border-emerald-500"

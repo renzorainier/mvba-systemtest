@@ -10,6 +10,8 @@ const StudentSchema = new mongoose.Schema({
   address: { type: String, required: [true, "Address is required"] },
   admissionDate: { type: Date, required: [true, "Admission date is required"] },
   learnersReferenceNumber: { type: String, required: [true, "LRN is required"] },
+  totalEstimatedCost: { type: Number, default: 15000, min: 0 },
+  remainingBalance: { type: Number, default: 15000, min: 0 },
 });
 
 

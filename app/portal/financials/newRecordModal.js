@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
 export default function AddNewRecord({ open, onClose }) {
@@ -14,8 +14,64 @@ export default function AddNewRecord({ open, onClose }) {
     remarks: '',
     receivedBy: '',
   })
+  const [students, setStudents] = useState([])
+  const [studentQuery, setStudentQuery] = useState('')
+  const [showStudentSuggestions, setShowStudentSuggestions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const fetchStudents = async () => {
+      try {
+        const response = await fetch('/api/students')
+        const data = await response.json()
+
+        if (data.success) {
+          setStudents(data.data || [])
+        }
+      } catch (err) {
+        console.error('Failed to load students:', err)
+      }
+    }
+
+    fetchStudents()
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      setStudentQuery('')
+      setShowStudentSuggestions(false)
+    }
+  }, [open])
+
+  const filteredStudents = useMemo(() => {
+    const query = studentQuery.trim().toLowerCase()
+
+    if (!query) {
+      return students.slice(0, 8)
+    }
+
+    return students
+      .filter((student) => {
+        const studentNumber = String(student.learnersReferenceNumber || '').toLowerCase()
+        const fullName = `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase()
+        return studentNumber.includes(query) || fullName.includes(query)
+      })
+      .slice(0, 8)
+  }, [students, studentQuery])
+
+  const selectStudent = (student) => {
+    setFormData((prev) => ({
+      ...prev,
+      studentId: student.learnersReferenceNumber,
+    }))
+    setStudentQuery(`${student.learnersReferenceNumber} - ${student.firstName} ${student.lastName}`)
+    setShowStudentSuggestions(false)
+  }
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -57,6 +113,8 @@ export default function AddNewRecord({ open, onClose }) {
         remarks: '',
         receivedBy: '',
       })
+      setStudentQuery('')
+      setShowStudentSuggestions(false)
       setError('')
       
       // Dispatch custom event to notify parent
@@ -97,18 +155,42 @@ export default function AddNewRecord({ open, onClose }) {
                   
                   <div className="mt-4">
                     <div className="grid grid-cols-1 gap-4 mb-4">
-                      <div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Student ID *</label>
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700">LRN *</label>
                         <input
                           type="text"
-                          placeholder="e.g., S-001"
+                          placeholder="Search LRN or name"
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.studentId}
-                          onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                          value={studentQuery}
+                          onChange={(e) => {
+                            setStudentQuery(e.target.value)
+                            setFormData((prev) => ({ ...prev, studentId: '' }))
+                            setShowStudentSuggestions(true)
+                          }}
+                          onFocus={() => setShowStudentSuggestions(true)}
                           disabled={loading}
                         />
+                        {showStudentSuggestions && filteredStudents.length > 0 && (
+                          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                            {filteredStudents.map((student) => (
+                              <button
+                                type="button"
+                                key={student._id}
+                                onClick={() => selectStudent(student)}
+                                className="block w-full px-3 py-2 text-left hover:bg-blue-50"
+                                disabled={loading}
+                              >
+                                <p className="text-sm font-semibold text-gray-900">{student.learnersReferenceNumber}</p>
+                                <p className="text-xs text-gray-500">{student.firstName} {student.lastName}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {showStudentSuggestions && filteredStudents.length === 0 && studentQuery.trim() && (
+                          <div className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg">
+                            No matching student found.
+                          </div>
+                        )}
                       </div>
                     </div>
 

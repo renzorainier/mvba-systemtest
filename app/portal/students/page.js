@@ -11,6 +11,14 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingStudent, setEditingStudent] = useState(null);
 
+  const formatPhp = (value) =>
+    new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+
   const openModal = () => {
     setEditingStudent(null);
     setIsModalOpen(true);
@@ -107,6 +115,9 @@ export default function App() {
                     Admission Date
                   </th>
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Remaining Balance
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
@@ -130,6 +141,9 @@ export default function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(student.admissionDate).toLocaleDateString()}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-rose-600">
+                        {formatPhp(student.remainingBalance)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
                           onClick={() => openEditModal(student)}
@@ -142,13 +156,13 @@ export default function App() {
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       Loading students...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       No students found matching your search.
                     </td>
                   </tr>
