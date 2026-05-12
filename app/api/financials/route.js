@@ -7,8 +7,46 @@ import { NextResponse } from 'next/server';
 export async function GET(request) {
   try {
     await dbConnect();
-    const financials = await Financial.find({});
-    return NextResponse.json({ success: true, data: financials }, { status: 200 });
+    const financials = await Financial.find({}).lean();
+
+    const studentIds = [...new Set(financials.map((item) => item.studentId).filter(Boolean))];
+    const objectIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+    const students = await Student.find(
+      {
+        $or: [
+          { learnersReferenceNumber: { $in: studentIds } },
+          { _id: { $in: objectIds } },
+        ],
+      },
+      { _id: 1, firstName: 1, lastName: 1, learnersReferenceNumber: 1 }
+    ).lean();
+
+    const studentByLrn = new Map(
+      students.map((student) => [
+        student.learnersReferenceNumber,
+        `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+      ])
+    );
+
+    const studentById = new Map(
+      students.map((student) => [
+        String(student._id),
+        `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+      ])
+    );
+
+    const enrichedFinancials = financials.map((record) => {
+      const key = String(record.studentId || '');
+      const studentName = studentByLrn.get(key) || studentById.get(key) || record.studentId;
+
+      return {
+        ...record,
+        studentName,
+      };
+    });
+
+    return NextResponse.json({ success: true, data: enrichedFinancials }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

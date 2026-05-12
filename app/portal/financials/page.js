@@ -124,7 +124,7 @@ export default function Financials() {
                     Payment ID
                   </th>
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    LRN
+                    Student Name
                   </th>
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Amount Paid
@@ -151,7 +151,7 @@ export default function Financials() {
                         {record.paymentId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {record.studentId}
+                        {record.studentName || record.studentId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold text-green-600">
                         ₱{record.amountPaid.toLocaleString()}
