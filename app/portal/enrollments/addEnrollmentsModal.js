@@ -1,114 +1,132 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogPanel,
+  DialogTitle,
+} from "@headlessui/react";
+import FileUpload from "@/components/FileUpload";
 
-export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }) {
+export default function AddEnrollmentsModal({
+  open,
+  onClose,
+  editingEnrollment,
+}) {
   const [formData, setFormData] = useState({
-    learnersReferenceNumber: '',
-    sectionId: 'TBA',
-    schoolYear: '',
-    enrollmentDate: '',
-    status: ''
-  })
-  
+    learnersReferenceNumber: "",
+    sectionId: "TBA",
+    schoolYear: "",
+    enrollmentDate: "",
+    status: "",
+  });
+
   // New state to hold the fetched students and sections
-  const [students, setStudents] = useState([])
-  const [sections, setSections] = useState([])
-  
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [students, setStudents] = useState([]);
+  const [sections, setSections] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Populate form when editing
   useEffect(() => {
     if (editingEnrollment) {
       setFormData({
-        learnersReferenceNumber: editingEnrollment.learnersReferenceNumber || '',
-        sectionId: editingEnrollment.sectionId || 'TBA',
-        schoolYear: editingEnrollment.schoolYear || '',
-        enrollmentDate: editingEnrollment.enrollmentDate?.split('T')[0] || '',
-        status: editingEnrollment.status || ''
-      })
+        learnersReferenceNumber:
+          editingEnrollment.learnersReferenceNumber || "",
+        sectionId: editingEnrollment.sectionId || "TBA",
+        schoolYear: editingEnrollment.schoolYear || "",
+        enrollmentDate: editingEnrollment.enrollmentDate?.split("T")[0] || "",
+        status: editingEnrollment.status || "",
+      });
     } else {
       setFormData({
-        learnersReferenceNumber: '',
-        sectionId: 'TBA',
-        schoolYear: '',
-        enrollmentDate: '',
-        status: ''
-      })
+        learnersReferenceNumber: "",
+        sectionId: "TBA",
+        schoolYear: "",
+        enrollmentDate: "",
+        status: "",
+      });
     }
-  }, [editingEnrollment, open])
+  }, [editingEnrollment, open]);
 
   // Fetch students and sections when the modal opens
   useEffect(() => {
     if (open) {
       // Fetch Students
-      fetch('/api/students')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) setStudents(data.data)
+      fetch("/api/students")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setStudents(data.data);
         })
-        .catch(err => console.error("Failed to fetch students:", err))
+        .catch((err) => console.error("Failed to fetch students:", err));
 
       // Fetch Sections
-      fetch('/api/sections')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) setSections(data.data)
+      fetch("/api/sections")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setSections(data.data);
         })
-        .catch(err => console.error("Failed to fetch sections:", err))
+        .catch((err) => console.error("Failed to fetch sections:", err));
     }
-  }, [open])
+  }, [open]);
 
   const handleSubmit = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
       // Validate required fields
-      if (!formData.learnersReferenceNumber || !formData.schoolYear || !formData.enrollmentDate || !formData.status) {
-        setError('Please fill in all required fields')
-        setLoading(false)
-        return
+      if (
+        !formData.learnersReferenceNumber ||
+        !formData.schoolYear ||
+        !formData.enrollmentDate ||
+        !formData.status
+      ) {
+        setError("Please fill in all required fields");
+        setLoading(false);
+        return;
       }
 
-      const method = editingEnrollment ? 'PUT' : 'POST'
-      const url = editingEnrollment ? `/api/enrollments/${editingEnrollment._id}` : '/api/enrollments'
+      const method = editingEnrollment ? "PUT" : "POST";
+      const url = editingEnrollment
+        ? `/api/enrollments/${editingEnrollment._id}`
+        : "/api/enrollments";
 
       const response = await fetch(url, {
         method: method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save enrollment')
+        throw new Error(data.error || "Failed to save enrollment");
       }
 
       // Reset form and close modal
       setFormData({
-        learnersReferenceNumber: '',
-        sectionId: 'TBA',
-        schoolYear: '',
-        enrollmentDate: '',
-        status: ''
-      })
-      setError('')
+        learnersReferenceNumber: "",
+        sectionId: "TBA",
+        schoolYear: "",
+        enrollmentDate: "",
+        status: "",
+      });
+      setError("");
 
       // Dispatch custom event to notify parent component to refresh the table
-      window.dispatchEvent(new Event('enrollmentAdded'))
-      onClose()
+      window.dispatchEvent(new Event("enrollmentAdded"));
+      onClose();
     } catch (err) {
-      setError(err.message || 'An error occurred')
+      setError(err.message || "An error occurred");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onClose={onClose} className="relative z-10">
@@ -126,8 +144,13 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                  <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
-                    {editingEnrollment ? 'Edit Enrollment' : 'Add New Enrollment'}
+                  <DialogTitle
+                    as="h3"
+                    className="text-base font-semibold text-gray-900"
+                  >
+                    {editingEnrollment
+                      ? "Edit Enrollment"
+                      : "Add New Enrollment"}
                   </DialogTitle>
 
                   {error && (
@@ -140,17 +163,30 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       {/* Student Dropdown */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Student *</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Student *
+                        </label>
                         <select
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.learnersReferenceNumber}
-                          onChange={(e) => setFormData({ ...formData, learnersReferenceNumber: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              learnersReferenceNumber: e.target.value,
+                            })
+                          }
                           disabled={loading || students.length === 0}
                         >
                           <option value="">Select a student</option>
                           {students.map((student) => (
-                            <option key={student._id} value={student.learnersReferenceNumber || student._id}>
-                              {student.firstName} {student.lastName} ({student.learnersReferenceNumber})
+                            <option
+                              key={student._id}
+                              value={
+                                student.learnersReferenceNumber || student._id
+                              }
+                            >
+                              {student.firstName} {student.lastName} (
+                              {student.learnersReferenceNumber})
                             </option>
                           ))}
                         </select>
@@ -158,16 +194,26 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
 
                       {/* Section Dropdown */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Section *</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Section *
+                        </label>
                         <select
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.sectionId}
-                          onChange={(e) => setFormData({ ...formData, sectionId: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              sectionId: e.target.value,
+                            })
+                          }
                           disabled={loading}
                         >
                           <option value="TBA">TBA</option>
                           {sections.map((section) => (
-                            <option key={section._id} value={section.sectionId || section._id}>
+                            <option
+                              key={section._id}
+                              value={section.sectionId || section._id}
+                            >
                               {section.sectionName || section.name}
                             </option>
                           ))}
@@ -177,34 +223,52 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">School Year *</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          School Year *
+                        </label>
                         <input
                           type="text"
                           placeholder="e.g. 2025-2026"
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.schoolYear}
-                          onChange={(e) => setFormData({ ...formData, schoolYear: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              schoolYear: e.target.value,
+                            })
+                          }
                           disabled={loading}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Enrollment Date *</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Enrollment Date *
+                        </label>
                         <input
                           type="date"
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.enrollmentDate}
-                          onChange={(e) => setFormData({ ...formData, enrollmentDate: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              enrollmentDate: e.target.value,
+                            })
+                          }
                           disabled={loading}
                         />
                       </div>
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700">Status *</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Status *
+                      </label>
                       <select
                         className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, status: e.target.value })
+                        }
                         disabled={loading}
                       >
                         <option value="">Select status</option>
@@ -215,6 +279,12 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
                         <option value="Dropped">Dropped</option>
                       </select>
                     </div>
+
+                    <FileUpload
+                      onUpload={(data) => console.log("Uploaded:", data)}
+                      accept="image/*"
+                      endpoint="/api/upload-file"
+                    />
                   </div>
                 </div>
               </div>
@@ -226,7 +296,13 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
                 disabled={loading}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
-                {loading ? (editingEnrollment ? 'Updating...' : 'Adding...') : (editingEnrollment ? 'Update Enrollment' : 'Add Enrollment')}
+                {loading
+                  ? editingEnrollment
+                    ? "Updating..."
+                    : "Adding..."
+                  : editingEnrollment
+                    ? "Update Enrollment"
+                    : "Add Enrollment"}
               </button>
               <button
                 type="button"
@@ -241,5 +317,5 @@ export default function AddEnrollmentsModal({ open, onClose, editingEnrollment }
         </div>
       </div>
     </Dialog>
-  )
+  );
 }
