@@ -10,6 +10,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingStudent, setEditingStudent] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const formatPhp = (value) =>
     new Intl.NumberFormat('en-PH', {
@@ -62,6 +63,17 @@ export default function App() {
     `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.learnersReferenceNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination logic
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedStudents = filteredStudents.slice(startIdx, startIdx + itemsPerPage);
+
+  // Reset page when search changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
@@ -123,8 +135,8 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {!loading && filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
+                {!loading && paginatedStudents.length > 0 ? (
+                  paginatedStudents.map((student) => (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                         {student.learnersReferenceNumber}
@@ -171,11 +183,30 @@ export default function App() {
             </table>
           </div>
 
-          {/* Footer / Pagination mock */}
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+          {/* Footer / Pagination */}
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
             <span className="text-sm text-gray-500">
-              Showing <span className="font-medium">{filteredStudents.length}</span> of <span className="font-medium">{students.length}</span> students
+              Showing <span className="font-medium">{startIdx + 1}</span>-<span className="font-medium">{Math.min(startIdx + itemsPerPage, filteredStudents.length)}</span> of <span className="font-medium">{filteredStudents.length}</span> students
             </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages || 1}</span>
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 

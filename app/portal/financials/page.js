@@ -10,6 +10,7 @@ export default function Financials() {
   const [financials, setFinancials] = useState([]);
   const [updatingId, setUpdatingId] = useState('');
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const statusOptions = ['Pending', 'Completed', 'Failed', 'Cancelled'];
 
@@ -95,6 +96,12 @@ export default function Financials() {
     }
   }
 
+  // Pagination logic
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(financials.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedFinancials = financials.slice(startIdx, startIdx + itemsPerPage);
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
       {/* Header Section */}
@@ -144,8 +151,8 @@ export default function Financials() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {!loading && financials.length > 0 ? (
-                  financials.map((record) => (
+                {!loading && paginatedFinancials.length > 0 ? (
+                  paginatedFinancials.map((record) => (
                     <tr key={record._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                         {record.paymentId}
@@ -198,11 +205,30 @@ export default function Financials() {
             </table>
           </div>
 
-          {/* Footer / Pagination mock */}
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+          {/* Footer / Pagination */}
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
             <span className="text-sm text-gray-500">
-              Showing <span className="font-medium">{financials.length}</span> payment records
+              Showing <span className="font-medium">{startIdx + 1}</span>-<span className="font-medium">{Math.min(startIdx + itemsPerPage, financials.length)}</span> of <span className="font-medium">{financials.length}</span> payment records
             </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages || 1}</span>
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Next
+              </button>
+            </div>
           </div>
 
         </div>
