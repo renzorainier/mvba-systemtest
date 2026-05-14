@@ -59,7 +59,7 @@ export async function POST(request) {
     
     // Ensure all required fields are present
     const financialData = {
-      paymentId: body.paymentId || `P-${Date.now()}`, // Auto-generate if not provided`,
+      paymentId: body.paymentId || `P-${Date.now()}`, // Auto-generate if not provided
       studentId: body.studentId,
       amountPaid: body.amountPaid,
       dateOfPayment: body.dateOfPayment,
@@ -68,7 +68,19 @@ export async function POST(request) {
       status: body.status,
       remarks: body.remarks || '',
       receivedBy: body.receivedBy,
+      documents: [], // Initialize empty documents array
     };
+    
+    // Add proof of payment if provided
+    if (body.proofOfPayment && body.proofOfPayment.fileId) {
+      financialData.documents.push({
+        fileId: body.proofOfPayment.fileId,
+        fileName: body.proofOfPayment.fileName,
+        fileType: body.proofOfPayment.fileType,
+        uploadedAt: new Date(),
+        fileSize: body.proofOfPayment.fileSize,
+      });
+    }
     
     const financial = await Financial.create(financialData);
 

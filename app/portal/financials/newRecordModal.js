@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+import FileUpload from '@/components/FileUpload';
 
 export default function AddNewRecord({ open, onClose }) {
   const [formData, setFormData] = useState({
@@ -13,12 +14,14 @@ export default function AddNewRecord({ open, onClose }) {
     status: 'Pending',
     remarks: '',
     receivedBy: '',
+    proofOfPayment: null, // Store the File object from upload
   })
   const [students, setStudents] = useState([])
   const [studentQuery, setStudentQuery] = useState('')
   const [showStudentSuggestions, setShowStudentSuggestions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
 
   useEffect(() => {
     if (!open) {
@@ -85,6 +88,32 @@ export default function AddNewRecord({ open, onClose }) {
         return
       }
 
+      let proofOfPaymentData = null
+
+      // Upload file to GridFS if selected
+      if (selectedFile) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', selectedFile)
+
+        const uploadResponse = await fetch('/api/upload-file', {
+          method: 'POST',
+          body: uploadFormData,
+        })
+
+        const uploadData = await uploadResponse.json()
+
+        if (!uploadResponse.ok) {
+          throw new Error(uploadData.error || 'Failed to upload file')
+        }
+
+        proofOfPaymentData = {
+          fileId: uploadData.fileId,
+          fileName: uploadData.fileName,
+          fileType: uploadData.fileType,
+          fileSize: uploadData.fileSize,
+        }
+      }
+
       const response = await fetch('/api/financials', {
         method: 'POST',
         headers: {
@@ -93,6 +122,7 @@ export default function AddNewRecord({ open, onClose }) {
         body: JSON.stringify({
           ...formData,
           amountPaid: parseFloat(formData.amountPaid),
+          proofOfPayment: proofOfPaymentData,
         }),
       })
       
@@ -110,9 +140,11 @@ export default function AddNewRecord({ open, onClose }) {
         paymentMethod: '',
         referenceNumber: '',
         status: 'Pending',
+        proofOfPayment: null,
         remarks: '',
         receivedBy: '',
       })
+      setSelectedFile(null)
       setStudentQuery('')
       setShowStudentSuggestions(false)
       setError('')
@@ -275,6 +307,17 @@ export default function AddNewRecord({ open, onClose }) {
                           disabled={loading}
                         />
                       </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700">Proof of Payment (Optional)</label>
+                      <FileUpload 
+                        onUpload={(file) => setSelectedFile(file)}
+                        accept="image/*"
+                        label="Upload Proof of Payment"
+                        endpoint="/api/upload-file"
+                        compressEndpoint="/api/compress"
+                      />
                     </div>
 
                     <div className="mb-4">
