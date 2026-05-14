@@ -126,7 +126,7 @@ export default function App() {
             icon={TrendingUp}
             accentBg="bg-emerald-100"
           />
-        </div>
+        </div>  
 
         {/* Automated Reports Panel */}
         <div className="mt-6 rounded-2xl border border-white/70 bg-white/90 p-6 shadow-sm backdrop-blur">
@@ -139,5 +139,5 @@ export default function App() {
         </div>
       </main>
     </div>
-  );
+  );  
 }

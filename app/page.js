@@ -157,14 +157,14 @@ export default function LoginPage() {
             <div className="w-full h-full rounded-full bg-white shadow-2xl flex items-center justify-center relative overflow-hidden ring-4 ring-yellow-500/50">
                 <img 
                   src="/logo.png" 
-                  alt="Metroview Baptist Academy Logo" 
+                     alt="MVBA Logo" 
                   className="w-full h-full object-cover"
                 />
             </div>
           </div>
 
           <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight drop-shadow-md">
-            Metroview Baptist <br/> Academy
+            MVBA
           </h2>
           <div className="w-24 h-1 bg-yellow-400 rounded-full mb-6 shadow-[0_0_10px_rgba(250,204,21,0.5)]"></div>
           <p className="text-xl lg:text-2xl text-blue-100 font-light tracking-wide">

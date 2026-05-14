@@ -44,7 +44,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 shadow-sm z-50">
       <div className="h-16 bg-blue-900 flex items-center px-6 gap-3">
         <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-xs">
-          Logo
+            MVBA
         </div>
         <h1 className="text-white font-bold text-lg tracking-wide">
           {userRole} Portal
