@@ -9,14 +9,10 @@ export default function Financials() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [financials, setFinancials] = useState([]);
-  const [updatingId, setUpdatingId] = useState('');
-  const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState(null);
-  
 
-  const statusOptions = ['Pending', 'Completed', 'Failed', 'Cancelled'];
 
   const getStatusStyles = (status) => {
     switch (status) {
@@ -118,6 +114,10 @@ export default function Financials() {
   const totalPages = Math.ceil(financials.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
   const paginatedFinancials = financials.slice(startIdx, startIdx + itemsPerPage);
+  const paginatedFinancials = financials.slice(
+    startIdx,
+    startIdx + itemsPerPage,
+  );
 
   return (
     <>
@@ -136,104 +136,110 @@ export default function Financials() {
           </button>
         </div>
 
-      {/* Main Content Card */}
-      <div className="max-w-7xl mx-auto">
-        {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {/* Main Content Card */}
+        <div className="max-w-7xl mx-auto">
+          {error && (
+            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-        {/* Table Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Payment ID
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Student Name
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Amount Paid
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Date of Payment
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Method
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Received By
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Proof of Payment
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {!loading && paginatedFinancials.length > 0 ? (
-                  paginatedFinancials.map((record) => (
-                    <tr key={record._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                        {record.paymentId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {record.studentName || record.studentId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold text-green-600">
-                        ₱{record.amountPaid.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(record.dateOfPayment).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.paymentMethod}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <select
-                          value={record.status}
-                          onChange={(e) => updateStatus(record, e.target.value)}
-                          disabled={updatingId === record._id}
-                          className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 disabled:opacity-60 ${getStatusStyles(record.status)}`}
-                        >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.receivedBy}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.documents && record.documents.length > 0 ? (
-                          <button
-                            onClick={() =>
-                              viewProofOfPayment(record.documents[0].fileId)
+          {/* Table Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Payment ID
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Student Name
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Amount Paid
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Date of Payment
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Method
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Received By
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Proof of Payment
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {!loading && paginatedFinancials.length > 0 ? (
+                    paginatedFinancials.map((record) => (
+                      <tr key={record._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                          {record.paymentId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                          {record.studentName || record.studentId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold text-green-600">
+                          ₱{record.amountPaid.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(record.dateOfPayment).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {record.paymentMethod}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <select
+                            value={record.status}
+                            onChange={(e) =>
+                              updateStatus(record, e.target.value)
                             }
-                            className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
-                            title={record.documents[0].fileName}
+                            disabled={updatingId === record._id}
+                            className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 disabled:opacity-60 ${getStatusStyles(record.status)}`}
                           >
-                            View
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
+                            {statusOptions.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {record.receivedBy}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {record.documents && record.documents.length > 0 ? (
+                            <button
+                              onClick={() =>
+                                viewProofOfPayment(record.documents[0].fileId)
+                              }
+                              className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                              title={record.documents[0].fileName}
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : loading ? (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                        Loading payment records...
                       </td>
                     </tr>
                   ) : (
                     <tr>
-                      <td
-                        colSpan="8"
-                        className="px-6 py-12 text-center text-gray-500"
-                      >
+                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500" >
                         No payment records found.
                       </td>
                     </tr>
@@ -242,54 +248,65 @@ export default function Financials() {
               </table>
             </div>
 
-          {/* Footer / Pagination */}
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
-            <span className="text-sm text-gray-500">
-              Showing <span className="font-medium">{startIdx + 1}</span>-<span className="font-medium">{Math.min(startIdx + itemsPerPage, financials.length)}</span> of <span className="font-medium">{financials.length}</span> payment records
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages || 1}</span>
+            {/* Footer / Pagination */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
+              <span className="text-sm text-gray-500">
+                Showing <span className="font-medium">{startIdx + 1}</span>-
+                <span className="font-medium">
+                  {Math.min(startIdx + itemsPerPage, financials.length)}
+                </span>{" "}
+                of <span className="font-medium">{financials.length}</span>{" "}
+                payment records
               </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-              >
-                Next
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page <span className="font-medium">{currentPage}</span> of{" "}
+                  <span className="font-medium">{totalPages || 1}</span>
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </div>
+        <AddNewRecord open={isModalOpen} onClose={closeModal} />
+        
+        {/* Proof of Payment Viewer Modal */}
+        {viewerOpen && selectedFileId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-2xl max-h-[90vh] bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Proof of Payment
+                </h2>
+                <button
+                  onClick={closeViewer}
+                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <X size={20} className="text-gray-600" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-6">
+                <FileViewer fileId={selectedFileId} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      <AddNewRecord open={isModalOpen} onClose={closeModal} />
-      
-      {/* Proof of Payment Viewer Modal */}
-      {viewerOpen && selectedFileId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-2xl max-h-[90vh] bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Proof of Payment</h2>
-              <button
-                onClick={closeViewer}
-                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <X size={20} className="text-gray-600" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto p-6">
-              <FileViewer fileId={selectedFileId} />
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
