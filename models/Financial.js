@@ -10,6 +10,14 @@ const FinancialSchema = new mongoose.Schema({
     receivedBy: { type: String, required: [true, "Receiver's name is required"] },
     paymentId: { type: String, required: [true, "Payment ID is required"] },    
     studentId: { type: String, required: [true, "Student ID is required"] },
+    // GridFS file references
+    documents: [{
+        fileId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        fileName: { type: String, required: true },
+        fileType: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+        fileSize: { type: Number, required: true }
+    }]
 });
 
 export default mongoose.models.Financial || mongoose.model('Financial', FinancialSchema, 'financials');

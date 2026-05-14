@@ -4,13 +4,16 @@ import { useState } from "react";
 
 export default function FileUpload({
   onUpload,
+  onCompress,
   accept = "*",
   label = "Upload File",
   endpoint = "/api/upload-file",
+  compressEndpoint = "/api/compress",
 }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
 
   function handleFileSelect(file) {
@@ -36,6 +39,61 @@ export default function FileUpload({
 
     setSelectedFile(file);
     setError("");
+    
+    // Compress file if onCompress callback is provided
+    if (onCompress) {
+      compressAndUpload(file);
+    } else if (onUpload) {
+      // Call onUpload callback with the File object if no compression
+      onUpload(file);
+    }
+  }
+
+  async function compressAndUpload(file) {
+    try {
+      setIsCompressing(true);
+      setError("");
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(compressEndpoint, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Compression failed');
+      }
+      
+      // Get compressed file as blob
+      const compressedBlob = await response.blob();
+      const contentType = response.headers.get('Content-Type');
+      const fileName = response.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1] || file.name;
+      
+      // Create a new File object from the compressed blob
+      const compressedFile = new File([compressedBlob], fileName, { type: contentType });
+      
+      // Call both callbacks with the compressed file
+      if (onCompress) {
+        onCompress({
+          originalFile: file,
+          compressedFile: compressedFile,
+          originalSize: file.size,
+          compressedSize: compressedFile.size,
+        });
+      }
+      
+      if (onUpload) {
+        onUpload(compressedFile);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to compress file');
+      console.error('Compression error:', err);
+    } finally {
+      setIsCompressing(false);
+    }
   }
 
   return (
@@ -76,10 +134,15 @@ export default function FileUpload({
           <span className="text-sm font-medium">{selectedFile.name}</span>
         ) : error ? (
           <span className="text-sm text-red-500">{error}</span>
+        ) : isCompressing ? (
+          <>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span>Compressing file...</span>
+          </>
         ) : (
           <>
-            <span>Drag and drop a PDF, JPG, JPEG, or PNG file here</span>
-            <span className="text-xs">or click to browse</span>
+            <span>Drag and drop a file here or click to browse</span>
+            <span className="text-xs">Only PDF, JPG, and PNG files are allowed</span>
           </>
         )}
       </label>

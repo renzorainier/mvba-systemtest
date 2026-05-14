@@ -4,18 +4,11 @@ import mupdf from "mupdf";
 
 export const runtime = "nodejs";
 
-// Get compression quality from form data in the frontend
-function parseQuality(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 80;
-  return Math.max(10, Math.min(100, Math.round(numeric)));
-}
-
 export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
-    const quality = parseQuality(formData.get("quality"));
+    const quality = 70; // Hardcoded compression quality for both images and PDFs
 
     if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") {
       return Response.json({ error: "A valid file is required." }, { status: 400 });
@@ -31,7 +24,7 @@ export async function POST(request) {
         .webp({ quality })
         .toBuffer();
 
-      const outputFilename = `${filenameBase}.compressed.webp`;
+      const outputFilename = `${filenameBase}.webp`;
 
       return new Response(outputBuffer, {
         status: 200,
