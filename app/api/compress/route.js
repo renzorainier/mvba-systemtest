@@ -85,7 +85,7 @@ export async function POST(request) {
         // Fallback: if compressed is larger than original, return original
         const finalBuffer = outputPdfBuffer.length > inputBuffer.length ? inputBuffer : outputPdfBuffer;
         const finalBytes = finalBuffer.length;
-        const outputFilename = `${filenameBase}.compressed.pdf`;
+        const outputFilename = `${filenameBase}.pdf`;
 
         return new Response(finalBuffer, {
           status: 200,
