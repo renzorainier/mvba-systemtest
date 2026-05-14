@@ -19,6 +19,7 @@ export default function ScheduleManagement() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
@@ -164,6 +165,17 @@ export default function ScheduleManagement() {
     sch.scheduleId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Pagination logic
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredSchedules.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedSchedules = filteredSchedules.slice(startIdx, startIdx + itemsPerPage);
+
+  // Reset page when search changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const renderTimeBlocks = (day) => {
     const dayItems = scheduleItems.filter(item => item.day === day);
     dayItems.sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -246,8 +258,8 @@ export default function ScheduleManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {!loading && filteredSchedules.length > 0 ? (
-                      filteredSchedules.map((sch) => (
+                    {!loading && paginatedSchedules.length > 0 ? (
+                      paginatedSchedules.map((sch) => (
                         <tr key={sch._id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm font-medium text-blue-600">{sch.scheduleId}</td>
                           <td className="px-6 py-4 text-sm font-bold text-gray-900">{sch.name}</td>
@@ -277,10 +289,29 @@ export default function ScheduleManagement() {
                   </tbody>
                 </table>
               </div>
-              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
                 <span className="text-sm text-gray-500">
-                  Showing <span className="font-medium">{filteredSchedules.length}</span> of <span className="font-medium">{schedules.length}</span> schedules
+                  Showing <span className="font-medium">{startIdx + 1}</span>-<span className="font-medium">{Math.min(startIdx + itemsPerPage, filteredSchedules.length)}</span> of <span className="font-medium">{filteredSchedules.length}</span> schedules
                 </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages || 1}</span>
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>

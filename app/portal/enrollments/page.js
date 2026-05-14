@@ -10,6 +10,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingEnrollment, setEditingEnrollment] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const openModal = () => {
     setEditingEnrollment(null);
@@ -57,6 +58,17 @@ export default function App() {
 
     return fullName.includes(searchLower) || sectionName.includes(searchLower) || enrollmentId.includes(searchLower);
   });
+
+  // Pagination logic
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredEnrollments.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedEnrollments = filteredEnrollments.slice(startIdx, startIdx + itemsPerPage);
+
+  // Reset page when search changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const getStatusColor = (status) => {
     if (status === 'Enrolled') {
@@ -124,8 +136,8 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {!loading && filteredEnrollments.length > 0 ? (
-                  filteredEnrollments.map((enrollment) => (
+                {!loading && paginatedEnrollments.length > 0 ? (
+                  paginatedEnrollments.map((enrollment) => (
                     <tr key={enrollment._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                         {enrollment.enrollmentId}
@@ -174,10 +186,29 @@ export default function App() {
             </table>
           </div>
 
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
             <span className="text-sm text-gray-500">
-              Showing <span className="font-medium">{filteredEnrollments.length}</span> of <span className="font-medium">{enrollments.length}</span> enrollments
+              Showing <span className="font-medium">{startIdx + 1}</span>-<span className="font-medium">{Math.min(startIdx + itemsPerPage, filteredEnrollments.length)}</span> of <span className="font-medium">{filteredEnrollments.length}</span> enrollments
             </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages || 1}</span>
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-3 py-1 border border-gray-300 rounded text-sm font-medium text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 
