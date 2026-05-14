@@ -121,14 +121,20 @@ export default function FileViewer({ fileId }) {
       )}
 
       {isPdf && (
-        <div className="flex flex-col gap-3 rounded-lg p-4">
+        <div className="flex flex-col gap-3 bg-zinc-100 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h12v10H4V5z" />
+            </svg>
+            <span className="text-zinc-700 dark:text-zinc-300">PDF Document</span>
+          </div>
           <a
             href={fileData}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-900 font-medium transition-colors w-fit"
+            className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 w-fit"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
             Open PDF in New Tab
