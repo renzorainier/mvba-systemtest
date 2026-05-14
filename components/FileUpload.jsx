@@ -27,6 +27,13 @@ export default function FileUpload({
       return;
     }
 
+    // 16MB file limit
+    const MAX_SIZE = 16 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setError("File size must be less than 16MB.");
+      return;
+    }
+
     setSelectedFile(file);
     setError("");
   }
@@ -55,7 +62,7 @@ export default function FileUpload({
         <svg
           className="h-8 w-8"
           fill="none"
-          stroke="currentColor"
+          stroke={error ? "red" : "black"}
           viewBox="0 0 24 24"
         >
           <path
