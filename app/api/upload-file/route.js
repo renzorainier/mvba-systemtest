@@ -2,13 +2,25 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { getGridFSBucket } from '@/lib/gridfs';
 import { Readable } from 'stream';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 export async function POST(request) {
   try {
     await dbConnect();
+
+    const user = getAuthenticatedUser(request);
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
     
     const formData = await request.formData();
     const file = formData.get('file');
+    const relatedRecordId = formData.get('relatedRecordId');
+    const relatedRecordType = formData.get('relatedRecordType');
     
     if (!file) {
       return NextResponse.json(
@@ -27,6 +39,10 @@ export async function POST(request) {
         mimeType: file.type,
         size: file.size,
         uploadedAt: new Date(),
+        uploadedByName: user.name || null,
+        uploadedByRole: user.role || null,
+        relatedRecordId: relatedRecordId || null,
+        relatedRecordType: relatedRecordType || null,
       },
     });
 

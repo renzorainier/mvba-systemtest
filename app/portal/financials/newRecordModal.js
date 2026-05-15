@@ -94,6 +94,8 @@ export default function AddNewRecord({ open, onClose }) {
       if (selectedFile) {
         const uploadFormData = new FormData()
         uploadFormData.append('file', selectedFile)
+        uploadFormData.append('relatedRecordType', 'financials')
+        uploadFormData.append('relatedRecordId', formData.studentId)
 
         const uploadResponse = await fetch('/api/upload-file', {
           method: 'POST',

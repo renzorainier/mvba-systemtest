@@ -1,11 +1,68 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { getGridFSBucket } from '@/lib/gridfs';
+import Financial from '@/models/Financial';
 import mongoose from 'mongoose';
+import { getAuthenticatedUser } from '@/lib/auth';
+
+const ROLE_RULES = {
+  financials: ['Admin', 'Cashier'],
+  enrollments: ['Admin', 'Registrar'],
+};
+
+function canAccessFile(user, metadata) {
+  if (!user) {
+    return false;
+  }
+
+  if (user.role === 'Admin') {
+    return true;
+  }
+
+  const relatedRecordType = String(metadata?.relatedRecordType || '').toLowerCase();
+  const allowedRoles = ROLE_RULES[relatedRecordType];
+
+  if (allowedRoles) {
+    return allowedRoles.includes(user.role);
+  }
+
+  const uploadedByRole = metadata?.uploadedByRole;
+
+  if (uploadedByRole) {
+    return uploadedByRole === user.role;
+  }
+
+  return true;
+}
+
+async function resolveFileContext(objectId, metadata) {
+  const relatedRecordType = String(metadata?.relatedRecordType || '').toLowerCase();
+
+  if (relatedRecordType) {
+    return relatedRecordType;
+  }
+
+  const linkedFinancialRecord = await Financial.exists({ 'documents.fileId': objectId });
+
+  if (linkedFinancialRecord) {
+    return 'financials';
+  }
+
+  return '';
+}
 
 export async function GET(request, { params }) {
   try {
     await dbConnect();
+
+    const user = getAuthenticatedUser(request);
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
     
     const { id } = await params;
     
@@ -30,6 +87,20 @@ export async function GET(request, { params }) {
     }
 
     const fileDoc = file[0];
+
+    const relatedRecordType = await resolveFileContext(objectId, fileDoc.metadata);
+    const accessMetadata = {
+      ...fileDoc.metadata,
+      relatedRecordType,
+    };
+
+    if (!canAccessFile(user, accessMetadata)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
     const downloadStream = bucket.openDownloadStream(objectId);
     
     // Collect chunks

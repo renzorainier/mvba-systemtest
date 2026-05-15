@@ -3,7 +3,11 @@ import mongoose from 'mongoose';
 const AccountSchema = new mongoose.Schema({
   // The Login Credentials
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // In real app, we encrypt this. For now, plain text is fine for testing.
+  password: { type: String, required: true },
+  failedLoginAttempts: { type: Number, default: 0 },
+  lockoutUntil: { type: Date, default: null },
+  lastFailedLoginAt: { type: Date, default: null },
+  lastSuccessfulLoginAt: { type: Date, default: null },
 
   // Who are they?
   fullName: { type: String, required: true },

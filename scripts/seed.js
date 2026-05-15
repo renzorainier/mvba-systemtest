@@ -1,8 +1,19 @@
 // Run this script once to create the Admin account: node seed.js
 const mongoose = require('mongoose');
+const crypto = require('node:crypto');
 
 // 👇 UPDATE THIS IF USING LOCALHOST OR ATLAS
 const MONGODB_URI = "mongodb://admin:admin123@ac-nzerx24-shard-00-00.qhp2v7e.mongodb.net:27017,ac-nzerx24-shard-00-02.qhp2v7e.mongodb.net:27017,ac-nzerx24-shard-00-01.qhp2v7e.mongodb.net:27017/mvba-database?ssl=true&authSource=admin&retryWrites=true&w=majority";
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const iterations = 120000;
+  const hash = crypto
+    .pbkdf2Sync(password, salt, iterations, 32, 'sha256')
+    .toString('hex');
+
+  return `pbkdf2$${iterations}$${salt}$${hash}`;
+}
 
 const seedDB = async () => {
   try {
@@ -18,7 +29,7 @@ const seedDB = async () => {
     // Create the Admin
     await Account.create({
       username: "admin",
-      password: "password123", // Simple password for now
+      password: hashPassword("password123"),
       fullName: "System Administrator",
       role: "Admin"
     });
