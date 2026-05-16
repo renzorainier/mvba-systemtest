@@ -91,6 +91,9 @@ export async function POST(request) {
       address: body.address,
       admissionDate: body.admissionDate,
       learnersReferenceNumber,
+      parentGuardianName: body.parentGuardianName || '',
+      parentGuardianRelationship: body.parentGuardianRelationship || '',
+      parentGuardianContactNumber: body.parentGuardianContactNumber || '',
       totalEstimatedCost: defaultTotal,
       remainingBalance: defaultTotal,
     };

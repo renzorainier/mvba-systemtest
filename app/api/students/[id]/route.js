@@ -53,6 +53,9 @@ export async function PUT(request, { params }) {
       address: body.address,
       admissionDate: body.admissionDate,
       learnersReferenceNumber,
+      parentGuardianName: body.parentGuardianName || '',
+      parentGuardianRelationship: body.parentGuardianRelationship || '',
+      parentGuardianContactNumber: body.parentGuardianContactNumber || '',
     };
     
     const student = await Student.findByIdAndUpdate(id, studentData, { new: true, runValidators: true });

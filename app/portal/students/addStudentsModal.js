@@ -15,6 +15,9 @@ const createEmptyFormData = () => ({
   address: '',
   admissionDate: '',
   learnersReferenceNumber: '',
+  parentGuardianName: '',
+  parentGuardianRelationship: '',
+  parentGuardianContactNumber: '',
 })
 
 const generateKinderOneLrn = () => Math.floor(100000 + Math.random() * 900000).toString()
@@ -39,6 +42,9 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
         address: editingStudent.address || '',
         admissionDate: editingStudent.admissionDate?.split('T')[0] || '',
         learnersReferenceNumber: editingStudent.learnersReferenceNumber || '',
+        parentGuardianName: editingStudent.parentGuardianName || '',
+        parentGuardianRelationship: editingStudent.parentGuardianRelationship || '',
+        parentGuardianContactNumber: editingStudent.parentGuardianContactNumber || '',
       })
     } else {
       setFormData(createEmptyFormData())
@@ -205,21 +211,49 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                       </div>
                     </div>
 
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
-                      <select
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        value={formData.gradeLevel}
-                        onChange={(e) => handleGradeLevelChange(e.target.value)}
-                        disabled={loading}
-                      >
-                        <option value="">Select grade level</option>
-                        {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
-                          <option key={gradeLevel} value={gradeLevel}>
-                            {gradeLevel}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
+                        <select
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.gradeLevel}
+                          onChange={(e) => handleGradeLevelChange(e.target.value)}
+                          disabled={loading}
+                        >
+                          <option value="">Select grade level</option>
+                          {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
+                            <option key={gradeLevel} value={gradeLevel}>
+                              {gradeLevel}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Learner&apos;s Reference Number (LRN) *</label>
+                        <input
+                          type="text"
+                          placeholder={editingStudent ? 'Enter LRN' : formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN'}
+                          inputMode="numeric"
+                          maxLength={formData.gradeLevel === 'Kinder 1' ? 6 : 12}
+                          pattern={formData.gradeLevel === 'Kinder 1' ? '\\d{6}' : '\\d{12}'}
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.learnersReferenceNumber}
+                          onChange={(e) => {
+                            const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, formData.gradeLevel === 'Kinder 1' ? 6 : 12)
+                            setFormData({ ...formData, learnersReferenceNumber: digitsOnly })
+                          }}
+                          readOnly={!editingStudent && formData.gradeLevel === 'Kinder 1'}
+                          disabled={loading || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
+                        />
+                        {!editingStudent && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            {formData.gradeLevel === 'Kinder 1'
+                              ? 'Kinder 1 automatically uses a random 6-digit LRN.'
+                              : 'Kinder 2 to Grade 6 require a 12-digit LRN.'}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
@@ -246,32 +280,6 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700">Learner&apos;s Reference Number (LRN) *</label>
-                      <input
-                        type="text"
-                        placeholder={editingStudent ? 'Enter LRN' : formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN'}
-                        inputMode="numeric"
-                        maxLength={formData.gradeLevel === 'Kinder 1' ? 6 : 12}
-                        pattern={formData.gradeLevel === 'Kinder 1' ? '\\d{6}' : '\\d{12}'}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        value={formData.learnersReferenceNumber}
-                        onChange={(e) => {
-                          const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, formData.gradeLevel === 'Kinder 1' ? 6 : 12)
-                          setFormData({ ...formData, learnersReferenceNumber: digitsOnly })
-                        }}
-                        readOnly={!editingStudent && formData.gradeLevel === 'Kinder 1'}
-                        disabled={loading || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
-                      />
-                      {!editingStudent && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          {formData.gradeLevel === 'Kinder 1'
-                            ? 'Kinder 1 automatically uses a random 6-digit LRN.'
-                            : 'Kinder 2 to Kinder 6 require a 12-digit LRN.'}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700">Address *</label>
                       <textarea
                         placeholder="Street address"
@@ -281,6 +289,46 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         disabled={loading}
                       />
+                    </div>
+
+                    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <h4 className="mb-4 text-sm font-semibold text-gray-900">Parent / Guardian Contact Information</h4>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Parent / Guardian Name</label>
+                          <input
+                            type="text"
+                            placeholder="Full name"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.parentGuardianName}
+                            onChange={(e) => setFormData({ ...formData, parentGuardianName: e.target.value })}
+                            disabled={loading}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Relationship</label>
+                          <input
+                            type="text"
+                            placeholder="Mother, Father, Guardian"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            value={formData.parentGuardianRelationship}
+                            onChange={(e) => setFormData({ ...formData, parentGuardianRelationship: e.target.value })}
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700">Contact Number</label>
+                        <input
+                          type="text"
+                          placeholder="09xxxxxxxxx"
+                          inputMode="numeric"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.parentGuardianContactNumber}
+                          onChange={(e) => setFormData({ ...formData, parentGuardianContactNumber: e.target.value.replace(/\D/g, '') })}
+                          disabled={loading}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

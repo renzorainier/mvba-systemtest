@@ -15,6 +15,9 @@ const StudentSchema = new mongoose.Schema({
   address: { type: String, required: [true, "Address is required"] },
   admissionDate: { type: Date, required: [true, "Admission date is required"] },
   learnersReferenceNumber: { type: String, required: [true, "LRN is required"], unique: true, sparse: true },
+  parentGuardianName: { type: String, required: false, default: '' },
+  parentGuardianRelationship: { type: String, required: false, default: '' },
+  parentGuardianContactNumber: { type: String, required: false, default: '' },
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
 });
