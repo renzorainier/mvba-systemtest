@@ -67,7 +67,7 @@ export async function POST(request) {
       : normalizedLrn;
 
     if (gradeLevel !== KINDER_ONE_LEVEL && !isValidKinderTwoToSixLrn(learnersReferenceNumber)) {
-      return NextResponse.json({ success: false, error: 'Kinder 2 to Kinder 6 LRN must be a 12-digit number' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number' }, { status: 400 });
     }
 
     if (gradeLevel === KINDER_ONE_LEVEL && !isValidKinderOneLrn(learnersReferenceNumber)) {

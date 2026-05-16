@@ -18,27 +18,28 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Student not found' }, { status: 404 });
     }
 
-    const learnersReferenceNumber = normalizeLearnersReferenceNumber(body.learnersReferenceNumber);
+    const gradeLevel = String(body.gradeLevel || existingStudent.gradeLevel || '').trim();
+    const learnersReferenceNumber = normalizeLearnersReferenceNumber(body.learnersReferenceNumber || existingStudent.learnersReferenceNumber);
 
-    if (learnersReferenceNumber && learnersReferenceNumber !== existingStudent.learnersReferenceNumber) {
-      const duplicateStudent = await Student.findOne({
-        learnersReferenceNumber,
-        _id: { $ne: id },
-      });
+    if (!gradeLevel) {
+      return NextResponse.json({ success: false, error: 'Grade level is required' }, { status: 400 });
+    }
 
-      if (duplicateStudent) {
-        return NextResponse.json({ success: false, error: 'LRN already exists' }, { status: 409 });
-      }
+    if (gradeLevel === 'Kinder 1' && !isValidKinderOneLrn(learnersReferenceNumber)) {
+      return NextResponse.json({ success: false, error: 'Kinder 1 LRN must be a 6-digit number' }, { status: 400 });
+    }
 
-      const gradeLevel = String(body.gradeLevel || existingStudent.gradeLevel || '').trim();
+    if (gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(learnersReferenceNumber)) {
+      return NextResponse.json({ success: false, error: 'Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number' }, { status: 400 });
+    }
 
-      if (gradeLevel === 'Kinder 1' && !isValidKinderOneLrn(learnersReferenceNumber)) {
-        return NextResponse.json({ success: false, error: 'Kinder 1 LRN must be a 6-digit number' }, { status: 400 });
-      }
+    const duplicateStudent = await Student.findOne({
+      learnersReferenceNumber,
+      _id: { $ne: id },
+    });
 
-      if (gradeLevel !== 'Kinder 1' && gradeLevel && !isValidKinderTwoToSixLrn(learnersReferenceNumber)) {
-        return NextResponse.json({ success: false, error: 'Kinder 2 to Kinder 6 LRN must be a 12-digit number' }, { status: 400 });
-      }
+    if (duplicateStudent) {
+      return NextResponse.json({ success: false, error: 'LRN already exists' }, { status: 409 });
     }
     
     // Map form field names to database field names
@@ -47,11 +48,11 @@ export async function PUT(request, { params }) {
       lastName: body.lastName,
       middleName: body.middleName,
       gender: body.gender,
-      ...(body.gradeLevel ? { gradeLevel: body.gradeLevel } : {}),
+      gradeLevel,
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       admissionDate: body.admissionDate,
-      learnersReferenceNumber: learnersReferenceNumber || existingStudent.learnersReferenceNumber,
+      learnersReferenceNumber,
     };
     
     const student = await Student.findByIdAndUpdate(id, studentData, { new: true, runValidators: true });

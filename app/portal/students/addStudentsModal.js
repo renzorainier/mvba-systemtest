@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-const GRADE_LEVEL_OPTIONS = ['Kinder 1', 'Kinder 2', 'Kinder 3', 'Kinder 4', 'Kinder 5', 'Kinder 6']
+const GRADE_LEVEL_OPTIONS = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']
 
 const createEmptyFormData = () => ({
   firstName: '',
@@ -81,7 +81,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
         }
 
         if (formData.gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(formData.learnersReferenceNumber)) {
-          setError('Kinder 2 to Kinder 6 LRN must be a 12-digit number')
+          setError('Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number')
           setLoading(false)
           return
         }
@@ -205,24 +205,22 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                       </div>
                     </div>
 
-                    {!editingStudent && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
-                        <select
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.gradeLevel}
-                          onChange={(e) => handleGradeLevelChange(e.target.value)}
-                          disabled={loading}
-                        >
-                          <option value="">Select grade level</option>
-                          {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
-                            <option key={gradeLevel} value={gradeLevel}>
-                              {gradeLevel}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
+                      <select
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={formData.gradeLevel}
+                        onChange={(e) => handleGradeLevelChange(e.target.value)}
+                        disabled={loading}
+                      >
+                        <option value="">Select grade level</option>
+                        {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
+                          <option key={gradeLevel} value={gradeLevel}>
+                            {gradeLevel}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
