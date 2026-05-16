@@ -72,12 +72,20 @@ export default function App() {
   }, [searchTerm]);
 
   const getStatusColor = (status) => {
-    if (status === 'Enrolled') {
-      return 'bg-green-100 text-green-600';
-    } else if (status === 'Pending') {
-      return 'bg-yellow-100 text-yellow-600';
+    switch (status) {
+      case 'Enrolled':
+      case 'Approved':
+        return 'border-green-200 bg-green-50 text-green-700 focus:border-green-500 focus:ring-green-500';
+      case 'Dropped':
+        return 'border-red-200 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-500';
+      case 'Pending':
+      case 'For payment':
+        return 'border-yellow-200 bg-yellow-50 text-yellow-700 focus:border-yellow-500 focus:ring-yellow-500';
+      case 'Interview':
+        return 'border-gray-300 bg-white text-gray-700 focus:border-blue-500 focus:ring-blue-500';
+      default:
+        return 'border-gray-300 bg-white text-gray-700 focus:border-blue-500 focus:ring-blue-500';
     }
-    return 'bg-gray-100 text-gray-600';
   };
 
   const STATUS_OPTIONS = [
@@ -203,7 +211,7 @@ export default function App() {
                             value={enrollment.status}
                             onChange={(e) => updateEnrollmentStatus(enrollment, e.target.value)}
                             disabled={statusUpdating === enrollment._id}
-                            className={`px-2 py-1 text-sm rounded-full ${getStatusColor(enrollment.status)} border border-transparent focus:outline-none`}
+                            className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 disabled:opacity-60 ${getStatusColor(enrollment.status)}`}
                           >
                             {STATUS_OPTIONS.map((opt) => (
                               <option key={opt} value={opt}>{opt}</option>

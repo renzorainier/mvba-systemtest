@@ -14,6 +14,22 @@ export default function AddEnrollmentsModal({
   onClose,
   editingEnrollment,
 }) {
+  const getStatusStyles = (status) => {
+    switch (status) {
+      case 'Enrolled':
+      case 'Approved':
+        return 'border-green-200 bg-green-50 text-green-700 focus:border-green-500 focus:ring-green-500';
+      case 'Dropped':
+        return 'border-red-200 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-500';
+      case 'Pending':
+      case 'For payment':
+        return 'border-yellow-200 bg-yellow-50 text-yellow-700 focus:border-yellow-500 focus:ring-yellow-500';
+      case 'Interview':
+        return 'border-gray-300 bg-white text-gray-700 focus:border-blue-500 focus:ring-blue-500';
+      default:
+        return 'border-gray-300 bg-white text-gray-700 focus:border-blue-500 focus:ring-blue-500';
+    }
+  };
   const [formData, setFormData] = useState({
     learnersReferenceNumber: "",
     sectionId: "TBA",
@@ -350,7 +366,7 @@ export default function AddEnrollmentsModal({
                         Status *
                       </label>
                       <select
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className={`mt-1 w-full px-3 py-2 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${getStatusStyles(formData.status)}`}
                         value={formData.status}
                         onChange={(e) =>
                           setFormData({ ...formData, status: e.target.value })
@@ -363,6 +379,7 @@ export default function AddEnrollmentsModal({
                         <option value="For payment">For payment</option>
                         <option value="Enrolled">Enrolled</option>
                         <option value="Dropped">Dropped</option>
+                        <option value="Pending">Pending</option>
                       </select>
                     </div>
 
