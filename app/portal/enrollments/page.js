@@ -11,6 +11,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusUpdating, setStatusUpdating] = useState(null);
 
   const openModal = () => {
     setEditingEnrollment(null);
@@ -77,6 +78,48 @@ export default function App() {
       return 'bg-yellow-100 text-yellow-600';
     }
     return 'bg-gray-100 text-gray-600';
+  };
+
+  const STATUS_OPTIONS = [
+    'Interview',
+    'Approved',
+    'For payment',
+    'Enrolled',
+    'Dropped',
+    'Pending',
+  ];
+
+  const updateEnrollmentStatus = async (enrollment, newStatus) => {
+    try {
+      setStatusUpdating(enrollment._id);
+
+      // Prepare body with required fields to avoid overwriting with undefined
+      const body = {
+        learnersReferenceNumber: enrollment.learnersReferenceNumber,
+        sectionId: enrollment.sectionId,
+        schoolYear: enrollment.schoolYear,
+        enrollmentDate: enrollment.enrollmentDate,
+        status: newStatus,
+      };
+
+
+      const res = await fetch(`/api/enrollments/${enrollment._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update status');
+
+      // Update local state
+      setEnrollments((prev) => prev.map((e) => (e._id === enrollment._id ? { ...e, status: newStatus } : e)));
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      alert(err.message || 'Failed to update status');
+    } finally {
+      setStatusUpdating(null);
+    }
   };
 
   return (
@@ -155,9 +198,24 @@ export default function App() {
                         {new Date(enrollment.enrollmentDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(enrollment.status)}`}>
-                          {enrollment.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={enrollment.status}
+                            onChange={(e) => updateEnrollmentStatus(enrollment, e.target.value)}
+                            disabled={statusUpdating === enrollment._id}
+                            className={`px-2 py-1 text-sm rounded-full ${getStatusColor(enrollment.status)} border border-transparent focus:outline-none`}
+                          >
+                            {STATUS_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                          {statusUpdating === enrollment._id && (
+                            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button

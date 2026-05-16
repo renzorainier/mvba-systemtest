@@ -44,6 +44,24 @@ export async function POST(request) {
     try {
         await dbConnect();
         const body = await request.json();
+        // basic validation
+        if (!body.learnersReferenceNumber) {
+            return NextResponse.json({ success: false, error: "Learner's reference number is required" }, { status: 400 });
+        }
+
+        // Prevent more than one enrollment per student
+        const existing = await Enrollment.findOne({ learnersReferenceNumber: body.learnersReferenceNumber }).lean();
+        if (existing) {
+            return NextResponse.json({ success: false, error: 'Student already has an enrollment' }, { status: 400 });
+        }
+
+        // Capacity check for section: max 15 students
+        if (body.sectionId) {
+            const count = await Enrollment.countDocuments({ sectionId: body.sectionId });
+            if (count >= 15) {
+                return NextResponse.json({ success: false, error: 'Selected section is full (15 students)' }, { status: 400 });
+            }
+        }
 
         const enrollmentData = {
             enrollmentId: body.enrollmentId || `E-${Date.now()}`,

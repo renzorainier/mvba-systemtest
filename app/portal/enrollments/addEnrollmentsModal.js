@@ -25,6 +25,8 @@ export default function AddEnrollmentsModal({
   // New state to hold the fetched students and sections
   const [students, setStudents] = useState([]);
   const [sections, setSections] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [isDuplicate, setIsDuplicate] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -79,8 +81,47 @@ export default function AddEnrollmentsModal({
           if (data.success) setSections(data.data);
         })
         .catch((err) => console.error("Failed to fetch sections:", err));
+
+      // Fetch Enrollments to allow client-side duplicate checks
+      fetch("/api/enrollments")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setEnrollments(data.data);
+        })
+        .catch((err) => console.error("Failed to fetch enrollments:", err));
     }
   }, [open]);
+
+  // When enrollments or sections change, annotate sections with current student counts
+  useEffect(() => {
+    if (sections.length > 0 && enrollments.length > 0) {
+      const counts = {};
+      enrollments.forEach((e) => {
+        const sid = e.sectionId;
+        if (!sid) return;
+        counts[sid] = (counts[sid] || 0) + 1;
+      });
+
+      setSections((prev) => prev.map((s) => ({ ...s, _studentCount: counts[s.sectionId] || 0 })));
+    }
+  }, [sections.length, enrollments]);
+
+  // Client-side check: if adding (not editing) and selected student already has an enrollment, show error
+  useEffect(() => {
+    if (formData.learnersReferenceNumber && enrollments.length > 0) {
+      const exists = enrollments.find((e) => {
+        const sameStudent = e.learnersReferenceNumber === formData.learnersReferenceNumber;
+        const sameRecord = editingEnrollment && e._id === editingEnrollment._id;
+        return sameStudent && !sameRecord;
+      });
+      setIsDuplicate(Boolean(exists));
+    } else {
+      setIsDuplicate(false);
+    }
+
+    // clear form-level error when no LRN selected
+    if (!formData.learnersReferenceNumber) setError('');
+  }, [formData.learnersReferenceNumber, enrollments, editingEnrollment]);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -103,6 +144,24 @@ export default function AddEnrollmentsModal({
       const url = editingEnrollment
         ? `/api/enrollments/${editingEnrollment._id}`
         : "/api/enrollments";
+
+      // Capacity check: ensure selected section has space (15 max)
+      const selectedSectionId = formData.sectionId;
+      if (selectedSectionId && selectedSectionId !== 'TBA') {
+        const sectionObj = sections.find(s => (s.sectionId || s._id) === selectedSectionId);
+        const currentCount = sectionObj?._studentCount || 0;
+        const isChangingSection = editingEnrollment && editingEnrollment.sectionId !== selectedSectionId;
+        if (!editingEnrollment && currentCount >= 15) {
+          setError('Selected section is full (15 students).');
+          setLoading(false);
+          return;
+        }
+        if (editingEnrollment && isChangingSection && currentCount >= 15) {
+          setError('Selected section is full (15 students).');
+          setLoading(false);
+          return;
+        }
+      }
 
       const response = await fetch(url, {
         method: method,
@@ -168,6 +227,11 @@ export default function AddEnrollmentsModal({
                       {error}
                     </div>
                   )}
+                  {isDuplicate && (
+                    <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
+                      Student already has an enrollment
+                    </div>
+                  )}
 
                   <div className="mt-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
@@ -220,19 +284,25 @@ export default function AddEnrollmentsModal({
                           disabled={loading || !selectedStudent}
                         >
                           <option value="TBA">TBA</option>
-                          {selectedStudent && visibleSections.length === 0 ? (
+                            {selectedStudent && visibleSections.length === 0 ? (
                             <option value="" disabled>
                               No sections for {selectedStudent.gradeLevel}
                             </option>
                           ) : null}
-                          {visibleSections.map((section) => (
-                            <option
-                              key={section._id}
-                              value={section.sectionId || section._id}
-                            >
-                              {section.sectionName || section.name}
-                            </option>
-                          ))}
+                            {visibleSections.map((section) => {
+                              const count = section._studentCount || 0;
+                              const isFull = count >= 15;
+                              const isSameAsEditing = editingEnrollment && (editingEnrollment.sectionId === (section.sectionId || section._id));
+                              return (
+                                <option
+                                  key={section._id}
+                                  value={section.sectionId || section._id}
+                                  disabled={isFull && !isSameAsEditing}
+                                >
+                                  {section.sectionName || section.name} {isFull ? '(Full)' : ''}
+                                </option>
+                              );
+                            })}
                         </select>
                       </div>
                     </div>
@@ -309,7 +379,7 @@ export default function AddEnrollmentsModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading || isDuplicate}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
                 {loading

@@ -30,8 +30,12 @@ export default function Dashboard() {
 
     // Listen for section added event
     window.addEventListener('sectionAdded', fetchSections);
+    window.addEventListener('enrollmentAdded', fetchSections);
 
-    return () => window.removeEventListener('sectionAdded', fetchSections);
+    return () => {
+      window.removeEventListener('sectionAdded', fetchSections);
+      window.removeEventListener('enrollmentAdded', fetchSections);
+    };
   }, []);
 
   const fetchSections = async () => {
@@ -41,7 +45,29 @@ export default function Dashboard() {
       const data = await response.json();
 
       if(data.success) {
-        setSections(data.data);
+        const sectionsData = data.data;
+
+        // also fetch enrollments to compute student counts per section
+        try {
+          const enrRes = await fetch('/api/enrollments');
+          const enrData = await enrRes.json();
+          if (enrData.success) {
+            const counts = {};
+            enrData.data.forEach((e) => {
+              const sid = e.sectionId;
+              if (!sid) return;
+              counts[sid] = (counts[sid] || 0) + 1;
+            });
+            // attach _studentCount to each section
+            sectionsData.forEach((s) => {
+              s._studentCount = counts[s.sectionId] || 0;
+            });
+          }
+        } catch (err) {
+          console.error('Failed to fetch enrollments for counts:', err);
+        }
+
+        setSections(sectionsData);
       }
     } catch (error) {
       console.error('Failed to fetch sections:', error);
@@ -117,6 +143,9 @@ export default function Dashboard() {
                       Room Number
                     </th>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Students
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                       Action
                     </th>
                   </tr>
@@ -140,6 +169,11 @@ export default function Dashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {section.roomNumber}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="text-sm text-gray-700 font-medium">
+                            {`${section._studentCount ?? 0}/15`}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             onClick={() => openEditModal(section)}
@@ -152,13 +186,13 @@ export default function Dashboard() {
                     ))
                   ) : loading ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                         Loading sections...
                       </td>
                     </tr>
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                         No Sections found matching your search.
                       </td>
                     </tr>
