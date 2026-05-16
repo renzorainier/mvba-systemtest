@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 const ScheduleItemSchema = new mongoose.Schema({
   id: { type: String }, // Temporary ID from frontend
   subject: { type: String, required: true },
-  teacher: { type: String, default: '' }, // Empty for breaks
   day: { type: String, required: true },
   startTime: { type: String, required: true },
   endTime: { type: String, required: true },

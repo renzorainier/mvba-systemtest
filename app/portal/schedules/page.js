@@ -26,11 +26,8 @@ export default function ScheduleManagement() {
   const [selectedGrade, setSelectedGrade] = useState('Kinder 1'); // Updated default grade
   
   const subjects = ['Math', 'Science', 'English', 'History', 'PE', 'Arts', 'Computer'];
-  const teachers = ['TCH-1001 (Mr. Smith)', 'TCH-1002 (Ms. Johnson)', 'TCH-1003 (Dr. Brown)'];
-
   const [newClass, setNewClass] = useState({
     subject: '',
-    teacher: '',
     day: 'Monday',
     startTime: '08:00',
     endTime: '09:00'
@@ -80,7 +77,7 @@ export default function ScheduleManagement() {
   };
 
   const handleAddClass = () => {
-    if (!newClass.subject || (!newClass.teacher && newClass.type !== 'recess' && newClass.type !== 'lunch')) return;
+    if (!newClass.subject) return;
     
     setScheduleItems([
       ...scheduleItems, 
@@ -106,13 +103,12 @@ export default function ScheduleManagement() {
     days.forEach(day => {
       slots.forEach(slot => {
         if (slot.type === 'recess') {
-          newItems.push({ id: (idCounter++).toString(), subject: 'RECESS', teacher: '', day, startTime: slot.start, endTime: slot.end, type: 'recess' });
+          newItems.push({ id: (idCounter++).toString(), subject: 'RECESS', day, startTime: slot.start, endTime: slot.end, type: 'recess' });
         } else if (slot.type === 'lunch') {
-          newItems.push({ id: (idCounter++).toString(), subject: 'LUNCH BREAK', teacher: '', day, startTime: slot.start, endTime: slot.end, type: 'lunch' });
+          newItems.push({ id: (idCounter++).toString(), subject: 'LUNCH BREAK', day, startTime: slot.start, endTime: slot.end, type: 'lunch' });
         } else {
           const randomSub = subjects[Math.floor(Math.random() * subjects.length)];
-          const randomTeach = teachers[Math.floor(Math.random() * teachers.length)];
-          newItems.push({ id: (idCounter++).toString(), subject: randomSub, teacher: randomTeach, day, startTime: slot.start, endTime: slot.end, type: 'class' });
+          newItems.push({ id: (idCounter++).toString(), subject: randomSub, day, startTime: slot.start, endTime: slot.end, type: 'class' });
         }
       });
     });
@@ -196,7 +192,6 @@ export default function ScheduleManagement() {
         <div key={item.id} className={`${bgClass} p-2 mb-2 rounded shadow-sm text-xs relative group transition-all hover:shadow-md`}>
           <div className={`font-bold ${textClass}`}>{item.subject}</div>
           <div className="text-gray-600 mt-1">{item.startTime} - {item.endTime}</div>
-          {item.type === 'class' && <div className="text-gray-500 truncate">{item.teacher}</div>}
           
           <button 
             onClick={() => setScheduleItems(scheduleItems.filter(i => i.id !== item.id))}
@@ -390,13 +385,7 @@ export default function ScheduleManagement() {
                       {subjects.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Teacher</label>
-                    <select className="w-full border border-gray-300 rounded p-2 text-sm" value={newClass.teacher} onChange={(e) => setNewClass({...newClass, teacher: e.target.value})}>
-                      <option value="">Select Teacher...</option>
-                      {teachers.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
+                  
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Day</label>
                     <div className="grid grid-cols-3 gap-2">
