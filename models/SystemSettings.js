@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { createDefaultTuitionPlans } from '@/lib/tuition-settings';
 
 const BreakdownItemSchema = new mongoose.Schema(
   {
@@ -8,11 +9,45 @@ const BreakdownItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const TuitionLineItemSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true, trim: true },
+    amount: { type: Number, required: true, min: 0 },
+  }
+);
+
+const TuitionCustomFieldSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true, trim: true },
+    value: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+const TuitionPlanSchema = new mongoose.Schema(
+  {
+    gradeLabel: { type: String, required: true, trim: true },
+    applicableGrades: { type: [String], default: [] },
+    totalBaseCost: { type: Number, required: true, min: 0 },
+    lineItems: { type: [TuitionLineItemSchema], default: [] },
+    amountDueBeforeSchool: { type: Number, default: 0, min: 0 },
+    remainingBalanceDue: { type: Number, default: 0, min: 0 },
+    monthlyPaymentCount: { type: Number, default: 0, min: 0 },
+    monthlyPaymentAmount: { type: Number, default: 0, min: 0 },
+    monthlyPaymentMonths: { type: String, default: '' },
+    customFields: { type: [TuitionCustomFieldSchema], default: [] },
+    notes: { type: String, default: '' },
+  },
+  { _id: true }
+);
+
 const SystemSettingsSchema = new mongoose.Schema(
   {
     key: { type: String, required: true, unique: true, default: 'tuition-breakdown' },
     title: { type: String, required: true, default: 'Sample Tuition Fee Breakdown (Kindergarten to Grade 6)' },
     currency: { type: String, required: true, default: 'PHP' },
+    currentSchoolYear: { type: String, required: true, default: '2025-2026' },
+    tuitionPlans: { type: [TuitionPlanSchema], default: createDefaultTuitionPlans },
     breakdown: { type: [BreakdownItemSchema], default: [] },
   },
   {
@@ -36,11 +71,25 @@ export const DEFAULT_SETTINGS_PAYLOAD = {
   key: 'tuition-breakdown',
   title: 'Sample Tuition Fee Breakdown (Kindergarten to Grade 6)',
   currency: 'PHP',
+  currentSchoolYear: '2025-2026',
+  tuitionPlans: createDefaultTuitionPlans(),
   breakdown: DEFAULT_TUITION_BREAKDOWN,
 };
 
 export const calculateTotalFromBreakdown = (breakdown = []) => {
-  return breakdown.reduce((total, item) => total + Number(item.amount || 0), 0);
+  return breakdown.reduce((total, item) => {
+    const amount = Number(item?.amount ?? item?.totalBaseCost ?? 0);
+
+    if (amount > 0) {
+      return total + amount;
+    }
+
+    if (Array.isArray(item?.lineItems)) {
+      return total + item.lineItems.reduce((sum, lineItem) => sum + Number(lineItem?.amount || 0), 0);
+    }
+
+    return total;
+  }, 0);
 };
 
 const SystemSettings =

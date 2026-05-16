@@ -1,13 +1,74 @@
 import dbConnect from '@/lib/mongodb';
 import Account from '@/models/Account';
-import SystemSettings, {
-  calculateTotalFromBreakdown,
-  DEFAULT_SETTINGS_PAYLOAD,
-} from '@/models/SystemSettings';
+import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import {
+  calculateTotalFromTuitionPlans,
+  createDefaultTuitionPlans,
+  normalizeTuitionPlans,
+} from '@/lib/tuition-settings';
 
 const SETTINGS_KEY = 'tuition-breakdown';
+const DEFAULT_CURRENT_SCHOOL_YEAR = '2025-2026';
+
+const normalizeSchoolYear = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4})\s*-\s*(\d{4})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return `${match[1]}-${match[2]}`;
+};
+
+const isValidSchoolYear = (value) => {
+  const normalized = normalizeSchoolYear(value);
+
+  if (!normalized) {
+    return false;
+  }
+
+  const [startYearText, endYearText] = normalized.split('-');
+  const startYear = Number(startYearText);
+  const endYear = Number(endYearText);
+
+  return Number.isInteger(startYear) && Number.isInteger(endYear) && endYear === startYear + 1;
+};
+
+const ensureWritableSchoolYear = async (request) => {
+  const token = request?.cookies?.get('auth_token')?.value;
+
+  if (!token) {
+    return {
+      allowed: false,
+      response: NextResponse.json({ success: false, error: 'Only admins can update system settings.' }, { status: 403 }),
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(token);
+
+    if (parsed?.role !== 'Admin') {
+      return {
+        allowed: false,
+        response: NextResponse.json({ success: false, error: 'Only admins can update system settings.' }, { status: 403 }),
+      };
+    }
+
+    return { allowed: true };
+  } catch {
+    return {
+      allowed: false,
+      response: NextResponse.json({ success: false, error: 'Only admins can update system settings.' }, { status: 403 }),
+    };
+  }
+};
 
 const isAdminRequest = async () => {
   const cookieStore = await cookies();
@@ -46,13 +107,13 @@ const getAuthenticatedAdmin = async () => {
   }
 };
 
-const sanitizeBreakdown = (inputBreakdown = []) => {
-  return inputBreakdown
-    .map((item) => ({
-      label: String(item?.label || '').trim(),
-      amount: Number(item?.amount || 0),
-    }))
-    .filter((item) => item.label.length > 0);
+const sanitizeTuitionPlans = (inputPlans = []) => {
+  return normalizeTuitionPlans(inputPlans).map((plan) => ({
+    ...plan,
+    applicableGrades: Array.isArray(plan.applicableGrades) ? plan.applicableGrades : [],
+    lineItems: Array.isArray(plan.lineItems) ? plan.lineItems : [],
+    customFields: Array.isArray(plan.customFields) ? plan.customFields : [],
+  }));
 };
 
 const ensureSettings = async () => {
@@ -70,7 +131,8 @@ export async function GET() {
     await dbConnect();
 
     const settings = await ensureSettings();
-    const totalEstimatedCost = calculateTotalFromBreakdown(settings.breakdown);
+    const tuitionPlans = sanitizeTuitionPlans(settings.tuitionPlans?.length ? settings.tuitionPlans : createDefaultTuitionPlans());
+    const totalEstimatedCost = calculateTotalFromTuitionPlans(tuitionPlans);
 
     return NextResponse.json(
       {
@@ -80,7 +142,9 @@ export async function GET() {
           key: settings.key,
           title: settings.title,
           currency: settings.currency,
-          breakdown: settings.breakdown,
+          currentSchoolYear: normalizeSchoolYear(settings.currentSchoolYear) || DEFAULT_CURRENT_SCHOOL_YEAR,
+          tuitionPlans,
+          breakdown: tuitionPlans,
           totalEstimatedCost,
         },
       },
@@ -93,6 +157,12 @@ export async function GET() {
 
 export async function PUT(request) {
   try {
+    const schoolYearAccess = await ensureWritableSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return schoolYearAccess.response;
+    }
+
     const isAdmin = await isAdminRequest();
 
     if (!isAdmin) {
@@ -102,8 +172,9 @@ export async function PUT(request) {
     await dbConnect();
 
     const body = await request.json();
-    const sanitizedBreakdown = sanitizeBreakdown(body.breakdown);
+    const sanitizedTuitionPlans = sanitizeTuitionPlans(body.tuitionPlans || []);
     const currentPassword = String(body.currentPassword || '').trim();
+    const currentSchoolYear = normalizeSchoolYear(body.currentSchoolYear) || DEFAULT_CURRENT_SCHOOL_YEAR;
 
     if (!currentPassword) {
       return NextResponse.json({ success: false, error: 'Current password is required.' }, { status: 400 });
@@ -115,18 +186,20 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Current password is incorrect.' }, { status: 401 });
     }
 
-    if (sanitizedBreakdown.length === 0) {
-      return NextResponse.json({ success: false, error: 'Breakdown must have at least one item.' }, { status: 400 });
+    if (sanitizedTuitionPlans.length === 0) {
+      return NextResponse.json({ success: false, error: 'Tuition plans must have at least one grade block.' }, { status: 400 });
     }
 
-    if (sanitizedBreakdown.some((item) => Number.isNaN(item.amount) || item.amount < 0)) {
-      return NextResponse.json({ success: false, error: 'Each amount must be a valid non-negative number.' }, { status: 400 });
+    if (!isValidSchoolYear(currentSchoolYear)) {
+      return NextResponse.json({ success: false, error: 'Current school year must be in YYYY-YYYY format.' }, { status: 400 });
     }
 
     const payload = {
       title: String(body.title || DEFAULT_SETTINGS_PAYLOAD.title).trim() || DEFAULT_SETTINGS_PAYLOAD.title,
       currency: String(body.currency || DEFAULT_SETTINGS_PAYLOAD.currency).trim() || DEFAULT_SETTINGS_PAYLOAD.currency,
-      breakdown: sanitizedBreakdown,
+      currentSchoolYear,
+      tuitionPlans: sanitizedTuitionPlans,
+      breakdown: [],
     };
 
     const settings = await SystemSettings.findOneAndUpdate(
@@ -135,7 +208,8 @@ export async function PUT(request) {
       { new: true, upsert: true }
     );
 
-    const totalEstimatedCost = calculateTotalFromBreakdown(settings.breakdown);
+    const tuitionPlans = sanitizeTuitionPlans(settings.tuitionPlans?.length ? settings.tuitionPlans : createDefaultTuitionPlans());
+    const totalEstimatedCost = calculateTotalFromTuitionPlans(tuitionPlans);
 
     return NextResponse.json(
       {
@@ -145,7 +219,9 @@ export async function PUT(request) {
           key: settings.key,
           title: settings.title,
           currency: settings.currency,
-          breakdown: settings.breakdown,
+          currentSchoolYear: normalizeSchoolYear(settings.currentSchoolYear) || DEFAULT_CURRENT_SCHOOL_YEAR,
+          tuitionPlans,
+          breakdown: tuitionPlans,
           totalEstimatedCost,
         },
       },

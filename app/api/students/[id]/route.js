@@ -5,7 +5,27 @@ import {
   isValidKinderTwoToSixLrn,
   normalizeLearnersReferenceNumber,
 } from '@/lib/student-identifiers';
+import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
+import { calculateTotalFromTuitionPlans, createDefaultTuitionPlans, getTuitionAmountForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import { NextResponse } from 'next/server';
+
+const SETTINGS_KEY = 'tuition-breakdown';
+
+const getTuitionPlans = async () => {
+  const settings = await SystemSettings.findOne({ key: SETTINGS_KEY });
+  return normalizeTuitionPlans(settings?.tuitionPlans?.length ? settings.tuitionPlans : DEFAULT_SETTINGS_PAYLOAD.tuitionPlans || createDefaultTuitionPlans());
+};
+
+const getDefaultTotal = async () => {
+  const tuitionPlans = await getTuitionPlans();
+  return calculateTotalFromTuitionPlans(tuitionPlans);
+};
+
+const getDefaultTotalForGrade = async (gradeLevel) => {
+  const tuitionPlans = await getTuitionPlans();
+  const fallbackTotal = calculateTotalFromTuitionPlans(tuitionPlans);
+  return getTuitionAmountForGrade(tuitionPlans, gradeLevel, fallbackTotal);
+};
 
 export async function PUT(request, { params }) {
   try {
@@ -41,6 +61,8 @@ export async function PUT(request, { params }) {
     if (duplicateStudent) {
       return NextResponse.json({ success: false, error: 'LRN already exists' }, { status: 409 });
     }
+
+    const defaultTotal = await getDefaultTotalForGrade(gradeLevel);
     
     // Map form field names to database field names
     const studentData = {
@@ -53,6 +75,8 @@ export async function PUT(request, { params }) {
       address: body.address,
       admissionDate: body.admissionDate,
       learnersReferenceNumber,
+      totalEstimatedCost: defaultTotal,
+      remainingBalance: defaultTotal,
       parentGuardianName: body.parentGuardianName || '',
       parentGuardianRelationship: body.parentGuardianRelationship || '',
       parentGuardianContactNumber: body.parentGuardianContactNumber || '',
