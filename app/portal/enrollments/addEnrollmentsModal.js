@@ -29,6 +29,16 @@ export default function AddEnrollmentsModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const selectedStudent = students.find(
+    (student) =>
+      student.learnersReferenceNumber === formData.learnersReferenceNumber ||
+      student._id === formData.learnersReferenceNumber
+  );
+
+  const visibleSections = selectedStudent?.gradeLevel
+    ? sections.filter((section) => section.gradeLevel === selectedStudent.gradeLevel)
+    : [];
+
   // Populate form when editing
   useEffect(() => {
     if (editingEnrollment) {
@@ -170,10 +180,11 @@ export default function AddEnrollmentsModal({
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.learnersReferenceNumber}
                           onChange={(e) =>
-                            setFormData({
-                              ...formData,
+                            setFormData((prev) => ({
+                              ...prev,
                               learnersReferenceNumber: e.target.value,
-                            })
+                              sectionId: "TBA",
+                            }))
                           }
                           disabled={loading || students.length === 0}
                         >
@@ -206,10 +217,15 @@ export default function AddEnrollmentsModal({
                               sectionId: e.target.value,
                             })
                           }
-                          disabled={loading}
+                          disabled={loading || !selectedStudent}
                         >
                           <option value="TBA">TBA</option>
-                          {sections.map((section) => (
+                          {selectedStudent && visibleSections.length === 0 ? (
+                            <option value="" disabled>
+                              No sections for {selectedStudent.gradeLevel}
+                            </option>
+                          ) : null}
+                          {visibleSections.map((section) => (
                             <option
                               key={section._id}
                               value={section.sectionId || section._id}
