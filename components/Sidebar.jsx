@@ -11,7 +11,8 @@ import {
   Settings, 
   HelpCircle, 
   LogOut, 
-  Calendar 
+  Calendar,
+  Layers3
 } from 'lucide-react';
 
 export default function Sidebar({ userRole = 'Admin' }) {
@@ -32,6 +33,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
     { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Teacher Management', href: '/portal/teachers', icon: GraduationCap, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Section Management', href: '/portal/sections', icon: School, allowedRoles: ['Admin', 'Registrar'] },
+    { name: 'Class Assignments', href: '/portal/classes', icon: Layers3, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Schedule Management', href: '/portal/schedules', icon: Calendar, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Financials', href: '/portal/financials', icon: Wallet, allowedRoles: ['Admin', 'Cashier'] },
     { name: 'System Settings', href: '/portal/system', icon: Settings, allowedRoles: ['Admin'] },
