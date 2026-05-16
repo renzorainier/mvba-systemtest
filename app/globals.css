@@ -32,3 +32,16 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Style uneditable form controls (both disabled and readonly) to appear greyed */
+@layer components {
+  input[disabled], textarea[disabled], select[disabled],
+  input[readonly], textarea[readonly], select[readonly] {
+    @apply bg-slate-100 text-slate-600 cursor-not-allowed;
+  }
+
+  /* For custom elements that may use aria-disabled */
+  [aria-disabled="true"] {
+    @apply bg-slate-100 text-slate-600 cursor-not-allowed;
+  }
+}
