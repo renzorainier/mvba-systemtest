@@ -3,17 +3,28 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
+const GRADE_LEVEL_OPTIONS = ['Kinder 1', 'Kinder 2', 'Kinder 3', 'Kinder 4', 'Kinder 5', 'Kinder 6']
+
+const createEmptyFormData = () => ({
+  firstName: '',
+  lastName: '',
+  middleName: '',
+  gender: '',
+  gradeLevel: '',
+  dateOfBirth: '',
+  address: '',
+  admissionDate: '',
+  learnersReferenceNumber: '',
+})
+
+const generateKinderOneLrn = () => Math.floor(100000 + Math.random() * 900000).toString()
+
+const isValidKinderOneLrn = (value) => /^\d{6}$/.test(value)
+
+const isValidKinderTwoToSixLrn = (value) => /^\d{12}$/.test(value)
+
 export default function AddStudentsModal({ open, onClose, editingStudent }) {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    middleName: '',
-    gender: '',
-    dateOfBirth: '',
-    address: '',
-    admissionDate: '',
-    learnersReferenceNumber: '',
-  })
+  const [formData, setFormData] = useState(createEmptyFormData())
 
   // Populate form when editing
   useEffect(() => {
@@ -23,26 +34,26 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
         lastName: editingStudent.lastName || '',
         middleName: editingStudent.middleName || '',
         gender: editingStudent.gender || '',
+        gradeLevel: editingStudent.gradeLevel || '',
         dateOfBirth: editingStudent.dateOfBirth?.split('T')[0] || '',
         address: editingStudent.address || '',
         admissionDate: editingStudent.admissionDate?.split('T')[0] || '',
         learnersReferenceNumber: editingStudent.learnersReferenceNumber || '',
       })
     } else {
-      setFormData({
-        firstName: '',
-        lastName: '',
-        middleName: '',
-        gender: '',
-        dateOfBirth: '',
-        address: '',
-        admissionDate: '',
-        learnersReferenceNumber: '',
-      })
+      setFormData(createEmptyFormData())
     }
   }, [editingStudent, open])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const handleGradeLevelChange = (gradeLevel) => {
+    setFormData((prev) => ({
+      ...prev,
+      gradeLevel,
+      learnersReferenceNumber: gradeLevel === 'Kinder 1' ? generateKinderOneLrn() : '',
+    }))
+  }
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -56,15 +67,42 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
         return
       }
 
+      if (!editingStudent) {
+        if (!formData.gradeLevel) {
+          setError('Please select a grade level')
+          setLoading(false)
+          return
+        }
+
+        if (formData.gradeLevel === 'Kinder 1' && !isValidKinderOneLrn(formData.learnersReferenceNumber)) {
+          setError('Kinder 1 LRN must be a 6-digit number')
+          setLoading(false)
+          return
+        }
+
+        if (formData.gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(formData.learnersReferenceNumber)) {
+          setError('Kinder 2 to Kinder 6 LRN must be a 12-digit number')
+          setLoading(false)
+          return
+        }
+      }
+
       const method = editingStudent ? 'PUT' : 'POST'
       const url = editingStudent ? `/api/students/${editingStudent._id}` : '/api/students'
+      const payload = editingStudent
+        ? formData
+        : {
+            ...formData,
+            learnersReferenceNumber:
+              formData.gradeLevel === 'Kinder 1' ? formData.learnersReferenceNumber : formData.learnersReferenceNumber.trim(),
+          }
 
       const response = await fetch(url, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -74,16 +112,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
       }
 
       // Reset form and close modal
-      setFormData({
-        firstName: '',
-        lastName: '',
-        middleName: '',
-        gender: '',
-        dateOfBirth: '',
-        address: '',
-        admissionDate: '',
-        learnersReferenceNumber: '',
-      })
+      setFormData(createEmptyFormData())
       setError('')
 
       // Dispatch custom event to notify parent
@@ -176,6 +205,25 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                       </div>
                     </div>
 
+                    {!editingStudent && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
+                        <select
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          value={formData.gradeLevel}
+                          onChange={(e) => handleGradeLevelChange(e.target.value)}
+                          disabled={loading}
+                        >
+                          <option value="">Select grade level</option>
+                          {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
+                            <option key={gradeLevel} value={gradeLevel}>
+                              {gradeLevel}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Date of Birth *</label>
@@ -200,15 +248,29 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700">Learner's Reference Number (LRN) *</label>
+                      <label className="block text-sm font-medium text-gray-700">Learner&apos;s Reference Number (LRN) *</label>
                       <input
                         type="text"
-                        placeholder="Enter LRN"
+                        placeholder={editingStudent ? 'Enter LRN' : formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN'}
+                        inputMode="numeric"
+                        maxLength={formData.gradeLevel === 'Kinder 1' ? 6 : 12}
+                        pattern={formData.gradeLevel === 'Kinder 1' ? '\\d{6}' : '\\d{12}'}
                         className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         value={formData.learnersReferenceNumber}
-                        onChange={(e) => setFormData({ ...formData, learnersReferenceNumber: e.target.value })}
-                        disabled={loading}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, formData.gradeLevel === 'Kinder 1' ? 6 : 12)
+                          setFormData({ ...formData, learnersReferenceNumber: digitsOnly })
+                        }}
+                        readOnly={!editingStudent && formData.gradeLevel === 'Kinder 1'}
+                        disabled={loading || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
                       />
+                      {!editingStudent && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          {formData.gradeLevel === 'Kinder 1'
+                            ? 'Kinder 1 automatically uses a random 6-digit LRN.'
+                            : 'Kinder 2 to Kinder 6 require a 12-digit LRN.'}
+                        </p>
+                      )}
                     </div>
 
                     <div className="mb-4">

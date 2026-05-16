@@ -4,6 +4,14 @@ import SystemSettings, {
   calculateTotalFromBreakdown,
   DEFAULT_SETTINGS_PAYLOAD,
 } from '@/models/SystemSettings';
+import {
+  generateUniqueKinderOneLrn,
+  isValidKinderOneLrn,
+  isValidKinderTwoToSixLrn,
+  KINDER_LEVELS,
+  KINDER_ONE_LEVEL,
+  normalizeLearnersReferenceNumber,
+} from '@/lib/student-identifiers';
 import { NextResponse } from 'next/server';
 
 const SETTINGS_KEY = 'tuition-breakdown';
@@ -47,6 +55,30 @@ export async function POST(request) {
     await dbConnect();
     const body = await request.json();
     const defaultTotal = await getDefaultTotal();
+    const gradeLevel = String(body.gradeLevel || '').trim();
+    const normalizedLrn = normalizeLearnersReferenceNumber(body.learnersReferenceNumber);
+
+    if (!KINDER_LEVELS.includes(gradeLevel)) {
+      return NextResponse.json({ success: false, error: 'Grade level is required' }, { status: 400 });
+    }
+
+    const learnersReferenceNumber = gradeLevel === KINDER_ONE_LEVEL
+      ? await generateUniqueKinderOneLrn()
+      : normalizedLrn;
+
+    if (gradeLevel !== KINDER_ONE_LEVEL && !isValidKinderTwoToSixLrn(learnersReferenceNumber)) {
+      return NextResponse.json({ success: false, error: 'Kinder 2 to Kinder 6 LRN must be a 12-digit number' }, { status: 400 });
+    }
+
+    if (gradeLevel === KINDER_ONE_LEVEL && !isValidKinderOneLrn(learnersReferenceNumber)) {
+      return NextResponse.json({ success: false, error: 'Kinder 1 LRN must be a 6-digit number' }, { status: 400 });
+    }
+
+    const duplicateStudent = await Student.exists({ learnersReferenceNumber });
+
+    if (duplicateStudent) {
+      return NextResponse.json({ success: false, error: 'LRN already exists' }, { status: 409 });
+    }
     
     // Map form field names to database field names
     const studentData = {
@@ -54,10 +86,11 @@ export async function POST(request) {
       lastName: body.lastName,
       middleName: body.middleName,
       gender: body.gender,
+      gradeLevel,
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       admissionDate: body.admissionDate,
-      learnersReferenceNumber: body.learnersReferenceNumber,
+      learnersReferenceNumber,
       totalEstimatedCost: defaultTotal,
       remainingBalance: defaultTotal,
     };
@@ -65,6 +98,10 @@ export async function POST(request) {
     const student = await Student.create(studentData);
     return NextResponse.json({ success: true, data: student }, { status: 201 });
   } catch (error) {
+    if (error?.code === 11000) {
+      return NextResponse.json({ success: false, error: 'Student ID or LRN already exists' }, { status: 409 });
+    }
+
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

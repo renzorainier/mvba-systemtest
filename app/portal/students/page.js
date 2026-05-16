@@ -61,7 +61,7 @@ export default function App() {
   // Filter logic for search
   const filteredStudents = students.filter(student =>
     `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.learnersReferenceNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    String(student.learnersReferenceNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Pagination logic
