@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
 const GRADE_LEVEL_OPTIONS = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']
@@ -28,10 +28,16 @@ const isValidKinderTwoToSixLrn = (value) => /^\d{12}$/.test(value)
 
 export default function AddStudentsModal({ open, onClose, editingStudent }) {
   const [formData, setFormData] = useState(createEmptyFormData())
+  const lrnByGradeRef = useRef({})
+  const isEditingKinderOne = Boolean(editingStudent && editingStudent.gradeLevel === 'Kinder 1')
 
   // Populate form when editing
   useEffect(() => {
     if (editingStudent) {
+      lrnByGradeRef.current = {
+        [editingStudent.gradeLevel || '']: editingStudent.learnersReferenceNumber || '',
+      }
+
       setFormData({
         firstName: editingStudent.firstName || '',
         lastName: editingStudent.lastName || '',
@@ -47,6 +53,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
         parentGuardianContactNumber: editingStudent.parentGuardianContactNumber || '',
       })
     } else {
+      lrnByGradeRef.current = {}
       setFormData(createEmptyFormData())
     }
   }, [editingStudent, open])
@@ -57,7 +64,20 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
     setFormData((prev) => ({
       ...prev,
       gradeLevel,
-      learnersReferenceNumber: gradeLevel === 'Kinder 1' ? generateKinderOneLrn() : '',
+      learnersReferenceNumber: (() => {
+        if (prev.gradeLevel) {
+          lrnByGradeRef.current[prev.gradeLevel] = prev.learnersReferenceNumber
+        }
+
+        if (gradeLevel === 'Kinder 1') {
+          const cachedKinderOneLrn = lrnByGradeRef.current['Kinder 1']
+          const nextKinderOneLrn = cachedKinderOneLrn || generateKinderOneLrn()
+          lrnByGradeRef.current['Kinder 1'] = nextKinderOneLrn
+          return nextKinderOneLrn
+        }
+
+        return lrnByGradeRef.current[gradeLevel] || ''
+      })(),
     }))
   }
 
@@ -218,7 +238,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.gradeLevel}
                           onChange={(e) => handleGradeLevelChange(e.target.value)}
-                          disabled={loading}
+                          disabled={loading || isEditingKinderOne}
                         >
                           <option value="">Select grade level</option>
                           {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
@@ -241,10 +261,13 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
                           value={formData.learnersReferenceNumber}
                           onChange={(e) => {
                             const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, formData.gradeLevel === 'Kinder 1' ? 6 : 12)
+                            if (formData.gradeLevel) {
+                              lrnByGradeRef.current[formData.gradeLevel] = digitsOnly
+                            }
                             setFormData({ ...formData, learnersReferenceNumber: digitsOnly })
                           }}
-                          readOnly={!editingStudent && formData.gradeLevel === 'Kinder 1'}
-                          disabled={loading || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
+                          readOnly={isEditingKinderOne || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
+                          disabled={loading || isEditingKinderOne || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
                         />
                         {!editingStudent && (
                           <p className="mt-1 text-xs text-gray-500">

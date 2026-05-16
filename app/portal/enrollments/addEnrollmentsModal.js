@@ -53,9 +53,15 @@ export default function AddEnrollmentsModal({
       student._id === formData.learnersReferenceNumber
   );
 
-  const visibleSections = selectedStudent?.gradeLevel
-    ? sections.filter((section) => section.gradeLevel === selectedStudent.gradeLevel)
-    : [];
+  const selectedSection = sections.find(
+    (section) => (section.sectionId || section._id) === formData.sectionId
+  );
+
+  const sectionGradeLevel = selectedStudent?.gradeLevel || selectedSection?.gradeLevel;
+
+  const visibleSections = sectionGradeLevel
+    ? sections.filter((section) => section.gradeLevel === sectionGradeLevel)
+    : sections;
 
   // Populate form when editing
   useEffect(() => {
@@ -297,12 +303,12 @@ export default function AddEnrollmentsModal({
                               sectionId: e.target.value,
                             })
                           }
-                          disabled={loading || !selectedStudent}
+                          disabled={loading}
                         >
                           <option value="TBA">TBA</option>
-                            {selectedStudent && visibleSections.length === 0 ? (
+                            {sectionGradeLevel && visibleSections.length === 0 ? (
                             <option value="" disabled>
-                              No sections for {selectedStudent.gradeLevel}
+                              No sections for {sectionGradeLevel}
                             </option>
                           ) : null}
                             {visibleSections.map((section) => {
