@@ -8,6 +8,7 @@ import {
   createDefaultTuitionPlans,
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
+import { hashPassword, verifyPassword } from '@/lib/passwords';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 const DEFAULT_CURRENT_SCHOOL_YEAR = '2025-2026';
@@ -132,6 +133,7 @@ export async function GET() {
 
     const settings = await ensureSettings();
     const tuitionPlans = sanitizeTuitionPlans(settings.tuitionPlans?.length ? settings.tuitionPlans : createDefaultTuitionPlans());
+    const breakdown = Array.isArray(settings.breakdown) ? settings.breakdown : DEFAULT_SETTINGS_PAYLOAD.breakdown;
     const totalEstimatedCost = calculateTotalFromTuitionPlans(tuitionPlans);
 
     return NextResponse.json(
@@ -144,7 +146,7 @@ export async function GET() {
           currency: settings.currency,
           currentSchoolYear: normalizeSchoolYear(settings.currentSchoolYear) || DEFAULT_CURRENT_SCHOOL_YEAR,
           tuitionPlans,
-          breakdown: tuitionPlans,
+          breakdown,
           totalEstimatedCost,
         },
       },
@@ -182,8 +184,15 @@ export async function PUT(request) {
 
     const authenticatedAdmin = await getAuthenticatedAdmin();
 
-    if (!authenticatedAdmin || authenticatedAdmin.password !== currentPassword) {
+    const passwordCheck = authenticatedAdmin ? verifyPassword(currentPassword, authenticatedAdmin.password) : { isValid: false, needsUpgrade: false };
+
+    if (!authenticatedAdmin || !passwordCheck.isValid) {
       return NextResponse.json({ success: false, error: 'Current password is incorrect.' }, { status: 401 });
+    }
+
+    if (passwordCheck.needsUpgrade) {
+      authenticatedAdmin.password = hashPassword(currentPassword);
+      await authenticatedAdmin.save();
     }
 
     if (sanitizedTuitionPlans.length === 0) {
@@ -194,21 +203,25 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Current school year must be in YYYY-YYYY format.' }, { status: 400 });
     }
 
-    const payload = {
-      title: String(body.title || DEFAULT_SETTINGS_PAYLOAD.title).trim() || DEFAULT_SETTINGS_PAYLOAD.title,
-      currency: String(body.currency || DEFAULT_SETTINGS_PAYLOAD.currency).trim() || DEFAULT_SETTINGS_PAYLOAD.currency,
-      currentSchoolYear,
-      tuitionPlans: sanitizedTuitionPlans,
-      breakdown: [],
-    };
+    const settings = await ensureSettings();
+    settings.title = String(body.title || DEFAULT_SETTINGS_PAYLOAD.title).trim() || DEFAULT_SETTINGS_PAYLOAD.title;
+    settings.currency = String(body.currency || DEFAULT_SETTINGS_PAYLOAD.currency).trim() || DEFAULT_SETTINGS_PAYLOAD.currency;
+    settings.currentSchoolYear = currentSchoolYear;
+    settings.tuitionPlans = sanitizedTuitionPlans;
 
-    const settings = await SystemSettings.findOneAndUpdate(
-      { key: SETTINGS_KEY },
-      { $set: payload, $setOnInsert: { key: SETTINGS_KEY } },
-      { new: true, upsert: true }
-    );
+    if (Array.isArray(body.breakdown)) {
+      settings.breakdown = body.breakdown
+        .map((item) => ({
+          label: String(item?.label || '').trim(),
+          amount: Number(item?.amount || 0),
+        }))
+        .filter((item) => item.label.length > 0);
+    }
+
+    await settings.save();
 
     const tuitionPlans = sanitizeTuitionPlans(settings.tuitionPlans?.length ? settings.tuitionPlans : createDefaultTuitionPlans());
+    const breakdown = Array.isArray(settings.breakdown) ? settings.breakdown : DEFAULT_SETTINGS_PAYLOAD.breakdown;
     const totalEstimatedCost = calculateTotalFromTuitionPlans(tuitionPlans);
 
     return NextResponse.json(
@@ -221,7 +234,7 @@ export async function PUT(request) {
           currency: settings.currency,
           currentSchoolYear: normalizeSchoolYear(settings.currentSchoolYear) || DEFAULT_CURRENT_SCHOOL_YEAR,
           tuitionPlans,
-          breakdown: tuitionPlans,
+          breakdown,
           totalEstimatedCost,
         },
       },

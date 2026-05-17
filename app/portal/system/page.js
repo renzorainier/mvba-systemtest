@@ -91,16 +91,22 @@ const serializePlans = (plans = []) => {
         .filter(Boolean);
 
       const derivedBaseCost = lineItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const derivedRemaining = Math.max(0, derivedBaseCost - Number(plan.amountDueBeforeSchool || 0));
+      const monthlyCount = Number(plan.monthlyPaymentCount || 0);
+      const derivedMonthlyAmount = monthlyCount > 0 ? Math.round(derivedRemaining / monthlyCount) : 0;
 
       return {
         gradeLabel: String(plan.gradeLabel || "").trim(),
         applicableGrades,
-        totalBaseCost: Number(plan.totalBaseCost || derivedBaseCost || 0),
+        // Total base cost must be the sum of breakdown line items
+        totalBaseCost: Number(derivedBaseCost || 0),
         lineItems,
         amountDueBeforeSchool: Number(plan.amountDueBeforeSchool || 0),
-        remainingBalanceDue: Number(plan.remainingBalanceDue || 0),
-        monthlyPaymentCount: Number(plan.monthlyPaymentCount || 0),
-        monthlyPaymentAmount: Number(plan.monthlyPaymentAmount || 0),
+        // Remaining balance is computed as total base cost - amount due before school
+        remainingBalanceDue: Number(derivedRemaining || 0),
+        monthlyPaymentCount: monthlyCount,
+        // Monthly amount is derived from remaining balance divided by monthly payment count
+        monthlyPaymentAmount: Number(derivedMonthlyAmount || 0),
         monthlyPaymentMonths: String(plan.monthlyPaymentMonths || "").trim(),
         customFields,
         notes: String(plan.notes || "").trim(),
@@ -110,8 +116,15 @@ const serializePlans = (plans = []) => {
 };
 
 const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLineItem, onRemoveLineItem, onAddCustomField, onRemoveCustomField }) => {
-  const monthlySummary = plan.monthlyPaymentCount && plan.monthlyPaymentAmount
-    ? `${plan.monthlyPaymentCount} monthly payments of ${formatPhp(plan.monthlyPaymentAmount)} (${plan.monthlyPaymentMonths || "schedule to be set"})`
+
+  // derive values from breakdown line items
+  const derivedBaseCost = (Array.isArray(plan.lineItems) ? plan.lineItems.reduce((s, it) => s + Number(it.amount || 0), 0) : 0);
+  const derivedRemaining = Math.max(0, derivedBaseCost - Number(plan.amountDueBeforeSchool || 0));
+  const monthlyCount = Number(plan.monthlyPaymentCount || 0);
+  const derivedMonthlyAmount = monthlyCount > 0 ? Math.round(derivedRemaining / monthlyCount) : 0;
+
+  const monthlySummary = monthlyCount && derivedMonthlyAmount
+    ? `${monthlyCount} monthly payments of ${formatPhp(derivedMonthlyAmount)} (${plan.monthlyPaymentMonths || "schedule to be set"})`
     : "Monthly payment schedule not set yet.";
 
   return (
@@ -158,9 +171,9 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
           <input
             type="number"
             min="0"
-            value={plan.totalBaseCost}
-            onChange={(e) => onChange(index, "totalBaseCost", e.target.value)}
-            disabled={!isEditing}
+            value={derivedBaseCost}
+            // total base cost is derived from breakdown - not editable
+            disabled={true}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-600"
           />
         </div>
@@ -180,9 +193,9 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
           <input
             type="number"
             min="0"
-            value={plan.remainingBalanceDue}
-            onChange={(e) => onChange(index, "remainingBalanceDue", e.target.value)}
-            disabled={!isEditing}
+            value={derivedRemaining}
+            // remaining balance is derived (total base cost - amount due before school)
+            disabled={true}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-600"
           />
         </div>
@@ -202,9 +215,9 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
           <input
             type="number"
             min="0"
-            value={plan.monthlyPaymentAmount}
-            onChange={(e) => onChange(index, "monthlyPaymentAmount", e.target.value)}
-            disabled={!isEditing}
+            value={derivedMonthlyAmount}
+            // monthly amount is derived from remaining balance divided by monthly payments
+            disabled={true}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-600"
           />
         </div>
@@ -318,11 +331,11 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
       <div className="mt-5 grid gap-3 rounded-2xl bg-slate-900 p-4 text-white md:grid-cols-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300">Computed Total</p>
-          <p className="mt-1 text-xl font-bold">{formatPhp(plan.totalBaseCost || 0)}</p>
+          <p className="mt-1 text-xl font-bold">{formatPhp(derivedBaseCost || 0)}</p>
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300">Amount Due</p>
-          <p className="mt-1 text-xl font-bold">{formatPhp(plan.amountDueBeforeSchool || 0)}</p>
+          <p className="mt-1 text-xl font-bold">{formatPhp(Number(plan.amountDueBeforeSchool || 0))}</p>
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300">Monthly Summary</p>

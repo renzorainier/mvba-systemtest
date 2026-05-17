@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, MoreHorizontal } from 'lucide-react';
 import AddStudentsModal from '../students/addStudentsModal';
+import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
 
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -10,6 +11,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingStudent, setEditingStudent] = useState(null);
+  const [balanceModalOpen, setBalanceModalOpen] = useState(false);
+  const [modalStudent, setModalStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const formatPhp = (value) =>
@@ -31,6 +34,16 @@ export default function App() {
   const openEditModal = (student) => {
     setEditingStudent(student);
     setIsModalOpen(true);
+  };
+
+  const openBalanceModal = (student) => {
+    setModalStudent(student);
+    setBalanceModalOpen(true);
+  };
+
+  const closeBalanceModal = () => {
+    setModalStudent(null);
+    setBalanceModalOpen(false);
   };
 
   useEffect(() => {
@@ -154,7 +167,9 @@ export default function App() {
                         {new Date(student.admissionDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-rose-600">
-                        {formatPhp(student.remainingBalance)}
+                        <button onClick={() => openBalanceModal(student)} className="hover:underline">
+                          {formatPhp(student.remainingBalance)}
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
@@ -213,6 +228,7 @@ export default function App() {
       </div>
 
       <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} />
+      <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
     </div>
   );
 }
