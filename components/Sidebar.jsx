@@ -65,7 +65,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
         </h1>
       </div>
 
-      <nav className="flex-1 p-6 space-y-3 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-3 overflow-y-auto">
         {visibleMenuItems.map((item) => {
           const active = isActive(item.href, item.href === '/portal/students');
           return (
