@@ -190,7 +190,9 @@ export async function GET(request, { params }) {
 
     // If a completed payment is outside the expected plan window, keep it visible by attaching leftovers to a matching payment month.
     const usedPaymentIds = new Set(
-      breakdownItems.flatMap((item) => item.allocations.map((allocation) => String(allocation.paymentId || allocation.sourceRecordId || '')))
+      breakdownItems.flatMap((item) =>
+        item.allocations.flatMap((allocation) => [String(allocation.paymentId || ''), String(allocation.sourceRecordId || '')])
+      ).filter(Boolean)
     );
 
     const overflowPayments = paymentBuckets.filter((payment) => !usedPaymentIds.has(String(payment._id)) && Number(payment.amount || 0) > 0);
