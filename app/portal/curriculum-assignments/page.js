@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LibraryBig, Plus, Search, PencilLine, Trash2, Save, X } from 'lucide-react';
 
-const gradeLevels = ['Kinder 1', 'Kinder 2', 'Kinder 3', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+const gradeLevels = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
 const emptyForm = {
   gl_curriculum_id: '',
@@ -156,7 +156,7 @@ export default function CurriculumAssignmentsPage() {
           </button>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(420px,1fr)] xl:items-start">
           <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 p-4">
               <div className="relative">
@@ -192,8 +192,15 @@ export default function CurriculumAssignmentsPage() {
                         <td className="px-6 py-4 text-sm text-slate-600">{assignment.school_year_id}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900">{assignment.grade_level}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {curriculum.curriculum_name || curriculum.curriculum_id || 'Unknown curriculum'}
-                          <div className="mt-1 text-xs text-slate-500">{curriculum.curriculum_id || ''}</div>
+                          <div
+                            className="max-w-[280px] truncate font-medium text-slate-900"
+                            title={curriculum.curriculum_name || curriculum.curriculum_id || 'Unknown curriculum'}
+                          >
+                            {curriculum.curriculum_name || curriculum.curriculum_id || 'Unknown curriculum'}
+                          </div>
+                          <div className="mt-1 max-w-[280px] truncate text-xs text-slate-500" title={curriculum.curriculum_id || ''}>
+                            {curriculum.curriculum_id || ''}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">{assignment.is_default ? 'Yes' : 'No'}</td>
                         <td className="px-6 py-4 text-sm">
@@ -224,7 +231,7 @@ export default function CurriculumAssignmentsPage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6 xl:min-w-[420px]">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-950">{editingId ? 'Edit Assignment' : 'New Assignment'}</h2>
@@ -251,7 +258,7 @@ export default function CurriculumAssignmentsPage() {
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:gap-5">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">School Year *</label>
                   <input
@@ -291,16 +298,16 @@ export default function CurriculumAssignmentsPage() {
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={formData.is_default}
                   onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
                 Mark this assignment as default for the selected grade level and school year.
               </label>
-              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+              <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-700">
                 <div className="font-medium text-slate-900">Preview</div>
                 <div className="mt-2 space-y-1 text-slate-600">
                   <div>School Year: {formData.school_year_id || 'Not set'}</div>

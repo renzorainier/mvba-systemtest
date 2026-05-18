@@ -35,6 +35,7 @@ const buildAssignmentPayload = (assignment, curriculums = []) => {
           description: curriculum.description,
           effective_start_date: curriculum.effective_start_date,
           effective_end_date: curriculum.effective_end_date,
+          subjects: Array.isArray(curriculum.subjects) ? curriculum.subjects : [],
         }
       : null,
   };

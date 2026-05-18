@@ -170,7 +170,12 @@ export default function Dashboard() {
                           {section.schoolYear}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {section.glCurriculumId?.curriculum_id?.curriculum_name || section.glCurriculumId?.curriculum_name || '—'}
+                          <div
+                            className="max-w-[260px] truncate"
+                            title={section.glCurriculumId?.curriculum_id?.curriculum_name || section.glCurriculumId?.curriculum_name || '—'}
+                          >
+                            {section.glCurriculumId?.curriculum_id?.curriculum_name || section.glCurriculumId?.curriculum_name || '—'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {section.roomNumber}

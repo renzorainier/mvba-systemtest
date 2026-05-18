@@ -9,6 +9,8 @@ const emptyForm = {
   description: '',
   effective_start_date: '',
   effective_end_date: '',
+  subjects: [],
+  subjectsText: '',
 };
 
 const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
@@ -57,6 +59,8 @@ export default function CurriculumsPage() {
       description: curriculum.description || '',
       effective_start_date: toDateInput(curriculum.effective_start_date),
       effective_end_date: toDateInput(curriculum.effective_end_date),
+      subjects: Array.isArray(curriculum.subjects) ? curriculum.subjects : [],
+      subjectsText: Array.isArray(curriculum.subjects) ? curriculum.subjects.map(s => s.subject_name || s).join(', ') : '',
     });
   };
 
@@ -79,6 +83,9 @@ export default function CurriculumsPage() {
       const payload = {
         ...formData,
         curriculum_id: formData.curriculum_id || `CUR-${Date.now()}`,
+        subjects: formData.subjectsText
+          ? formData.subjectsText.split(',').map(s => ({ subject_name: s.trim() })).filter(s => s.subject_name)
+          : (formData.subjects || []),
       };
 
       const response = await fetch(editingId ? `/api/curriculums/${editingId}` : '/api/curriculums', {
@@ -220,6 +227,17 @@ export default function CurriculumsPage() {
             {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Subjects</label>
+                <small className="text-xs text-slate-500">Add comma-separated subject names or provide objects.</small>
+                <textarea
+                  value={formData.subjectsText || ''}
+                  onChange={(e) => setFormData({ ...formData, subjectsText: e.target.value })}
+                  rows={2}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g. Math, Science, English"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Curriculum Code</label>
                 <input

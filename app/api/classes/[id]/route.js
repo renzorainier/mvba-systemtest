@@ -1,6 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import ClassAssignment from '@/models/ClassAssignment';
-import SystemSettings from '@/models/SystemSettings';
+import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
@@ -9,11 +9,38 @@ import { NextResponse } from 'next/server';
 const SETTINGS_KEY = 'tuition-breakdown';
 
 const ensureSettings = async () => {
-  let settings = await SystemSettings.findOne({ key: SETTINGS_KEY });
+  const collection = SystemSettings.collection;
+  let settings = await collection.findOne({ key: SETTINGS_KEY });
   if (!settings) {
-    settings = await SystemSettings.create({ key: SETTINGS_KEY });
+    await collection.updateOne(
+      { key: SETTINGS_KEY },
+      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
+      { upsert: true }
+    );
+    settings = await collection.findOne({ key: SETTINGS_KEY });
   }
+
+  settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
+  settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
   return settings;
+};
+
+const resolveCurriculumAssignmentId = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (value._id) return String(value._id);
+    if (typeof value.toHexString === 'function') return String(value.toHexString());
+    if (value.gl_curriculum_id) return String(value.gl_curriculum_id);
+    if (value.curriculum_id && typeof value.curriculum_id === 'string') return value.curriculum_id;
+    if (value.curriculum_id && value.curriculum_id._id) return String(value.curriculum_id._id);
+    try {
+      const asStr = String(value);
+      if (asStr && asStr !== '[object Object]') return asStr;
+    } catch (e) {}
+    return '';
+  }
+  return String(value);
 };
 
 const enrichAssignment = (assignment, settings) => {
@@ -32,7 +59,7 @@ const enrichAssignment = (assignment, settings) => {
           ...section,
           glCurriculumId: assignmentLink
             ? {
-                ...assignmentLink.toObject(),
+                ...(assignmentLink?.toObject ? assignmentLink.toObject() : assignmentLink),
                 curriculum_id: curriculum
                   ? {
                       _id: curriculum._id,
@@ -99,7 +126,8 @@ export async function PUT(request, { params }) {
     }
 
     const settings = await ensureSettings();
-    const sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId));
+    const sectionCurriculumId = resolveCurriculumAssignmentId(section.glCurriculumId);
+    const sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
 
     if (!sectionCurriculum) {
       return NextResponse.json({ success: false, error: 'Section must be linked to a grade-level curriculum before creating a class assignment' }, { status: 400 });

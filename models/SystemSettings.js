@@ -41,14 +41,39 @@ const TuitionPlanSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const SubjectSchema = new mongoose.Schema(
+  {
+    subject_id: { type: String, default: '' },
+    subject_name: { type: String, required: true, trim: true },
+    code: { type: String, default: '' },
+    description: { type: String, default: '' },
+    default_class_hours: { type: Number, default: 0 },
+  },
+  { _id: true }
+);
+
+const CurriculumSchema = new mongoose.Schema(
+  {
+    curriculum_id: { type: String, required: true },
+    curriculum_name: { type: String, required: true, trim: true },
+    description: { type: String, default: '' },
+    effective_start_date: { type: Date },
+    effective_end_date: { type: Date },
+    subjects: { type: [SubjectSchema], default: [] },
+  },
+  { _id: true, timestamps: true }
+);
+
 const SystemSettingsSchema = new mongoose.Schema(
   {
     key: { type: String, required: true, unique: true, default: 'tuition-breakdown' },
     title: { type: String, required: true, default: 'Sample Tuition Fee Breakdown (Kindergarten to Grade 6)' },
     currency: { type: String, required: true, default: 'PHP' },
     currentSchoolYear: { type: String, required: true, default: '2025-2026' },
-    tuitionPlans: { type: [TuitionPlanSchema], default: createDefaultTuitionPlans },
-    breakdown: { type: [BreakdownItemSchema], default: [] },
+      tuitionPlans: { type: [TuitionPlanSchema], default: createDefaultTuitionPlans },
+      breakdown: { type: [BreakdownItemSchema], default: [] },
+      curriculums: { type: [CurriculumSchema], default: [] },
+      gradeLevelCurriculums: { type: Array, default: [] },
   },
   {
     timestamps: true,
@@ -74,6 +99,8 @@ export const DEFAULT_SETTINGS_PAYLOAD = {
   currentSchoolYear: '2025-2026',
   tuitionPlans: createDefaultTuitionPlans(),
   breakdown: DEFAULT_TUITION_BREAKDOWN,
+  curriculums: [],
+  gradeLevelCurriculums: [],
 };
 
 export const calculateTotalFromBreakdown = (breakdown = []) => {

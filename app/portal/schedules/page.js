@@ -26,7 +26,7 @@ export default function ScheduleManagement() {
   const [currentScheduleName, setCurrentScheduleName] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('Kinder 1'); // Updated default grade
   
-  const subjects = ['Math', 'Science', 'English', 'History', 'PE', 'Arts', 'Computer'];
+  const [availableSubjects, setAvailableSubjects] = useState(['Math', 'Science', 'English', 'History', 'PE', 'Arts', 'Computer']);
   const [newClass, setNewClass] = useState({
     subject: '',
     day: 'Monday',
@@ -97,12 +97,39 @@ export default function ScheduleManagement() {
 
   const handleAddClass = () => {
     if (!newClass.subject) return;
-    
+
     setScheduleItems([
-      ...scheduleItems, 
+      ...scheduleItems,
       { ...newClass, id: Date.now().toString(), type: 'class' }
     ]);
   };
+
+  // Load curriculum subjects when grade/section selection changes
+  useEffect(() => {
+    // Try to fetch curriculums for the selected grade via grade-level-curriculums
+    const fetchSubjects = async () => {
+      try {
+        const res = await fetch(`/api/grade-level-curriculums?gradeLevel=${encodeURIComponent(selectedGrade)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          // pick the first assignment for this grade
+          const assignment = data.data[0];
+          const subs = assignment.curriculum_id?.subjects || [];
+          if (Array.isArray(subs) && subs.length > 0) {
+            setAvailableSubjects(subs.map(s => s.subject_name || s));
+            return;
+          }
+        }
+      } catch (e) {
+        console.debug('No curriculum subjects found for grade', selectedGrade);
+      }
+
+      // fallback to default list
+      setAvailableSubjects(['Math', 'Science', 'English', 'History', 'PE', 'Arts', 'Computer']);
+    };
+
+    fetchSubjects();
+  }, [selectedGrade]);
 
   const handleAutoGenerate = () => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -126,7 +153,7 @@ export default function ScheduleManagement() {
         } else if (slot.type === 'lunch') {
           newItems.push({ id: (idCounter++).toString(), subject: 'LUNCH BREAK', day, startTime: slot.start, endTime: slot.end, type: 'lunch' });
         } else {
-          const randomSub = subjects[Math.floor(Math.random() * subjects.length)];
+          const randomSub = availableSubjects[Math.floor(Math.random() * availableSubjects.length)];
           newItems.push({ id: (idCounter++).toString(), subject: randomSub, day, startTime: slot.start, endTime: slot.end, type: 'class' });
         }
       });
@@ -224,7 +251,7 @@ export default function ScheduleManagement() {
   };
 
   // List of grades for the dropdown
-  const gradeLevels = ['Kinder 1', 'Kinder 2', 'Kinder 3', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+  const gradeLevels = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans text-slate-800">
@@ -403,7 +430,7 @@ export default function ScheduleManagement() {
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Subject</label>
                     <select className="w-full border border-gray-300 rounded p-2 text-sm" value={newClass.subject} onChange={(e) => setNewClass({...newClass, subject: e.target.value})}>
                       <option value="">Select Subject...</option>
-                      {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                      {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   

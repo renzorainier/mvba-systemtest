@@ -54,6 +54,14 @@ export async function POST(request) {
       description: body.description || '',
       effective_start_date: body.effective_start_date,
       effective_end_date: body.effective_end_date,
+      subjects: Array.isArray(body.subjects) ? body.subjects.map(s => ({
+        _id: new mongoose.Types.ObjectId(),
+        subject_id: s.subject_id || `SUB-${Date.now()}`,
+        subject_name: s.subject_name,
+        code: s.code || '',
+        description: s.description || '',
+        default_class_hours: Number(s.default_class_hours || 0),
+      })) : [],
     };
 
     await SystemSettings.collection.updateOne(
