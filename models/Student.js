@@ -20,7 +20,15 @@ const StudentSchema = new mongoose.Schema({
   parentGuardianContactNumber: { type: String, required: false, default: '' },
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
-});
+  profilePicture: { type: String, required: false, default: null },
+  documents: [
+    {
+      fileId: mongoose.Schema.Types.ObjectId,
+      fileName: String,
+      uploadedAt: { type: Date, default: Date.now },
+    }
+  ],
+}, { timestamps: true });
 
 
 // Check if model exists before compiling to prevent overwrite errors in dev mode

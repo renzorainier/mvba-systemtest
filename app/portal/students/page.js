@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, MoreHorizontal } from 'lucide-react';
 import AddStudentsModal from '../students/addStudentsModal';
+import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
 
 export default function App() {
@@ -14,6 +15,8 @@ export default function App() {
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [modalStudent, setModalStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const formatPhp = (value) =>
     new Intl.NumberFormat('en-PH', {
@@ -44,6 +47,22 @@ export default function App() {
   const closeBalanceModal = () => {
     setModalStudent(null);
     setBalanceModalOpen(false);
+  };
+
+  const openProfileModal = (student) => {
+    setSelectedStudent(student);
+    setProfileModalOpen(true);
+  };
+
+  const closeProfileModal = () => {
+    setSelectedStudent(null);
+    setProfileModalOpen(false);
+  };
+
+  const handleStudentUpdate = (updatedStudent) => {
+    setStudents((prev) =>
+      prev.map((s) => (s._id === updatedStudent._id ? updatedStudent : s))
+    );
   };
 
   useEffect(() => {
@@ -151,8 +170,13 @@ export default function App() {
                 {!loading && paginatedStudents.length > 0 ? (
                   paginatedStudents.map((student) => (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                        {student.learnersReferenceNumber}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => openProfileModal(student)}
+                          className="text-blue-600 hover:text-blue-900 hover:underline transition-colors"
+                        >
+                          {student.learnersReferenceNumber}
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                         {student.firstName} {student.lastName}
@@ -229,6 +253,7 @@ export default function App() {
 
       <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} />
       <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
+      <StudentProfileModal open={profileModalOpen} onClose={closeProfileModal} student={selectedStudent} onStudentUpdate={handleStudentUpdate} />
     </div>
   );
 }

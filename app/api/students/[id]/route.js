@@ -8,6 +8,8 @@ import {
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import { calculateTotalFromTuitionPlans, createDefaultTuitionPlans, getTuitionAmountForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import { NextResponse } from 'next/server';
+import { getGridFSBucket } from '@/lib/gridfs';
+import { Readable } from 'stream';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -31,7 +33,10 @@ export async function PUT(request, { params }) {
   try {
     await dbConnect();
     const { id } = await params;
-    const body = await request.json();
+    
+    const formData = await request.formData();
+    const body = Object.fromEntries(formData);
+    
     const existingStudent = await Student.findById(id);
 
     if (!existingStudent) {
@@ -64,6 +69,87 @@ export async function PUT(request, { params }) {
 
     const defaultTotal = await getDefaultTotalForGrade(gradeLevel);
     
+    // Handle profile picture upload
+    let profilePictureUrl = existingStudent.profilePicture;
+    const profilePictureFile = formData.get('profilePicture');
+    if (profilePictureFile && typeof profilePictureFile === 'object') {
+      try {
+        const bucket = await getGridFSBucket();
+        const buffer = Buffer.from(await profilePictureFile.arrayBuffer());
+        
+        const uploadStream = bucket.openUploadStream(`student-profile-${id}`, {
+          metadata: {
+            studentId: id,
+            uploadedAt: new Date(),
+          },
+        });
+
+        const readable = Readable.from([buffer]);
+        const fileId = await new Promise((resolve, reject) => {
+          readable.pipe(uploadStream)
+            .on('error', reject)
+            .on('finish', () => {
+              resolve(uploadStream.id.toString());
+            });
+        });
+
+        profilePictureUrl = `/api/download-file/${fileId}`;
+      } catch (fileError) {
+        console.error('Profile picture upload error:', fileError);
+        return NextResponse.json({ success: false, error: 'Failed to upload profile picture' }, { status: 500 });
+      }
+    }
+
+    // Handle document uploads
+    const documents = existingStudent.documents || [];
+    const documentsToRemoveStr = body['documentsToRemove'];
+    const documentsToRemove = documentsToRemoveStr ? JSON.parse(documentsToRemoveStr) : [];
+    
+    // Remove documents that were deleted
+    const updatedDocuments = documents.filter(doc => !documentsToRemove.includes(doc.fileId));
+    
+    const documentKeys = Object.keys(body).filter(key => key.startsWith('documents['));
+    
+    if (documentKeys.length > 0) {
+      try {
+        const bucket = await getGridFSBucket();
+        
+        for (let i = 0; i < 10; i++) {
+          const docFile = formData.get(`documents[${i}]`);
+          const docName = body[`documentNames[${i}]`];
+          
+          if (docFile && typeof docFile === 'object' && docName) {
+            const buffer = Buffer.from(await docFile.arrayBuffer());
+            
+            const uploadStream = bucket.openUploadStream(docName, {
+              metadata: {
+                studentId: id,
+                uploadedAt: new Date(),
+              },
+            });
+
+            const readable = Readable.from([buffer]);
+            const fileId = await new Promise((resolve, reject) => {
+              readable.pipe(uploadStream)
+                .on('error', reject)
+                .on('finish', () => {
+                  resolve(uploadStream.id.toString());
+                });
+            });
+
+            updatedDocuments.push({
+              fileId,
+              fileName: docName,
+              uploadedAt: new Date(),
+            });
+          }
+        }
+      } catch (fileError) {
+        console.error('Document upload error:', fileError);
+        return NextResponse.json({ success: false, error: 'Failed to upload documents' }, { status: 500 });
+      }
+    }
+
     // Map form field names to database field names
     const studentData = {
       firstName: body.firstName,
@@ -80,6 +166,8 @@ export async function PUT(request, { params }) {
       parentGuardianName: body.parentGuardianName || '',
       parentGuardianRelationship: body.parentGuardianRelationship || '',
       parentGuardianContactNumber: body.parentGuardianContactNumber || '',
+      profilePicture: profilePictureUrl,
+      documents: updatedDocuments,
     };
     
     const student = await Student.findByIdAndUpdate(id, studentData, { new: true, runValidators: true });

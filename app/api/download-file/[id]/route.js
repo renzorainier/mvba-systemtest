@@ -8,6 +8,8 @@ import { getAuthenticatedUser } from '@/lib/auth';
 const ROLE_RULES = {
   financials: ['Admin', 'Cashier'],
   enrollments: ['Admin', 'Registrar'],
+  studentProfile: ['Admin', 'Registrar', 'Teacher'],
+  studentDocuments: ['Admin', 'Registrar', 'Teacher'],
 };
 
 function canAccessFile(user, metadata) {
@@ -40,6 +42,11 @@ async function resolveFileContext(objectId, metadata) {
 
   if (relatedRecordType) {
     return relatedRecordType;
+  }
+
+  // Check if it's a student profile picture
+  if (metadata?.studentId) {
+    return 'studentProfile';
   }
 
   const linkedFinancialRecord = await Financial.exists({ 'documents.fileId': objectId });
