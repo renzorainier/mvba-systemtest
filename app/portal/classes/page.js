@@ -78,12 +78,13 @@ export default function ClassAssignmentsPage() {
     return assignments.filter((assignment) => {
       const sectionName = assignment.section?.sectionName || '';
       const sectionId = assignment.section?.sectionId || '';
+      const curriculumName = assignment.section?.glCurriculumId?.curriculum_id?.curriculum_name || assignment.section?.glCurriculumId?.curriculum_name || '';
       const teacherName = `${assignment.teacher?.firstName || ''} ${assignment.teacher?.lastName || ''}`.trim();
       const teacherId = assignment.teacher?.teacherId || '';
       const scheduleName = assignment.schedule?.name || '';
       const scheduleId = assignment.schedule?.scheduleId || '';
 
-      return [sectionName, sectionId, teacherName, teacherId, scheduleName, scheduleId, assignment.assignmentId]
+      return [sectionName, sectionId, curriculumName, teacherName, teacherId, scheduleName, scheduleId, assignment.assignmentId]
         .some((value) => String(value || '').toLowerCase().includes(query));
     });
   }, [assignments, searchTerm]);
@@ -138,6 +139,7 @@ export default function ClassAssignmentsPage() {
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Assignment ID</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Section</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Curriculum</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Teacher</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Schedule</th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Grade Level</th>
@@ -153,6 +155,10 @@ export default function ClassAssignmentsPage() {
                       <td className="px-6 py-4 text-sm font-semibold text-slate-900">
                         {assignment.section?.sectionName || 'Unknown section'}
                         <div className="text-xs font-normal text-slate-500">{assignment.section?.sectionId || 'No section ID'}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {assignment.section?.glCurriculumId?.curriculum_id?.curriculum_name || assignment.section?.glCurriculumId?.curriculum_name || 'No curriculum'}
+                        <div className="text-xs text-slate-500">{assignment.section?.glCurriculumId?.gl_curriculum_id || ''}</div>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
                         {assignment.teacher ? `${assignment.teacher.firstName || ''} ${assignment.teacher.lastName || ''}`.trim() : 'Unknown teacher'}
@@ -184,13 +190,13 @@ export default function ClassAssignmentsPage() {
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
                       Loading class assignments...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
                       No class assignments found matching your search.
                     </td>
                   </tr>

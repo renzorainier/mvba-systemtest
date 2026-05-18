@@ -11,11 +11,14 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
         sectionId: '',
         gradeLevel: '',
         schoolYear: '',
+        glCurriculumId: '',
         roomNumber: '',
     });
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [curriculumOptions, setCurriculumOptions] = useState([]);
+    const [loadingCurriculums, setLoadingCurriculums] = useState(false);
 
     // Auto-generate section ID based on grade level, section name, and school year
     const generateSectionId = (grade, name, year) => {
@@ -53,6 +56,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                 sectionId: editingSection.sectionId || '',
                 gradeLevel: editingSection.gradeLevel || '',
                 schoolYear: editingSection.schoolYear || '',
+                glCurriculumId: editingSection.glCurriculumId?._id || editingSection.glCurriculumId || '',
                 roomNumber: editingSection.roomNumber || '',
             });
         } else {
@@ -61,10 +65,36 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                 sectionId: '',
                 gradeLevel: '',
                 schoolYear: '',
+                glCurriculumId: '',
                 roomNumber: '',
             });
         }
     }, [editingSection, isOpen]);
+
+    useEffect(() => {
+        const fetchCurriculums = async () => {
+            if (!formData.gradeLevel || !formData.schoolYear) {
+                setCurriculumOptions([]);
+                return;
+            }
+
+            try {
+                setLoadingCurriculums(true);
+                const response = await fetch(`/api/grade-level-curriculums?schoolYearId=${encodeURIComponent(formData.schoolYear)}&gradeLevel=${encodeURIComponent(formData.gradeLevel)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    setCurriculumOptions(data.data);
+                }
+            } catch (curriculumError) {
+                console.error('Failed to fetch grade-level curriculums:', curriculumError);
+            } finally {
+                setLoadingCurriculums(false);
+            }
+        };
+
+        fetchCurriculums();
+    }, [formData.gradeLevel, formData.schoolYear]);
 
     // Auto-generate section ID when dependencies change
     useEffect(() => {
@@ -77,13 +107,22 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
         }
     }, [formData.gradeLevel, formData.sectionName, formData.schoolYear, editingSection])
 
+    useEffect(() => {
+        if (formData.glCurriculumId && curriculumOptions.length > 0) {
+            const stillVisible = curriculumOptions.some((option) => (option._id || option.gl_curriculum_id) === formData.glCurriculumId);
+            if (!stillVisible) {
+                setFormData((prev) => ({ ...prev, glCurriculumId: '' }));
+            }
+        }
+    }, [curriculumOptions, formData.glCurriculumId]);
+
     const handleSubmit = async () => {
         setLoading(true)
         setError('')
 
         // Validation check
         if (!formData.sectionName || !formData.sectionId || !formData.gradeLevel ||
-            !formData.schoolYear || !formData.roomNumber) {
+            !formData.schoolYear || !formData.glCurriculumId || !formData.roomNumber) {
             setError('Please fill in all required fields.');
             setLoading(false);
             return;
@@ -113,6 +152,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                     sectionId: '',
                     gradeLevel: '',
                     schoolYear: '',
+                    glCurriculumId: '',
                     roomNumber: '',
                 });
                 setError(null);
@@ -203,6 +243,40 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                                                     onChange={(e) => setFormData({ ...formData, schoolYear: e.target.value })}
                                                     disabled={loading}
                                                 />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Grade-Level Curriculum *</label>
+                                                <select
+                                                    value={formData.glCurriculumId}
+                                                    onChange={(e) => setFormData({ ...formData, glCurriculumId: e.target.value })}
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                    disabled={loading || loadingCurriculums || !formData.gradeLevel || !formData.schoolYear}
+                                                >
+                                                    <option value="">
+                                                        {!formData.gradeLevel || !formData.schoolYear
+                                                            ? 'Select a grade level and school year first'
+                                                            : loadingCurriculums
+                                                                ? 'Loading curriculum options...'
+                                                                : 'Select a curriculum'}
+                                                    </option>
+                                                    {curriculumOptions.map((option) => {
+                                                        const curriculum = option.curriculum_id || {};
+                                                        return (
+                                                            <option key={option._id} value={option._id}>
+                                                                {option.grade_level} | {option.school_year_id} | {curriculum.curriculum_name || curriculum.curriculum_id || 'Curriculum'}
+                                                                {option.is_default ? ' | Default' : ''}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                                {formData.gradeLevel && formData.schoolYear && (
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        Available curriculum assignments for {formData.gradeLevel} in {formData.schoolYear}.
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
 

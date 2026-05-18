@@ -66,6 +66,15 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
     [sections, formData.sectionId]
   );
 
+  const selectedCurriculum = useMemo(() => {
+    const glCurriculum = selectedSection?.glCurriculumId;
+    if (!glCurriculum) {
+      return null;
+    }
+
+    return glCurriculum.curriculum_id || glCurriculum;
+  }, [selectedSection]);
+
   const visibleSchedules = useMemo(() => {
     if (!selectedSection?.gradeLevel) {
       return schedules;
@@ -224,6 +233,12 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                       <span className="block text-xs uppercase tracking-wide text-gray-500">Teacher</span>
                       <span className="font-medium">
                         {formData.teacherId ? `${teachers.find((teacher) => teacher._id === formData.teacherId)?.firstName || ''} ${teachers.find((teacher) => teacher._id === formData.teacherId)?.lastName || ''}`.trim() : 'Not selected'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-xs uppercase tracking-wide text-gray-500">Curriculum</span>
+                      <span className="font-medium">
+                        {selectedCurriculum ? selectedCurriculum.curriculum_name || selectedCurriculum.curriculum_id || 'Assigned curriculum' : 'Not available'}
                       </span>
                     </div>
                   </div>

@@ -1,9 +1,54 @@
 import dbConnect from '@/lib/mongodb';
 import ClassAssignment from '@/models/ClassAssignment';
+import SystemSettings from '@/models/SystemSettings';
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
 import { NextResponse } from 'next/server';
+
+const SETTINGS_KEY = 'tuition-breakdown';
+
+const ensureSettings = async () => {
+  let settings = await SystemSettings.findOne({ key: SETTINGS_KEY });
+  if (!settings) {
+    settings = await SystemSettings.create({ key: SETTINGS_KEY });
+  }
+  return settings;
+};
+
+const enrichAssignment = (assignment, settings) => {
+  const section = assignment.section?.toObject ? assignment.section.toObject() : assignment.section;
+  const assignmentLink = section?.glCurriculumId
+    ? (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId))
+    : null;
+  const curriculum = assignmentLink
+    ? (settings.curriculums || []).find((item) => String(item._id) === String(assignmentLink.curriculum_id))
+    : null;
+
+  return {
+    ...assignment.toObject(),
+    section: section
+      ? {
+          ...section,
+          glCurriculumId: assignmentLink
+            ? {
+                ...assignmentLink.toObject(),
+                curriculum_id: curriculum
+                  ? {
+                      _id: curriculum._id,
+                      curriculum_id: curriculum.curriculum_id,
+                      curriculum_name: curriculum.curriculum_name,
+                      description: curriculum.description,
+                      effective_start_date: curriculum.effective_start_date,
+                      effective_end_date: curriculum.effective_end_date,
+                    }
+                  : null,
+              }
+            : null,
+        }
+      : null,
+  };
+};
 
 const buildAssignmentQuery = () => (
   ClassAssignment.find({})
@@ -16,8 +61,9 @@ const buildAssignmentQuery = () => (
 export async function GET() {
   try {
     await dbConnect();
+    const settings = await ensureSettings();
     const assignments = await buildAssignmentQuery();
-    return NextResponse.json({ success: true, data: assignments }, { status: 200 });
+    return NextResponse.json({ success: true, data: assignments.map((assignment) => enrichAssignment(assignment, settings)) }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -55,6 +101,17 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Section and schedule must have the same grade level' }, { status: 400 });
     }
 
+    const settings = await ensureSettings();
+    const sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId));
+
+    if (!sectionCurriculum) {
+      return NextResponse.json({ success: false, error: 'Section must be linked to a grade-level curriculum before creating a class assignment' }, { status: 400 });
+    }
+
+    if (String(sectionCurriculum.grade_level || '').trim() !== String(section.gradeLevel || '').trim()) {
+      return NextResponse.json({ success: false, error: 'Section curriculum grade level does not match the section' }, { status: 400 });
+    }
+
     const existingAssignment = await ClassAssignment.findOne({ section: sectionId });
     if (existingAssignment) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });
@@ -72,7 +129,7 @@ export async function POST(request) {
       .populate('teacher')
       .populate('schedule');
 
-    return NextResponse.json({ success: true, data: populatedAssignment }, { status: 201 });
+    return NextResponse.json({ success: true, data: enrichAssignment(populatedAssignment, settings) }, { status: 201 });
   } catch (error) {
     if (error?.code === 11000) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });

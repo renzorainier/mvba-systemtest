@@ -4,6 +4,7 @@ const SectionSchema = new mongoose.Schema({
     sectionName: { type: String, required: [true, "Section name is required"] },
     gradeLevel: { type: String, required: [true, "Grade level is required"] },
     schoolYear: { type: String, required: [true, "School year is required"] },
+    glCurriculumId: { type: String, required: [true, "Grade level curriculum is required"] },
     roomNumber: { type: String, required: [true, "Room number is required"] },
     sectionId: { type: String, required: [true, "Section ID is required"], unique: true },
 });

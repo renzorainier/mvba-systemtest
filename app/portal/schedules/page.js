@@ -20,6 +20,7 @@ export default function ScheduleManagement() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [scheduleCurriculumMap, setScheduleCurriculumMap] = useState({});
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
@@ -43,11 +44,29 @@ export default function ScheduleManagement() {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/schedules');
-      const data = await response.json();
+      const [schedulesResponse, classesResponse] = await Promise.all([
+        fetch('/api/schedules'),
+        fetch('/api/classes'),
+      ]);
+      const [data, classesData] = await Promise.all([
+        schedulesResponse.json(),
+        classesResponse.json(),
+      ]);
 
       if (data.success) {
         setSchedules(data.data);
+      }
+
+      if (classesData.success) {
+        const nextMap = {};
+        classesData.data.forEach((assignment) => {
+          const scheduleId = assignment.schedule?._id;
+          const curriculumName = assignment.section?.glCurriculumId?.curriculum_id?.curriculum_name || assignment.section?.glCurriculumId?.curriculum_name || '';
+          if (scheduleId && curriculumName) {
+            nextMap[scheduleId] = curriculumName;
+          }
+        });
+        setScheduleCurriculumMap(nextMap);
       }
     } catch (error) {
       console.error('Failed to fetch schedules:', error);
@@ -247,6 +266,7 @@ export default function ScheduleManagement() {
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Schedule ID</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Schedule Name</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Grade Level</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Curriculum</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Subjects</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Date Created</th>
                       <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
@@ -259,6 +279,7 @@ export default function ScheduleManagement() {
                           <td className="px-6 py-4 text-sm font-medium text-blue-600">{sch.scheduleId}</td>
                           <td className="px-6 py-4 text-sm font-bold text-gray-900">{sch.name}</td>
                           <td className="px-6 py-4 text-sm text-gray-500">{sch.gradeLevel}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{scheduleCurriculumMap[sch._id] || 'Linked from section'}</td>
                           <td className="px-6 py-4 text-sm text-gray-500">{sch.totalSubjects} Classes</td>
                           <td className="px-6 py-4 text-sm text-gray-500">{new Date(sch.createdAt).toLocaleDateString()}</td>
                           <td className="px-6 py-4 text-right">
@@ -274,11 +295,11 @@ export default function ScheduleManagement() {
                       ))
                     ) : loading ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500">Loading schedules...</td>
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">Loading schedules...</td>
                       </tr>
                     ) : (
                       <tr>
-                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500">No schedules found.</td>
+                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">No schedules found.</td>
                       </tr>
                     )}
                   </tbody>

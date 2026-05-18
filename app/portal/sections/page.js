@@ -139,6 +139,9 @@ export default function Dashboard() {
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                       School Year 
                     </th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Curriculum
+                      </th>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                       Room Number
                     </th>
@@ -167,6 +170,9 @@ export default function Dashboard() {
                           {section.schoolYear}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {section.glCurriculumId?.curriculum_id?.curriculum_name || section.glCurriculumId?.curriculum_name || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {section.roomNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -186,13 +192,13 @@ export default function Dashboard() {
                     ))
                   ) : loading ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                         Loading sections...
                       </td>
                     </tr>
                   ) : (
                     <tr>
-                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                         No Sections found matching your search.
                       </td>
                     </tr>
