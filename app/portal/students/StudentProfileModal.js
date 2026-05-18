@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
-import { X, Upload, Save, Edit2 } from 'lucide-react';
+import { X, Upload, Save, Edit2, Archive } from 'lucide-react';
 
 const GRADE_LEVEL_OPTIONS = [
   'Kinder 1',
@@ -30,13 +30,14 @@ const createEmptyFormData = () => ({
   parentGuardianContactNumber: '',
 });
 
-export default function StudentProfileModal({ open, onClose, student, onStudentUpdate }) {
+export default function StudentProfileModal({ open, onClose, student, onStudentUpdate, onArchived }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [documentsToRemove, setDocumentsToRemove] = useState([]);
@@ -209,6 +210,47 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       setError('An error occurred while updating the student profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!student) return;
+
+    const confirmed = window.confirm(
+      'Archive this student and all linked enrollments, payments, and receipt records? You can restore them later from Archived Students.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setArchiving(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/students/${student._id}/archive`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to archive student');
+      }
+
+      if (onArchived) {
+        onArchived(result.data);
+      }
+
+      setSuccess('Student archived successfully');
+      setTimeout(() => {
+        onClose();
+      }, 900);
+    } catch (archiveError) {
+      console.error('Error archiving student:', archiveError);
+      setError(archiveError.message || 'An error occurred while archiving the student');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -591,9 +633,19 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
             {/* Footer / Action Buttons */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              {!isEditing && (
+                <button
+                  onClick={handleArchive}
+                  disabled={loading || archiving}
+                  className="px-4 py-2 border border-red-300 rounded-lg font-medium text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Archive size={18} />
+                  {archiving ? 'Archiving...' : 'Archive'}
+                </button>
+              )}
               <button
                 onClick={onClose}
-                disabled={loading}
+                disabled={loading || archiving}
                 className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Close

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import AddStudentsModal from '../students/addStudentsModal';
 import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
@@ -253,7 +253,13 @@ export default function App() {
 
       <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} />
       <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
-      <StudentProfileModal open={profileModalOpen} onClose={closeProfileModal} student={selectedStudent} onStudentUpdate={handleStudentUpdate} />
+      <StudentProfileModal
+        open={profileModalOpen}
+        onClose={closeProfileModal}
+        student={selectedStudent}
+        onStudentUpdate={handleStudentUpdate}
+        onArchived={fetchStudents}
+      />
     </div>
   );
 }

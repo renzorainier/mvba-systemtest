@@ -12,7 +12,8 @@ import {
   HelpCircle, 
   LogOut, 
   Calendar,
-  Layers3
+  Layers3,
+  Archive
 } from 'lucide-react';
 
 export default function Sidebar({ userRole = 'Admin' }) {
@@ -25,11 +26,18 @@ export default function Sidebar({ userRole = 'Admin' }) {
     router.push('/');
   };
 
-  const isActive = (path) => pathname === path || pathname.startsWith(`${path}/`);
+  const isActive = (path, exact = false) => {
+    if (exact) {
+      return pathname === path;
+    }
+
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   const menuItems = [
     { name: 'Dashboard', href: '/portal/dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Registrar', 'Cashier'] },
     { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
+    { name: 'Archived Students', href: '/portal/students/archived', icon: Archive, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Teacher Management', href: '/portal/teachers', icon: GraduationCap, allowedRoles: ['Admin', 'Registrar'] },
     { name: 'Section Management', href: '/portal/sections', icon: School, allowedRoles: ['Admin', 'Registrar'] },
@@ -55,7 +63,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {visibleMenuItems.map((item) => {
-          const active = isActive(item.href);
+          const active = isActive(item.href, item.href === '/portal/students');
           return (
             <Link 
               key={item.href} 
