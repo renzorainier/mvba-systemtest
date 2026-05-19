@@ -142,6 +142,16 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });
     }
 
+    const duplicateTeacher = await ClassAssignment.findOne({ teacher: teacherId, _id: { $ne: id } });
+    if (duplicateTeacher) {
+      return NextResponse.json({ success: false, error: 'This teacher already has a class assignment' }, { status: 409 });
+    }
+
+    const duplicateSchedule = await ClassAssignment.findOne({ schedule: scheduleId, _id: { $ne: id } });
+    if (duplicateSchedule) {
+      return NextResponse.json({ success: false, error: 'This schedule already has a class assignment' }, { status: 409 });
+    }
+
     const assignment = await ClassAssignment.findByIdAndUpdate(
       id,
       {

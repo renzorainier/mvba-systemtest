@@ -149,6 +149,16 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });
     }
 
+    const existingTeacherAssignment = await ClassAssignment.findOne({ teacher: teacherId });
+    if (existingTeacherAssignment) {
+      return NextResponse.json({ success: false, error: 'This teacher already has a class assignment' }, { status: 409 });
+    }
+
+    const existingScheduleAssignment = await ClassAssignment.findOne({ schedule: scheduleId });
+    if (existingScheduleAssignment) {
+      return NextResponse.json({ success: false, error: 'This schedule already has a class assignment' }, { status: 409 });
+    }
+
     const assignment = await ClassAssignment.create({
       assignmentId: body.assignmentId || `CA-${Date.now()}`,
       section: sectionId,
