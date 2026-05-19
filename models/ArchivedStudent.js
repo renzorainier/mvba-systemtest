@@ -19,6 +19,7 @@ const ArchivedStudentSchema = new mongoose.Schema({
   parentGuardianContactNumber: { type: String, required: false, default: '' },
   sectionId: { type: String, required: false, default: null },
   schoolYear: { type: String, required: [true, 'School year is required'] },
+  sourceStudentId: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
   profilePicture: { type: String, required: false, default: null },
@@ -36,5 +37,16 @@ const ArchivedStudentSchema = new mongoose.Schema({
   ],
   archivedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
+
+ArchivedStudentSchema.index(
+  { sourceStudentId: 1, schoolYear: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceStudentId: { $exists: true, $ne: null },
+      schoolYear: { $exists: true, $ne: null },
+    },
+  }
+);
 
 export default mongoose.models.ArchivedStudent || mongoose.model('ArchivedStudent', ArchivedStudentSchema, 'archived_students');
