@@ -207,7 +207,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
           onClose();
         }, 1500);
       } else {
-        setError(result.message || 'Failed to update student');
+        setError(result.error || result.message || 'Failed to update student');
       }
     } catch (error) {
       console.error('Error updating student:', error);
@@ -237,16 +237,17 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       });
 
       const result = await response.json();
+      const alreadyArchived = response.status === 409 && result.error === 'Student is already archived.';
 
-      if (!response.ok || !result.success) {
+      if ((!response.ok || !result.success) && !alreadyArchived) {
         throw new Error(result.error || 'Failed to archive student');
       }
 
       if (onArchived) {
-        onArchived(result.data);
+        onArchived(result.data || student);
       }
 
-      setSuccess('Student archived successfully');
+      setSuccess(alreadyArchived ? 'Student was already archived' : 'Student archived successfully');
       setTimeout(() => {
         onClose();
       }, 900);

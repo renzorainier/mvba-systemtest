@@ -21,6 +21,8 @@ export default function ScheduleManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [scheduleCurriculumMap, setScheduleCurriculumMap] = useState({});
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [currentScheduleCode, setCurrentScheduleCode] = useState('');
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
@@ -82,6 +84,8 @@ export default function ScheduleManagement() {
     setCurrentScheduleName('');
     setSelectedGrade('Kinder 1');
     setScheduleItems([]);
+    setCurrentScheduleCode('');
+    setEditingScheduleId(null);
     setError('');
     setViewMode('editor');
   };
@@ -91,6 +95,8 @@ export default function ScheduleManagement() {
     setCurrentScheduleName(schedule.name);
     setSelectedGrade(schedule.gradeLevel);
     setScheduleItems(schedule.items || []);
+    setCurrentScheduleCode(schedule.scheduleId || '');
+    setEditingScheduleId(schedule._id);
     setError('');
     setViewMode('editor');
   };
@@ -173,6 +179,7 @@ export default function ScheduleManagement() {
     setError('');
 
     const payload = {
+      scheduleId: currentScheduleCode || undefined,
       name: currentScheduleName,
       gradeLevel: selectedGrade,
       totalSubjects: scheduleItems.filter(i => i.type === 'class').length,
@@ -180,8 +187,8 @@ export default function ScheduleManagement() {
     };
 
     try {
-      const response = await fetch('/api/schedules', {
-        method: 'POST',
+      const response = await fetch(editingScheduleId ? `/api/schedules/${editingScheduleId}` : '/api/schedules', {
+        method: editingScheduleId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
@@ -195,6 +202,8 @@ export default function ScheduleManagement() {
       setViewMode('list');
       setScheduleItems([]);
       setCurrentScheduleName('');
+      setCurrentScheduleCode('');
+      setEditingScheduleId(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -387,7 +396,7 @@ export default function ScheduleManagement() {
                   className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-6 py-2 rounded-md text-sm font-medium flex items-center shadow-sm"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {saving ? 'Saving...' : 'Save Schedule'}
+                  {saving ? 'Saving...' : editingScheduleId ? 'Update Schedule' : 'Save Schedule'}
                 </button>
               </div>
             </div>

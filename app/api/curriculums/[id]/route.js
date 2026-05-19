@@ -1,4 +1,5 @@
 import dbConnect from '@/lib/mongodb';
+import mongoose from 'mongoose';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
