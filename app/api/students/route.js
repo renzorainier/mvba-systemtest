@@ -45,7 +45,10 @@ export async function GET(request) {
     const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
 
     if (isHistorical) {
-      const archivedStudents = await ArchivedStudent.find({ schoolYear: selectedSchoolYear }).lean();
+      const archivedStudents = await ArchivedStudent.find({
+        schoolYear: selectedSchoolYear,
+        $or: [{ archiveType: 'rollover' }, { archiveType: { $exists: false } }],
+      }).lean();
       return NextResponse.json({ success: true, data: archivedStudents }, { status: 200 });
     }
 

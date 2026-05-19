@@ -22,6 +22,11 @@ const ArchivedStudentSchema = new mongoose.Schema({
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
   profilePicture: { type: String, required: false, default: null },
+  archiveType: {
+    type: String,
+    enum: ['manual', 'rollover'],
+    default: 'manual',
+  },
   documents: [
     {
       fileId: mongoose.Schema.Types.ObjectId,

@@ -4,8 +4,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   try {
-    const { selectedSchoolYear } = await getSchoolYearContext(request);
-    const students = await listArchivedStudents(selectedSchoolYear);
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const students = await listArchivedStudents(selectedSchoolYear, { isHistorical });
 
     return NextResponse.json({ success: true, data: students }, { status: 200 });
   } catch (error) {
