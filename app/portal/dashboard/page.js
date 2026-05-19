@@ -38,6 +38,12 @@ export default function App() {
   const [totalTuition, setTotalTuition] = useState(null);
   const [outstandingBalance, setOutstandingBalance] = useState(null);
   const [totalPayments, setTotalPayments] = useState(null);
+  const [schoolYearState, setSchoolYearState] = useState({
+    loading: true,
+    currentSchoolYear: '',
+    selectedSchoolYear: '',
+    isHistorical: false,
+  });
 
   const formatPhp = (value) =>
     new Intl.NumberFormat('en-PH', {
@@ -110,7 +116,28 @@ export default function App() {
       }
     };
 
+    const fetchSchoolYear = async () => {
+      try {
+        const response = await fetch('/api/school-years');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          return;
+        }
+
+        setSchoolYearState({
+          loading: false,
+          currentSchoolYear: data.data.currentSchoolYear || '',
+          selectedSchoolYear: data.data.selectedSchoolYear || data.data.currentSchoolYear || '',
+          isHistorical: Boolean(data.data.isHistorical),
+        });
+      } catch {
+        setSchoolYearState((previous) => ({ ...previous, loading: false }));
+      }
+    };
+
     fetchDashboardMetrics();
+    fetchSchoolYear();
   }, []);
 
   return (
@@ -118,10 +145,27 @@ export default function App() {
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 md:px-8 lg:px-10 lg:py-8">
         <div className="mb-8 flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">Admin Portal</p>
-          <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">Dashboard</h1>
-          <p className="max-w-2xl text-sm text-slate-500">
-            Quick view of your school totals, balances, and current payment activity.
-          </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">Dashboard</h1>
+              <p className="max-w-2xl text-sm text-slate-500">
+                Quick view of your school totals, balances, and current payment activity.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">School Year</p>
+              <p className="mt-1 text-lg font-black tracking-tight text-slate-900">
+                {schoolYearState.loading
+                  ? 'Loading...'
+                  : schoolYearState.selectedSchoolYear || schoolYearState.currentSchoolYear || 'Not set'}
+              </p>
+              {schoolYearState.isHistorical && !schoolYearState.loading && (
+                <p className="mt-1 text-xs font-medium text-amber-700">
+                  Historical selection
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Key Metrics Grid */}

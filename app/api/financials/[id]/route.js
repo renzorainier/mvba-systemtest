@@ -4,10 +4,17 @@ import Student from '@/models/Student';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 const findStudentByIdentifier = async (studentId) => {
   const studentSearchFilters = [{ learnersReferenceNumber: studentId }];
 
   if (mongoose.Types.ObjectId.isValid(studentId)) {
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     studentSearchFilters.push({ _id: studentId });
   }
 

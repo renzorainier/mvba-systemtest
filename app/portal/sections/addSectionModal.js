@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
+export default function AddSectionsModal({ isOpen, onClose, editingSection, isHistorical = false }) {
     const gradeLevel = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
     const [formData, setFormData] = useState({
@@ -117,6 +117,10 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
     }, [curriculumOptions, formData.glCurriculumId]);
 
     const handleSubmit = async () => {
+        if (isHistorical) {
+            return;
+        }
+
         setLoading(true)
         setError('')
 
@@ -204,7 +208,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                                                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     value={formData.sectionName}
                                                     onChange={(e) => setFormData({ ...formData, sectionName: e.target.value })}
-                                                    disabled={loading}
+                                                    disabled={loading || isHistorical}
                                                 />
                                             </div>
                                             <div>
@@ -226,7 +230,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                                                     value={formData.gradeLevel} // FIXED: Now uses formData directly
                                                     onChange={(e) => setFormData({ ...formData, gradeLevel: e.target.value })} // FIXED: Updates formData directly
                                                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                    disabled={loading}
+                                                    disabled={loading || isHistorical}
                                                 >
                                                     {/* FIXED: Added a default empty option so the user HAS to click it */}
                                                     <option value="">Select a Grade...</option> 
@@ -241,7 +245,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                                                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     value={formData.schoolYear}
                                                     onChange={(e) => setFormData({ ...formData, schoolYear: e.target.value })}
-                                                    disabled={loading}
+                                                    disabled={loading || isHistorical}
                                                 />
                                             </div>
                                         </div>
@@ -290,7 +294,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                                                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                                     value={formData.roomNumber}
                                                     onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                                                    disabled={loading}
+                                                    disabled={loading || isHistorical}
                                                 />
                                             </div>
                                         </div>
@@ -302,7 +306,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection }) {
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                disabled={loading}
+                                disabled={loading || isHistorical}
                                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
                             >
                                 {loading ? (editingSection ? 'Updating...' : 'Adding...') : (editingSection ? 'Update Section' : 'Add Section')}

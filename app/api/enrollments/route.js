@@ -2,19 +2,30 @@ import dbConnect from "@/lib/mongodb";
 import Enrollment from "@/models/Enrollment";
 import Student from "@/models/Student";
 import Section from "@/models/Section";
+import ArchivedEnrollment from "@/models/ArchivedEnrollment";
+import ArchivedStudent from "@/models/ArchivedStudent";
+import ArchivedSection from "@/models/ArchivedSection";
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from "@/lib/school-year";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
     try{
         await dbConnect();
-        const enrollments = await Enrollment.find({}).lean();
+        const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+        const enrollments = isHistorical
+            ? await ArchivedEnrollment.find({ schoolYear: selectedSchoolYear }).lean()
+            : await Enrollment.find({ schoolYear: selectedSchoolYear }).lean();
 
         const learnerRefs = [...new Set(enrollments.map((item) => item.learnersReferenceNumber).filter(Boolean))];
         const sectionIds = [...new Set(enrollments.map((item) => item.sectionId).filter(Boolean))];
 
         const [students, sections] = await Promise.all([
-            Student.find({ learnersReferenceNumber: { $in: learnerRefs } }, { firstName: 1, lastName: 1, learnersReferenceNumber: 1 }).lean(),
-            Section.find({ sectionId: { $in: sectionIds } }, { sectionId: 1, sectionName: 1 }).lean(),
+            isHistorical
+                ? ArchivedStudent.find({ learnersReferenceNumber: { $in: learnerRefs }, schoolYear: selectedSchoolYear }, { firstName: 1, lastName: 1, learnersReferenceNumber: 1 }).lean()
+                : Student.find({ learnersReferenceNumber: { $in: learnerRefs } }, { firstName: 1, lastName: 1, learnersReferenceNumber: 1 }).lean(),
+            isHistorical
+                ? ArchivedSection.find({ sectionId: { $in: sectionIds }, schoolYear: selectedSchoolYear }, { sectionId: 1, sectionName: 1 }).lean()
+                : Section.find({ sectionId: { $in: sectionIds } }, { sectionId: 1, sectionName: 1 }).lean(),
         ]);
 
         const studentNameByLrn = new Map(
@@ -43,6 +54,12 @@ export async function GET(request) {
 export async function POST(request) {
     try {
         await dbConnect();
+        const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+        if (!schoolYearAccess.allowed) {
+            return NextResponse.json(schoolYearAccess.response, { status: 403 });
+        }
+
         const body = await request.json();
         // basic validation
         if (!body.learnersReferenceNumber) {

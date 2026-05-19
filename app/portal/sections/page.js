@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, MoreHorizontal } from 'lucide-react';
 import AddSectionsModal from './addSectionModal';
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function Dashboard() {
+  const { isHistorical } = useSchoolYearContext();
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,6 +15,9 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const openModal = () => {
+    if (isHistorical) {
+      return;
+    }
     setEditingSection(null);
     setIsModalOpen(true);
   };
@@ -21,6 +26,9 @@ export default function Dashboard() {
     setEditingSection(null);
   };
   const openEditModal = (section) => {
+    if (isHistorical) {
+      return;
+    }
     setEditingSection(section);
     setIsModalOpen(true);
   };
@@ -99,7 +107,7 @@ export default function Dashboard() {
         {/* Header Section */}
         <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Section Management</h1>
-          <button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+          <button onClick={openModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
             <Plus size={18} />
             Add New Section
           </button>
@@ -188,7 +196,8 @@ export default function Dashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             onClick={() => openEditModal(section)}
-                            className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                            disabled={isHistorical}
+                            className="text-blue-600 hover:text-blue-900 font-medium transition-colors disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300"
                           >
                             Edit
                           </button>
@@ -240,7 +249,7 @@ export default function Dashboard() {
           </div>
         </div>
         {/* Add Sections Modal */}
-        <AddSectionsModal isOpen={isModalOpen} onClose={closeModal} editingSection={editingSection} />
+        <AddSectionsModal isOpen={isModalOpen} onClose={closeModal} editingSection={editingSection} isHistorical={isHistorical} />
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import Student from '@/models/Student';
+import ArchivedStudent from '@/models/ArchivedStudent';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import {
   generateUniqueKinderOneLrn,
@@ -16,6 +17,7 @@ import {
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -40,6 +42,13 @@ const getDefaultTotalForGrade = async (gradeLevel) => {
 export async function GET(request) {
   try {
     await dbConnect();
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+
+    if (isHistorical) {
+      const archivedStudents = await ArchivedStudent.find({ schoolYear: selectedSchoolYear }).lean();
+      return NextResponse.json({ success: true, data: archivedStudents }, { status: 200 });
+    }
+
     const settings = await SystemSettings.findOne({ key: SETTINGS_KEY });
     const tuitionPlans = normalizeTuitionPlans(settings?.tuitionPlans?.length ? settings.tuitionPlans : DEFAULT_SETTINGS_PAYLOAD.tuitionPlans || createDefaultTuitionPlans());
     const defaultTotal = calculateTotalFromTuitionPlans(tuitionPlans);
@@ -89,6 +98,12 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const body = await request.json();
     const gradeLevel = String(body.gradeLevel || '').trim();
     const normalizedLrn = normalizeLearnersReferenceNumber(body.learnersReferenceNumber);

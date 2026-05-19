@@ -5,8 +5,10 @@ import { Search, Plus } from 'lucide-react';
 import AddStudentsModal from '../students/addStudentsModal';
 import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function App() {
+  const { isHistorical } = useSchoolYearContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +29,9 @@ export default function App() {
     }).format(Number(value || 0));
 
   const openModal = () => {
+    if (isHistorical) {
+      return;
+    }
     setEditingStudent(null);
     setIsModalOpen(true);
   };
@@ -35,6 +40,9 @@ export default function App() {
     setEditingStudent(null);
   };
   const openEditModal = (student) => {
+    if (isHistorical) {
+      return;
+    }
     setEditingStudent(student);
     setIsModalOpen(true);
   };
@@ -112,7 +120,7 @@ export default function App() {
       {/* Header Section */}
       <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Student Management</h1>
-        <button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+        <button onClick={openModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
           <Plus size={18} />
           Add New Student
         </button>
@@ -198,7 +206,8 @@ export default function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
                           onClick={() => openEditModal(student)}
-                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                          disabled={isHistorical}
+                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300"
                         >
                           Edit
                         </button>
@@ -251,7 +260,7 @@ export default function App() {
 
       </div>
 
-      <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} />
+      <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} isHistorical={isHistorical} />
       <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
       <StudentProfileModal
         open={profileModalOpen}
@@ -259,6 +268,7 @@ export default function App() {
         student={selectedStudent}
         onStudentUpdate={handleStudentUpdate}
         onArchived={fetchStudents}
+        isHistorical={isHistorical}
       />
     </div>
   );

@@ -9,6 +9,7 @@ import {
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
 import { hashPassword, verifyPassword } from '@/lib/passwords';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 const DEFAULT_CURRENT_SCHOOL_YEAR = '2025-2026';
@@ -169,6 +170,12 @@ export async function PUT(request) {
 
     if (!isAdmin) {
       return NextResponse.json({ success: false, error: 'Only admins can update system settings.' }, { status: 403 });
+    }
+
+    const historicalAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!historicalAccess.allowed) {
+      return NextResponse.json(historicalAccess.response, { status: 403 });
     }
 
     await dbConnect();

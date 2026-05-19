@@ -4,7 +4,9 @@ import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSetting
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
+import ArchivedClassAssignment from '@/models/ArchivedClassAssignment';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -89,12 +91,15 @@ const buildAssignmentQuery = () => (
     .sort({ createdAt: -1 })
 );
 
-export async function GET() {
+export async function GET(request) {
   try {
     await dbConnect();
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
     const settings = await ensureSettings();
-    const assignments = await buildAssignmentQuery();
-    return NextResponse.json({ success: true, data: assignments.map((assignment) => enrichAssignment(assignment, settings)) }, { status: 200 });
+    const assignments = isHistorical
+      ? await ArchivedClassAssignment.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 })
+      : await buildAssignmentQuery();
+    return NextResponse.json({ success: true, data: isHistorical ? assignments : assignments.map((assignment) => enrichAssignment(assignment, settings)) }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -103,6 +108,12 @@ export async function GET() {
 export async function POST(request) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const body = await request.json();
     const { sectionId, teacherId, scheduleId } = body;
 

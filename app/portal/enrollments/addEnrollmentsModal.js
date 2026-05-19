@@ -13,6 +13,7 @@ export default function AddEnrollmentsModal({
   open,
   onClose,
   editingEnrollment,
+  isHistorical = false,
 }) {
   const getStatusStyles = (status) => {
     switch (status) {
@@ -146,6 +147,10 @@ export default function AddEnrollmentsModal({
   }, [formData.learnersReferenceNumber, enrollments, editingEnrollment]);
 
   const handleSubmit = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -402,7 +407,7 @@ export default function AddEnrollmentsModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || isDuplicate}
+                disabled={loading || isDuplicate || isHistorical}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
                 {loading

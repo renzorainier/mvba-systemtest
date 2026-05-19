@@ -1,10 +1,17 @@
 import dbConnect from '@/lib/mongodb';
 import Teachers from '@/models/Teachers';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 import { NextResponse } from 'next/server';
 
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     

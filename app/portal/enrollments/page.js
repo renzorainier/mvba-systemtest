@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
 import AddEnrollmentsModal from '../enrollments/addEnrollmentsModal';
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function App() {
+  const { isHistorical } = useSchoolYearContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +16,9 @@ export default function App() {
   const [statusUpdating, setStatusUpdating] = useState(null);
 
   const openModal = () => {
+    if (isHistorical) {
+      return;
+    }
     setEditingEnrollment(null);
     setIsModalOpen(true);
   };
@@ -22,6 +27,9 @@ export default function App() {
     setEditingEnrollment(null);
   };
   const openEditModal = (enrollment) => {
+    if (isHistorical) {
+      return;
+    }
     setEditingEnrollment(enrollment);
     setIsModalOpen(true);
   };
@@ -134,7 +142,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Enrollment Management</h1>
-        <button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+        <button onClick={openModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
           <Plus size={18} />
           Add New Enrollment
         </button>
@@ -226,10 +234,11 @@ export default function App() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => openEditModal(enrollment)}
-                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
-                        >
+                          <button
+                            onClick={() => openEditModal(enrollment)}
+                            disabled={isHistorical}
+                            className="text-blue-600 hover:text-blue-900 font-medium transition-colors disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300"
+                          >
                           Edit
                         </button>
                       </td>
@@ -280,7 +289,7 @@ export default function App() {
 
       </div>
 
-      <AddEnrollmentsModal open={isModalOpen} onClose={closeModal} editingEnrollment={editingEnrollment} />
+      <AddEnrollmentsModal open={isModalOpen} onClose={closeModal} editingEnrollment={editingEnrollment} isHistorical={isHistorical} />
     </div>
   );
 }

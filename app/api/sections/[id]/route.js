@@ -2,6 +2,7 @@ import dbConnect from '@/lib/mongodb';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Section from '@/models/Section';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -25,6 +26,12 @@ const ensureSettings = async () => {
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     

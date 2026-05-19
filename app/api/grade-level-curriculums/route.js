@@ -1,7 +1,9 @@
 import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
+import ArchivedGradeLevelCurriculum from '@/models/ArchivedGradeLevelCurriculum';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -44,13 +46,18 @@ const buildAssignmentPayload = (assignment, curriculums = []) => {
 export async function GET(request) {
   try {
     await dbConnect();
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
     const settings = await ensureSettings();
     const { searchParams } = new URL(request.url);
     const schoolYearId = searchParams.get('schoolYearId') || searchParams.get('school_year_id') || '';
     const gradeLevel = searchParams.get('gradeLevel') || searchParams.get('grade_level') || '';
 
-    const assignments = settings.gradeLevelCurriculums
-      .filter((assignment) => !schoolYearId || String(assignment.school_year_id || '').trim() === schoolYearId)
+    const sourceAssignments = isHistorical
+      ? await ArchivedGradeLevelCurriculum.find({ schoolYear: selectedSchoolYear }).lean()
+      : settings.gradeLevelCurriculums;
+
+    const assignments = sourceAssignments
+      .filter((assignment) => !schoolYearId || String(assignment.school_year_id || assignment.schoolYear || '').trim() === schoolYearId)
       .filter((assignment) => !gradeLevel || String(assignment.grade_level || '').trim() === gradeLevel)
       .map((assignment) => buildAssignmentPayload(assignment, settings.curriculums || []))
       .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0));
@@ -64,6 +71,12 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const body = await request.json();
 
     const settings = await ensureSettings();

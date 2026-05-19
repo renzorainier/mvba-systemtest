@@ -10,6 +10,7 @@ import { calculateTotalFromTuitionPlans, createDefaultTuitionPlans, getTuitionAm
 import { NextResponse } from 'next/server';
 import { getGridFSBucket } from '@/lib/gridfs';
 import { Readable } from 'stream';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -32,6 +33,12 @@ const getDefaultTotalForGrade = async (gradeLevel) => {
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     
     const formData = await request.formData();

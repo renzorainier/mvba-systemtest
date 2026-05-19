@@ -1,13 +1,70 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Lock, Loader2, LogIn } from 'lucide-react';
+import { User, Lock, Loader2, LogIn, School } from 'lucide-react';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ username: '', password: '' });
+  const [schoolYearState, setSchoolYearState] = useState({
+    loading: true,
+    currentSchoolYear: '',
+    selectedSchoolYear: '',
+    availableYears: [],
+  });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const schoolYearOptions = Array.from(
+    new Set(
+      [
+        ...(schoolYearState.availableYears || []),
+        schoolYearState.selectedSchoolYear,
+        schoolYearState.currentSchoolYear,
+      ].filter(Boolean)
+    )
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSchoolYears = async () => {
+      try {
+        const response = await fetch('/api/school-years');
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !isMounted) {
+          return;
+        }
+
+        setSchoolYearState({
+          loading: false,
+          currentSchoolYear: data.data.currentSchoolYear || '',
+          selectedSchoolYear: data.data.selectedSchoolYear || data.data.currentSchoolYear || '',
+          availableYears: Array.isArray(data.data.availableYears) ? data.data.availableYears : [],
+        });
+      } catch {
+        if (isMounted) {
+          setSchoolYearState((previous) => ({ ...previous, loading: false }));
+        }
+      }
+    };
+
+    loadSchoolYears();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSchoolYearChange = (event) => {
+    const nextYear = event.target.value;
+
+    document.cookie = `selected_school_year=${encodeURIComponent(nextYear)}; path=/; max-age=31536000; samesite=lax`;
+    setSchoolYearState((previous) => ({
+      ...previous,
+      selectedSchoolYear: nextYear,
+    }));
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -59,6 +116,24 @@ export default function LoginPage() {
             <p className="text-gray-500 text-lg">
               Please enter your credentials to access the portal.
             </p>
+          </div>
+
+          <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+              <School size={14} />
+              School Year
+            </div>
+            <p className="mt-2 text-sm text-slate-600">Choose the school year before signing in. The portal will open in that context.</p>
+            <select
+              value={schoolYearState.selectedSchoolYear || schoolYearState.currentSchoolYear || ''}
+              onChange={handleSchoolYearChange}
+              disabled={schoolYearState.loading}
+              className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-900 shadow-sm outline-none transition focus:border-blue-500 disabled:cursor-wait disabled:bg-slate-100"
+            >
+              {schoolYearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
           </div>
 
           {error && (

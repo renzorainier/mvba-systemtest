@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Plus, Search, PencilLine, Trash2, Save, X } from 'lucide-react';
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 const emptyForm = {
   curriculum_id: '',
@@ -16,6 +17,7 @@ const emptyForm = {
 const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
 
 export default function CurriculumsPage() {
+  const { isHistorical } = useSchoolYearContext();
   const [curriculums, setCurriculums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,10 @@ export default function CurriculumsPage() {
   }, [curriculums, searchTerm]);
 
   const startEdit = (curriculum) => {
+    if (isHistorical) {
+      return;
+    }
+
     setEditingId(curriculum._id);
     setFormData({
       curriculum_id: curriculum.curriculum_id || '',
@@ -71,6 +77,10 @@ export default function CurriculumsPage() {
   };
 
   const handleSave = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     try {
       setSaving(true);
       setError('');
@@ -109,6 +119,10 @@ export default function CurriculumsPage() {
   };
 
   const handleDelete = async (curriculum) => {
+    if (isHistorical) {
+      return;
+    }
+
     if (!window.confirm(`Delete curriculum ${curriculum.curriculum_name}?`)) {
       return;
     }
@@ -141,7 +155,7 @@ export default function CurriculumsPage() {
             <h1 className="text-3xl font-black tracking-tight text-slate-950">Curriculum Management</h1>
             <p className="mt-1 text-sm text-slate-600">Define curriculum versions and keep them tied to grade-level assignments.</p>
           </div>
-          <button onClick={resetForm} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-blue-700">
+          <button onClick={resetForm} disabled={isHistorical} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
             <Plus size={18} />
             New Curriculum
           </button>
@@ -185,11 +199,11 @@ export default function CurriculumsPage() {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => startEdit(curriculum)} className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-900">
+                          <button onClick={() => startEdit(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-900 disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300">
                             <PencilLine size={16} />
                             Edit
                           </button>
-                          <button onClick={() => handleDelete(curriculum)} className="inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-900">
+                          <button onClick={() => handleDelete(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-900 disabled:cursor-not-allowed disabled:text-red-300 disabled:hover:text-red-300">
                             <Trash2 size={16} />
                             Delete
                           </button>
@@ -217,7 +231,7 @@ export default function CurriculumsPage() {
                 <p className="text-sm text-slate-600">Use a stable code so grade assignments can reference it later.</p>
               </div>
               {editingId && (
-                <button onClick={resetForm} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                <button onClick={resetForm} disabled={isHistorical} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
                   <X size={14} />
                   Clear
                 </button>
@@ -290,7 +304,7 @@ export default function CurriculumsPage() {
               </div>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || isHistorical}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:bg-blue-400"
               >
                 <Save size={16} />

@@ -1,18 +1,24 @@
 import dbConnect from '@/lib/mongodb';
 import Financial from '@/models/Financial';
 import Student from '@/models/Student';
+import ArchivedPayment from '@/models/ArchivedPayment';
+import ArchivedStudent from '@/models/ArchivedStudent';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 export async function GET(request) {
   try {
     await dbConnect();
-    const financials = await Financial.find({}).lean();
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const financials = isHistorical
+      ? await ArchivedPayment.find({ schoolYear: selectedSchoolYear }).lean()
+      : await Financial.find({}).lean();
 
     const studentIds = [...new Set(financials.map((item) => item.studentId).filter(Boolean))];
     const objectIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
 
-    const students = await Student.find(
+    const students = await (isHistorical ? ArchivedStudent : Student).find(
       {
         $or: [
           { learnersReferenceNumber: { $in: studentIds } },
@@ -55,6 +61,12 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const body = await request.json();
     
     // Ensure all required fields are present

@@ -1,7 +1,9 @@
 import dbConnect from "@/lib/mongodb";
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from "@/models/SystemSettings";
 import Section from "@/models/Section";
+import ArchivedSection from "@/models/ArchivedSection";
 import { NextResponse } from "next/server";
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from "@/lib/school-year";
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -52,9 +54,12 @@ const buildSectionPayload = (section, settings) => {
 export async function GET(request) {
     try {
         await dbConnect();
+                const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
                 const settings = await ensureSettings();
-                const sections = await Section.find({}).sort({ createdAt: -1 });
-                return NextResponse.json({ success: true, data: sections.map((section) => buildSectionPayload(section, settings)) }, { status: 200 });
+                const sections = isHistorical
+                    ? await ArchivedSection.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 })
+                    : await Section.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
+                return NextResponse.json({ success: true, data: isHistorical ? sections : sections.map((section) => buildSectionPayload(section, settings)) }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
@@ -63,6 +68,12 @@ export async function GET(request) {
 export async function POST(request) {
     try {
         await dbConnect();
+        const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+        if (!schoolYearAccess.allowed) {
+            return NextResponse.json(schoolYearAccess.response, { status: 403 });
+        }
+
         const body = await request.json();
         const sectionData = {
             sectionName: body.sectionName,

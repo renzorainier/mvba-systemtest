@@ -3,10 +3,17 @@ import dbConnect from '@/lib/mongodb';
 import { getGridFSBucket } from '@/lib/gridfs';
 import { Readable } from 'stream';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 export async function POST(request) {
   try {
     await dbConnect();
+
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
 
     const user = getAuthenticatedUser(request);
 

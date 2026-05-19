@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-// 1. Add 'Calendar' to your imports
 import { 
   LayoutDashboard, 
   Users, 
@@ -22,6 +21,7 @@ import {
 export default function Sidebar({ userRole = 'Admin' }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [openGroups, setOpenGroups] = useState({});
 
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
@@ -88,8 +88,6 @@ export default function Sidebar({ userRole = 'Admin' }) {
       ],
     },
   ];
-
-  const [openGroups, setOpenGroups] = useState({});
 
   function GroupHeader({ title, active, onClickToggle, isOpen }) {
     return (
@@ -184,6 +182,12 @@ export default function Sidebar({ userRole = 'Admin' }) {
       </nav>
 
       <div className="p-4 border-t border-gray-100">
+        {userRole === 'Admin' && (
+          <Link href="/portal/rollover" className={`mb-3 flex items-center gap-3 w-full text-left py-3 px-3 rounded-md transition-all font-medium ${pathname.startsWith('/portal/rollover') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+            <Archive size={22} />
+            <span className="text-base">School Year Rollover</span>
+          </Link>
+        )}
         <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left py-3 px-3 text-red-500 hover:bg-red-50 rounded-md transition-all font-medium">
           <LogOut size={22} />
           <span className="text-base">Log Out</span>

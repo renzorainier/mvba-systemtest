@@ -30,7 +30,7 @@ const createEmptyFormData = () => ({
   parentGuardianContactNumber: '',
 });
 
-export default function StudentProfileModal({ open, onClose, student, onStudentUpdate, onArchived }) {
+export default function StudentProfileModal({ open, onClose, student, onStudentUpdate, onArchived, isHistorical = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
@@ -148,6 +148,10 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   };
 
   const handleSave = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -214,7 +218,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   };
 
   const handleArchive = async () => {
-    if (!student) return;
+    if (!student || isHistorical) return;
 
     const confirmed = window.confirm(
       'Archive this student and all linked enrollments, payments, and receipt records? You can restore them later from Archived Students.'
@@ -317,10 +321,11 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                     />
 
                     <button
-                      onClick={() => isEditing && fileInputRef.current?.click()}
-                      aria-disabled={!isEditing}
-                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors ${isEditing ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
-                      title={isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
+                      onClick={() => isEditing && !isHistorical && fileInputRef.current?.click()}
+                      aria-disabled={!isEditing || isHistorical}
+                      disabled={!isEditing || isHistorical}
+                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors disabled:cursor-not-allowed ${isEditing && !isHistorical ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
+                      title={isHistorical ? 'Historical school years are read-only' : isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
                     >
                       <Upload size={16} />
                     </button>
@@ -585,7 +590,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                                 Download
                               </a>
                             )}
-                            {isEditing && (
+                            {isEditing && !isHistorical && (
                               <button
                                 onClick={() => removeDocument(index)}
                                 className="text-red-600 hover:text-red-700 font-medium transition-colors"
@@ -600,7 +605,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                   )}
 
                   {/* Upload Documents */}
-                  {isEditing && (
+                  {isEditing && !isHistorical && (
                     <>
                       <input
                         type="file"
@@ -652,8 +657,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               </button>
               {!isEditing ? (
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                  onClick={() => !isHistorical && setIsEditing(true)}
+                  disabled={isHistorical}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
                   <Edit2 size={18} />
                   Edit Profile
@@ -669,7 +675,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                   </button>
                   <button
                     onClick={handleSave}
-                    disabled={loading}
+                    disabled={loading || isHistorical}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={18} />

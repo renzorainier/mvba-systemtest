@@ -1,8 +1,15 @@
 import { archiveStudent } from '@/lib/student-archive';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 import { NextResponse } from 'next/server';
 
 export async function POST(request, { params }) {
   try {
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const result = await archiveStudent(id);
 

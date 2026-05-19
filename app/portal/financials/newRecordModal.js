@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import FileUpload from '@/components/FileUpload';
 
-export default function AddNewRecord({ open, onClose }) {
+export default function AddNewRecord({ open, onClose, isHistorical = false }) {
   const [formData, setFormData] = useState({
     studentId: '',
     amountPaid: '',
@@ -77,6 +77,10 @@ export default function AddNewRecord({ open, onClose }) {
   }
 
   const handleSubmit = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     setLoading(true)
     setError('')
     
@@ -341,7 +345,7 @@ export default function AddNewRecord({ open, onClose }) {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading || isHistorical}
                 className="inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-green-500 disabled:bg-green-400 sm:ml-3 sm:w-auto"
               >
                 {loading ? 'Recording...' : 'Record Payment'}

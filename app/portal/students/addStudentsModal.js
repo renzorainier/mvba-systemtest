@@ -26,7 +26,7 @@ const isValidKinderOneLrn = (value) => /^\d{6}$/.test(value)
 
 const isValidKinderTwoToSixLrn = (value) => /^\d{12}$/.test(value)
 
-export default function AddStudentsModal({ open, onClose, editingStudent }) {
+export default function AddStudentsModal({ open, onClose, editingStudent, isHistorical = false }) {
   const [formData, setFormData] = useState(createEmptyFormData())
   const lrnByGradeRef = useRef({})
   const isEditingKinderOne = Boolean(editingStudent && editingStudent.gradeLevel === 'Kinder 1')
@@ -82,6 +82,10 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
   }
 
   const handleSubmit = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     setLoading(true)
     setError('')
 
@@ -361,7 +365,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent }) {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading || isHistorical}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
                 {loading ? (editingStudent ? 'Updating...' : 'Adding...') : (editingStudent ? 'Update Student' : 'Add Student')}

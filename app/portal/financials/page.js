@@ -4,8 +4,10 @@ import { Search, Plus, MoreHorizontal, Download, X } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import AddNewRecord from "../financials/newRecordModal";
 import FileViewer from "@/components/FileViewer";
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function Financials() {
+  const { isHistorical } = useSchoolYearContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [financials, setFinancials] = useState([]);
@@ -30,7 +32,13 @@ export default function Financials() {
     }
   };
 
-  const openModal = () => setIsModalOpen(true);
+  const openModal = () => {
+    if (isHistorical) {
+      return;
+    }
+
+    setIsModalOpen(true);
+  };
   const closeModal = () => setIsModalOpen(false);
 
   useEffect(() => {
@@ -63,6 +71,10 @@ export default function Financials() {
   };
 
   const updateStatus = async (record, nextStatus) => {
+    if (isHistorical) {
+      return;
+    }
+
     if (!record?._id || record.status === nextStatus) {
       return;
     }
@@ -124,7 +136,7 @@ export default function Financials() {
         {/* Header Section */}
         <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Financial Management</h1>
-          <button onClick={openModal} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+          <button onClick={openModal} disabled={isHistorical} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-green-300">
             <Plus size={18} />
             Record New Payment
           </button>
@@ -193,7 +205,7 @@ export default function Financials() {
                           <select
                             value={record.status}
                             onChange={(e) => updateStatus(record, e.target.value)}
-                            disabled={updatingId === record._id}
+                            disabled={updatingId === record._id || isHistorical}
                             className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 disabled:opacity-60 ${getStatusStyles(record.status)}`}
                           >
                             {statusOptions.map((status) => (
@@ -268,7 +280,7 @@ export default function Financials() {
           </div>
         </div>
       </div>
-      <AddNewRecord open={isModalOpen} onClose={closeModal} />
+      <AddNewRecord open={isModalOpen} onClose={closeModal} isHistorical={isHistorical} />
       
       {/* Proof of Payment Viewer Modal */}
       {viewerOpen && selectedFileId && (

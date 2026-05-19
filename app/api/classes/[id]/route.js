@@ -5,6 +5,7 @@ import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -87,6 +88,12 @@ const getPopulatedAssignment = (id) => (
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const existingAssignment = await ClassAssignment.findById(id);
@@ -176,6 +183,12 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const assignment = await ClassAssignment.findByIdAndDelete(id);
 

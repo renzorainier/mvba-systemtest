@@ -14,6 +14,9 @@
 //   );
 // }
 import Sidebar from '@/components/Sidebar';
+import { SchoolYearProvider } from '@/components/SchoolYearContext';
+import dbConnect from '@/lib/mongodb';
+import SystemSettings from '@/models/SystemSettings';
 import { cookies } from 'next/headers'; // 1. Import cookies from Next.js
 
 // 2. Make the layout async so it can read cookies securely
@@ -35,16 +38,29 @@ export default async function DashboardLayout({ children }) {
     }
   }
 
+  await dbConnect();
+  const settings = await SystemSettings.findOne({ key: 'tuition-breakdown' }).lean();
+  const currentSchoolYear = String(settings?.currentSchoolYear || '2025-2026').trim();
+  const selectedSchoolYear = String(cookieStore.get('selected_school_year')?.value || currentSchoolYear).trim();
+  const isHistorical = selectedSchoolYear !== currentSchoolYear;
+
   return (
-    <div className="flex bg-gray-100 min-h-screen">
+    <SchoolYearProvider value={{ currentSchoolYear, selectedSchoolYear, isHistorical }}>
+      <div className="flex bg-gray-100 min-h-screen">
 
       {/* 5. Pass the userRole directly into the Sidebar as a prop! */}
       <Sidebar userRole={userRole} />
 
       {/* The Page Content is pushed to the right */}
       <main className="flex-1 ml-64 p-8">
+        {isHistorical && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 shadow-sm">
+            Historical school year selected: {selectedSchoolYear}. The portal is in read-only mode until you switch back to {currentSchoolYear}.
+          </div>
+        )}
         {children}
       </main>
-    </div>
+      </div>
+    </SchoolYearProvider>
   );
 }
