@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
+import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import Section from '@/models/Section';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
@@ -49,15 +50,29 @@ export async function PUT(request, { params }) {
         return NextResponse.json({ success: false, error: 'Section name, grade level, school year, curriculum, and room number are required' }, { status: 400 });
       }
 
-      const settings = await ensureSettings();
-      const gradeLevelCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(sectionData.glCurriculumId));
-    if (!gradeLevelCurriculum) {
-      return NextResponse.json({ success: false, error: 'Selected grade-level curriculum not found' }, { status: 404 });
-    }
+      // Prefer grade-level assignments stored in the dedicated collection
+      let gradeLevelCurriculum = null;
+      if (sectionData.glCurriculumId) {
+        try {
+          gradeLevelCurriculum = await GradeLevelCurriculum.findById(sectionData.glCurriculumId).lean();
+        } catch (e) {
+          gradeLevelCurriculum = null;
+        }
+      }
 
-    if (String(gradeLevelCurriculum.school_year_id || '').trim() !== String(sectionData.schoolYear || '').trim() || String(gradeLevelCurriculum.grade_level || '').trim() !== String(sectionData.gradeLevel || '').trim()) {
-      return NextResponse.json({ success: false, error: 'Selected curriculum does not match the section school year and grade level' }, { status: 400 });
-    }
+      // Fallback to legacy SystemSettings entries
+      if (!gradeLevelCurriculum) {
+        const settings = await ensureSettings();
+        gradeLevelCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(sectionData.glCurriculumId));
+      }
+
+      if (!gradeLevelCurriculum) {
+        return NextResponse.json({ success: false, error: 'Selected grade-level curriculum not found' }, { status: 404 });
+      }
+
+      if (String(gradeLevelCurriculum.school_year_id || '').trim() !== String(sectionData.schoolYear || '').trim() || String(gradeLevelCurriculum.grade_level || '').trim() !== String(sectionData.gradeLevel || '').trim()) {
+        return NextResponse.json({ success: false, error: 'Selected curriculum does not match the section school year and grade level' }, { status: 400 });
+      }
     
       const section = await Section.findByIdAndUpdate(id, sectionData, { new: true });
     
