@@ -15,6 +15,12 @@ const GRADE_LEVEL_OPTIONS = [
   'Grade 6',
 ];
 
+const DOCUMENT_FIELDS = [
+  'Birth Certificate',
+  'Form 137',
+  'Report Card',
+];
+
 const createEmptyFormData = () => ({
   firstName: '',
   lastName: '',
@@ -35,7 +41,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState(
+    DOCUMENT_FIELDS.map((label) => ({
+      label,
+      file: null,
+      fileId: null,
+      fileName: '',
+      uploadedAt: '',
+    }))
+  );
   const [loading, setLoading] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
@@ -44,9 +58,34 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const fileInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
+  const setProfilePictureFile = (file) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be smaller than 5MB');
+      return;
+    }
+
+    setProfilePicture(file);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProfilePicturePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    setError('');
+  };
+
   // Initialize form data when student changes
   useEffect(() => {
     if (student) {
+      const existingDocuments = Array.isArray(student.documents) ? student.documents : [];
+
       setFormData({
         firstName: student.firstName || '',
         lastName: student.lastName || '',
@@ -61,10 +100,19 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         parentGuardianRelationship: student.parentGuardianRelationship || '',
         parentGuardianContactNumber: student.parentGuardianContactNumber || '',
       });
-      // Load existing documents
-      if (student.documents && Array.isArray(student.documents)) {
-        setDocuments(student.documents);
-      }
+      setDocuments(
+        DOCUMENT_FIELDS.map((label, index) => {
+          const existingDocument = existingDocuments.find((doc) => doc.fileName === label) || existingDocuments[index] || null;
+
+          return {
+            label,
+            file: null,
+            fileId: existingDocument?.fileId || null,
+            fileName: existingDocument?.fileName || '',
+            uploadedAt: existingDocument?.uploadedAt || '',
+          };
+        })
+      );
       setIsEditing(false);
       setError('');
       setSuccess('');
@@ -106,45 +154,102 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
+    setProfilePictureFile(file);
+  };
+
+  const handleProfilePictureDrop = (e) => {
+    e.preventDefault();
+    if (!isEditing) return;
+
+    const file = e.dataTransfer.files?.[0];
+    setProfilePictureFile(file);
+  };
+
+  // Compress a file using the /api/compress endpoint and return a File
+  const compressFile = async (file) => {
+    try {
+      const form = new FormData();
+      form.append('file', file);
+
+      const res = await fetch('/api/compress', { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Compression failed');
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image must be smaller than 5MB');
-        return;
-      }
-      setProfilePicture(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfilePicturePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-      setError('');
+
+      const blob = await res.blob();
+      const contentType = res.headers.get('Content-Type') || file.type;
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      const filename = (match && match[1]) || file.name;
+
+      return new File([blob], filename, { type: contentType });
+    } catch (err) {
+      console.error('Compression error:', err);
+      // Fallback to original file if compression fails
+      return file;
     }
   };
 
-  const handleDocumentChange = (e) => {
-    const files = e.target.files;
-    if (files) {
-      const newDocuments = Array.from(files).map((file) => ({
-        file,
-        name: file.name,
-        uploadedAt: new Date().toISOString(),
-      }));
-      setDocuments((prev) => [...prev, ...newDocuments]);
-      setError('');
+  // Upload a file to /api/upload-file and return the fileId
+  const uploadToGridFS = async (file, relatedRecordId = null, relatedRecordType = null) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (relatedRecordId) form.append('relatedRecordId', relatedRecordId);
+    if (relatedRecordType) form.append('relatedRecordType', relatedRecordType);
+
+    const res = await fetch('/api/upload-file', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Upload failed');
     }
+    return data.fileId;
+  };
+
+  const handleDocumentChange = (index, file) => {
+    if (!file) return;
+
+    const existingFileId = documents[index]?.fileId;
+    if (existingFileId) {
+      setDocumentsToRemove((prevIds) => [...new Set([...prevIds, existingFileId])]);
+    }
+
+    setDocuments((prev) =>
+      prev.map((doc, docIndex) =>
+        docIndex === index
+          ? {
+              ...doc,
+              file,
+              fileName: file.name,
+              uploadedAt: new Date().toISOString(),
+              fileId: doc.fileId || null,
+            }
+          : doc
+      )
+    );
+
+    setError('');
   };
 
   const removeDocument = (index) => {
     const docToRemove = documents[index];
-    // Track documents to remove (those with fileId)
-    if (docToRemove.fileId) {
-      setDocumentsToRemove((prev) => [...prev, docToRemove.fileId]);
+    if (docToRemove?.fileId) {
+      setDocumentsToRemove((prevIds) => [...new Set([...prevIds, docToRemove.fileId])]);
     }
-    setDocuments((prev) => prev.filter((_, i) => i !== index));
+
+    setDocuments((prev) =>
+      prev.map((doc, docIndex) =>
+        docIndex === index
+          ? {
+              ...doc,
+              file: null,
+              fileId: null,
+              fileName: '',
+              uploadedAt: '',
+            }
+          : doc
+      )
+    );
   };
 
   const handleSave = async () => {
@@ -166,19 +271,40 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       });
 
       if (profilePicture) {
-        updateData.append('profilePicture', profilePicture);
+        // Compress then upload profile picture to GridFS first
+        try {
+          const compressedProfile = await compressFile(profilePicture);
+          const uploadedId = await uploadToGridFS(compressedProfile, student._id, 'student-profile');
+          updateData.append('preuploadedProfilePictureId', uploadedId);
+        } catch (err) {
+          console.error('Profile picture upload error:', err);
+          // Fallback: include the raw file so server can handle upload
+          updateData.append('profilePicture', profilePicture);
+        }
       }
 
-      // Add documents
-      documents.forEach((doc, index) => {
+      // Add fixed document slots: compress+upload via /api/upload-file and send references
+      const preuploadedDocuments = [];
+      for (let i = 0; i < documents.length; i++) {
+        const doc = documents[i];
         if (doc.file) {
-          // New document
-          updateData.append(`documents[${index}]`, doc.file);
-          updateData.append(`documentNames[${index}]`, doc.name);
+          try {
+            const compressed = await compressFile(doc.file);
+            const fileId = await uploadToGridFS(compressed, student._id, 'student-document');
+            preuploadedDocuments.push({ fileId, fileName: doc.fileName || doc.label, uploadedAt: new Date().toISOString() });
+          } catch (err) {
+            console.error('Document upload error:', err);
+            // Fallback: attach file directly so server will upload; include slot and label
+            updateData.append(`documents[${i}]`, doc.file);
+            updateData.append(`documentNames[${i}]`, doc.label);
+          }
         }
-      });
+      }
 
-      // Add documents to remove
+      if (preuploadedDocuments.length > 0) {
+        updateData.append('preuploadedDocuments', JSON.stringify(preuploadedDocuments));
+      }
+
       if (documentsToRemove.length > 0) {
         updateData.append('documentsToRemove', JSON.stringify(documentsToRemove));
       }
@@ -194,7 +320,6 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         setSuccess('Student profile updated successfully');
         setIsEditing(false);
         setProfilePicture(null);
-        setDocuments([]);
         setDocumentsToRemove([]);
         if (onStudentUpdate) {
           onStudentUpdate(result.data);
@@ -294,7 +419,25 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                 <div className="flex items-start gap-8">
                   {/* Picture Display */}
                   <div className="flex-shrink-0 relative">
-                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm">
+                    <div
+                      onDragOver={(e) => {
+                        if (!isEditing) return;
+                        e.preventDefault();
+                      }}
+                      onDrop={handleProfilePictureDrop}
+                      onClick={() => isEditing && fileInputRef.current?.click()}
+                      onKeyDown={(e) => {
+                        if (!isEditing) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      tabIndex={isEditing ? 0 : -1}
+                      role={isEditing ? 'button' : undefined}
+                      aria-label={isEditing ? 'Upload profile picture' : undefined}
+                      className={`w-32 h-32 md:w-40 md:h-40 rounded-full border-2 bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm ${isEditing ? 'cursor-pointer border-dashed border-blue-300 outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' : 'border-gray-200'}`}
+                    >
                       {profilePicturePreview ? (
                         <img
                           src={profilePicturePreview}
@@ -317,9 +460,10 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                     />
 
                     <button
+                      type="button"
                       onClick={() => isEditing && fileInputRef.current?.click()}
-                      aria-disabled={!isEditing}
-                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors ${isEditing ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
+                      disabled={!isEditing}
+                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors disabled:cursor-not-allowed ${isEditing ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
                       title={isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
                     >
                       <Upload size={16} />
@@ -560,33 +704,40 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               {/* Student Documents Section */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Documents</h3>
-                <div className="space-y-4">
-                  {/* Documents List */}
-                  {documents.length > 0 && (
-                    <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                      {documents.map((doc, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 hover:bg-gray-50"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {documents.map((doc, index) => (
+                    <div key={doc.label} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <div className="mb-3">
+                        <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
+                      </div>
+
+                      {doc.fileId || doc.file ? (
+                        <div className="space-y-3">
+                          <div className="rounded-md bg-white border border-gray-200 p-3">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {doc.fileName || doc.label}
+                            </p>
                             <p className="text-xs text-gray-500">
-                              {new Date(doc.uploadedAt).toLocaleDateString()}
+                              {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Saved document'}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {doc.fileId && (
+
+                          <div className="flex items-center justify-between gap-2">
+                            {doc.fileId ? (
                               <a
                                 href={`/api/download-file/${doc.fileId}`}
-                                download={doc.fileName}
+                                download={doc.fileName || doc.label}
                                 className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                               >
                                 Download
                               </a>
+                            ) : (
+                              <span className="text-xs text-green-700 font-medium">Pending save</span>
                             )}
+
                             {isEditing && (
                               <button
+                                type="button"
                                 onClick={() => removeDocument(index)}
                                 className="text-red-600 hover:text-red-700 font-medium transition-colors"
                               >
@@ -595,38 +746,29 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                             )}
                           </div>
                         </div>
-                      ))}
+                      ) : (
+                        <>
+                          <input
+                            id={`document-${index}`}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleDocumentChange(index, e.target.files?.[0])}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            disabled={!isEditing}
+                            onClick={() => isEditing && document.getElementById(`document-${index}`)?.click()}
+                            className="w-full rounded-lg border-2 border-dashed border-gray-300 bg-white p-4 text-center transition-colors hover:border-blue-500 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Upload size={24} className="mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm font-medium text-gray-700">Upload file</p>
+                            <p className="text-xs text-gray-500">Click to select a file</p>
+                          </button>
+                        </>
+                      )}
                     </div>
-                  )}
-
-                  {/* Upload Documents */}
-                  {isEditing && (
-                    <>
-                      <input
-                        type="file"
-                        ref={documentInputRef}
-                        multiple
-                        onChange={handleDocumentChange}
-                        className="hidden"
-                      />
-                      <button
-                        onClick={() => documentInputRef.current?.click()}
-                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                      >
-                        <Upload size={24} className="mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm font-medium text-gray-700">Upload Documents</p>
-                        <p className="text-xs text-gray-500">
-                          Drag and drop or click to select files
-                        </p>
-                      </button>
-                    </>
-                  )}
-
-                  {documents.length === 0 && !isEditing && (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      No documents uploaded yet
-                    </p>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>

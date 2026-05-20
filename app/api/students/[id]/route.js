@@ -100,6 +100,12 @@ export async function PUT(request, { params }) {
       }
     }
 
+    // Support preuploaded profile picture (uploaded via /api/upload-file)
+    const preuploadedProfilePictureId = body['preuploadedProfilePictureId'];
+    if (!profilePictureFile && preuploadedProfilePictureId) {
+      profilePictureUrl = `/api/download-file/${preuploadedProfilePictureId}`;
+    }
+
     // Handle document uploads
     const documents = existingStudent.documents || [];
     const documentsToRemoveStr = body['documentsToRemove'];
@@ -116,12 +122,13 @@ export async function PUT(request, { params }) {
         
         for (let i = 0; i < 10; i++) {
           const docFile = formData.get(`documents[${i}]`);
-          const docName = body[`documentNames[${i}]`];
-          
-          if (docFile && typeof docFile === 'object' && docName) {
+          const docLabel = body[`documentNames[${i}]`];
+
+          if (docFile && typeof docFile === 'object' && docLabel) {
             const buffer = Buffer.from(await docFile.arrayBuffer());
-            
-            const uploadStream = bucket.openUploadStream(docName, {
+            const filename = docLabel;
+
+            const uploadStream = bucket.openUploadStream(filename, {
               metadata: {
                 studentId: id,
                 uploadedAt: new Date(),
@@ -137,17 +144,50 @@ export async function PUT(request, { params }) {
                 });
             });
 
-            updatedDocuments.push({
+            const newDocEntry = {
               fileId,
-              fileName: docName,
+              fileName: filename,
               uploadedAt: new Date(),
-            });
+            };
+
+            // If a document with the same name exists, replace it; otherwise append
+            const existingIndex = updatedDocuments.findIndex(d => d.fileName === filename);
+            if (existingIndex >= 0) {
+              updatedDocuments[existingIndex] = newDocEntry;
+            } else {
+              updatedDocuments.push(newDocEntry);
+            }
           }
         }
       } catch (fileError) {
         console.error('Document upload error:', fileError);
         return NextResponse.json({ success: false, error: 'Failed to upload documents' }, { status: 500 });
       }
+    }
+
+    // Support preuploaded documents (uploaded via /api/upload-file)
+    const preuploadedDocumentsStr = body['preuploadedDocuments'];
+    const preuploadedDocuments = preuploadedDocumentsStr ? JSON.parse(preuploadedDocumentsStr) : [];
+    if (Array.isArray(preuploadedDocuments) && preuploadedDocuments.length > 0) {
+      preuploadedDocuments.forEach((pd) => {
+        if (pd && pd.fileId) {
+          const newEntry = {
+            fileId: pd.fileId,
+            fileName: pd.fileName || '',
+            uploadedAt: pd.uploadedAt ? new Date(pd.uploadedAt) : new Date(),
+          };
+
+          const existingByName = pd.fileName ? updatedDocuments.findIndex(d => d.fileName === pd.fileName) : -1;
+          const existingById = updatedDocuments.findIndex(d => d.fileId === pd.fileId);
+          if (existingByName >= 0) {
+            updatedDocuments[existingByName] = newEntry;
+          } else if (existingById >= 0) {
+            updatedDocuments[existingById] = newEntry;
+          } else {
+            updatedDocuments.push(newEntry);
+          }
+        }
+      });
     }
 
     // Map form field names to database field names
