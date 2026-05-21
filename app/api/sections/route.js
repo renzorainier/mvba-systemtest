@@ -1,5 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from "@/models/SystemSettings";
+import GradeLevelCurriculum from "@/models/GradeLevelCurriculum";
+import Curriculum from "@/models/Curriculum";
 import Section from "@/models/Section";
 import ArchivedSection from "@/models/ArchivedSection";
 import { NextResponse } from "next/server";
@@ -24,32 +26,66 @@ const ensureSettings = async () => {
     return settings;
 };
 
-const buildSectionPayload = (section, settings) => {
-    const assignment = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId));
-    const curriculum = assignment ? (settings.curriculums || []).find((item) => String(item._id) === String(assignment.curriculum_id)) : null;
+    const serializeCurriculum = (curriculum) => {
+        if (!curriculum) {
+            return null;
+        }
 
-    const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
-    const curriculumData = curriculum?.toObject ? curriculum.toObject() : curriculum;
-
-    return {
-        ...section.toObject(),
-        glCurriculumId: assignment
-            ? {
-                    ...assignmentData,
-                    curriculum_id: curriculumData
-                        ? {
-                                _id: curriculumData._id,
-                                curriculum_id: curriculumData.curriculum_id,
-                                curriculum_name: curriculumData.curriculum_name,
-                                description: curriculumData.description,
-                                effective_start_date: curriculumData.effective_start_date,
-                                effective_end_date: curriculumData.effective_end_date,
-                            }
-                        : null,
-                }
-            : null,
+        return {
+            _id: curriculum._id,
+            curriculum_id: curriculum.curriculum_id,
+            curriculum_name: curriculum.curriculum_name,
+            description: curriculum.description,
+            effective_start_date: curriculum.effective_start_date,
+            effective_end_date: curriculum.effective_end_date,
+        };
     };
-};
+
+    const buildSectionPayload = async (section, settings) => {
+        const sectionData = section?.toObject ? section.toObject() : section;
+        const sectionAssignmentId = String(sectionData.glCurriculumId || '').trim();
+
+        let assignment = null;
+        if (sectionAssignmentId) {
+            try {
+                assignment = await GradeLevelCurriculum.findById(sectionAssignmentId).lean();
+            } catch (error) {
+                assignment = null;
+            }
+        }
+
+        if (!assignment) {
+            assignment = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionAssignmentId || String(item.gl_curriculum_id || '') === sectionAssignmentId) || null;
+        }
+
+        let curriculum = null;
+        const assignmentCurriculumId = assignment ? String(assignment.curriculum_id || '').trim() : '';
+
+        if (assignmentCurriculumId) {
+            try {
+                curriculum = await Curriculum.findById(assignmentCurriculumId).lean();
+            } catch (error) {
+                curriculum = null;
+            }
+        }
+
+        if (!curriculum && assignmentCurriculumId) {
+            curriculum = (settings.curriculums || []).find((item) => String(item._id) === assignmentCurriculumId || String(item.curriculum_id || '') === assignmentCurriculumId) || null;
+        }
+
+        const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
+        const curriculumData = curriculum?.toObject ? curriculum.toObject() : curriculum;
+
+        return {
+            ...sectionData,
+            glCurriculumId: assignmentData
+                ? {
+                        ...assignmentData,
+                        curriculum_id: serializeCurriculum(curriculumData),
+                    }
+                : null,
+        };
+    };
 
 export async function GET(request) {
     try {
@@ -59,7 +95,7 @@ export async function GET(request) {
                 const sections = isHistorical
                     ? await ArchivedSection.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 })
                     : await Section.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
-                return NextResponse.json({ success: true, data: isHistorical ? sections : sections.map((section) => buildSectionPayload(section, settings)) }, { status: 200 });
+                return NextResponse.json({ success: true, data: isHistorical ? sections : await Promise.all(sections.map((section) => buildSectionPayload(section, settings))) }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
@@ -84,12 +120,26 @@ export async function POST(request) {
             sectionId: body.sectionId || `S-${Date.now()}`, // Auto-generate if not provided
         };
 
+        const settings = await ensureSettings();
+
         if (!sectionData.sectionName || !sectionData.gradeLevel || !sectionData.schoolYear || !sectionData.glCurriculumId || !sectionData.roomNumber) {
             return NextResponse.json({ success: false, error: 'Section name, grade level, school year, curriculum, and room number are required' }, { status: 400 });
         }
 
-        const settings = await ensureSettings();
-        const gradeLevelCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(sectionData.glCurriculumId));
+        let gradeLevelCurriculum = null;
+
+        try {
+            gradeLevelCurriculum = await GradeLevelCurriculum.findById(sectionData.glCurriculumId).lean();
+        } catch (error) {
+            gradeLevelCurriculum = null;
+        }
+
+        if (!gradeLevelCurriculum) {
+            gradeLevelCurriculum = (settings.gradeLevelCurriculums || []).find(
+                (item) => String(item._id) === String(sectionData.glCurriculumId) || String(item.gl_curriculum_id || '') === String(sectionData.glCurriculumId)
+            );
+        }
+
         if (!gradeLevelCurriculum) {
             return NextResponse.json({ success: false, error: 'Selected grade-level curriculum not found' }, { status: 404 });
         }
@@ -99,7 +149,7 @@ export async function POST(request) {
         }
 
         const section = await Section.create(sectionData);
-        return NextResponse.json({ success: true, data: buildSectionPayload(section, settings) }, { status: 201 });
+        return NextResponse.json({ success: true, data: await buildSectionPayload(section, settings) }, { status: 201 });
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

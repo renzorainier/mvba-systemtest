@@ -124,6 +124,10 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
         setLoading(true)
         setError('')
 
+        if (!editingSection) {
+            console.log('[Sections] New section form submission payload:', formData);
+        }
+
         // Validation check
         if (!formData.sectionName || !formData.sectionId || !formData.gradeLevel ||
             !formData.schoolYear || !formData.glCurriculumId || !formData.roomNumber) {

@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/mongodb';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
+import Curriculum from '@/models/Curriculum';
 import Section from '@/models/Section';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
@@ -22,6 +23,67 @@ const ensureSettings = async () => {
   settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
   settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
   return settings;
+};
+
+const serializeCurriculum = (curriculum) => {
+  if (!curriculum) {
+    return null;
+  }
+
+  return {
+    _id: curriculum._id,
+    curriculum_id: curriculum.curriculum_id,
+    curriculum_name: curriculum.curriculum_name,
+    description: curriculum.description,
+    effective_start_date: curriculum.effective_start_date,
+    effective_end_date: curriculum.effective_end_date,
+  };
+};
+
+const buildSectionPayload = async (section, settings) => {
+  const sectionData = section?.toObject ? section.toObject() : section;
+  const sectionAssignmentId = String(sectionData.glCurriculumId || '').trim();
+
+  let assignment = null;
+  if (sectionAssignmentId) {
+    try {
+      assignment = await GradeLevelCurriculum.findById(sectionAssignmentId).lean();
+    } catch (error) {
+      assignment = null;
+    }
+  }
+
+  if (!assignment) {
+    assignment = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionAssignmentId || String(item.gl_curriculum_id || '') === sectionAssignmentId) || null;
+  }
+
+  let curriculum = null;
+  const assignmentCurriculumId = assignment ? String(assignment.curriculum_id || '').trim() : '';
+
+  if (assignmentCurriculumId) {
+    try {
+      curriculum = await Curriculum.findById(assignmentCurriculumId).lean();
+    } catch (error) {
+      curriculum = null;
+    }
+  }
+
+  if (!curriculum && assignmentCurriculumId) {
+    curriculum = (settings.curriculums || []).find((item) => String(item._id) === assignmentCurriculumId || String(item.curriculum_id || '') === assignmentCurriculumId) || null;
+  }
+
+  const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
+  const curriculumData = curriculum?.toObject ? curriculum.toObject() : curriculum;
+
+  return {
+    ...sectionData,
+    glCurriculumId: assignmentData
+      ? {
+          ...assignmentData,
+          curriculum_id: serializeCurriculum(curriculumData),
+        }
+      : null,
+  };
 };
 
 export async function PUT(request, { params }) {
@@ -80,7 +142,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Section not found' }, { status: 404 });
     }
     
-    return NextResponse.json({ success: true, data: section }, { status: 200 });
+    return NextResponse.json({ success: true, data: await buildSectionPayload(section, settings) }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
