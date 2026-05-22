@@ -13,7 +13,7 @@ export default function App() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingStudent, setEditingStudent] = useState(null);
+  
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [modalStudent, setModalStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,19 +32,10 @@ export default function App() {
     if (isHistorical) {
       return;
     }
-    setEditingStudent(null);
     setIsModalOpen(true);
   };
   const closeModal = () => {
     setIsModalOpen(false);
-    setEditingStudent(null);
-  };
-  const openEditModal = (student) => {
-    if (isHistorical) {
-      return;
-    }
-    setEditingStudent(student);
-    setIsModalOpen(true);
   };
 
   const openBalanceModal = (student) => {
@@ -169,9 +160,6 @@ export default function App() {
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Remaining Balance
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -203,26 +191,17 @@ export default function App() {
                           {formatPhp(student.remainingBalance)}
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => openEditModal(student)}
-                          disabled={isHistorical}
-                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300"
-                        >
-                          Edit
-                        </button>
-                      </td>
                     </tr>
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                       Loading students...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                       No students found matching your search.
                     </td>
                   </tr>
@@ -260,7 +239,7 @@ export default function App() {
 
       </div>
 
-      <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} isHistorical={isHistorical} />
+      <AddStudentsModal open={isModalOpen} onClose={closeModal} isHistorical={isHistorical} />
       <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
       <StudentProfileModal
         open={profileModalOpen}

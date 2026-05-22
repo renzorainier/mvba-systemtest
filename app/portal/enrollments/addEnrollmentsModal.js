@@ -7,7 +7,6 @@ import {
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
-import FileUpload from "@/components/FileUpload";
 
 export default function AddEnrollmentsModal({
   open,
@@ -393,12 +392,6 @@ export default function AddEnrollmentsModal({
                         <option value="Pending">Pending</option>
                       </select>
                     </div>
-
-                    <FileUpload
-                      onUpload={(data) => console.log("Uploaded:", data)}
-                      accept="image/*"
-                      endpoint="/api/upload-file"
-                    />
                   </div>
                 </div>
               </div>

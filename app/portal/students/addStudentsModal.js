@@ -26,37 +26,17 @@ const isValidKinderOneLrn = (value) => /^\d{6}$/.test(value)
 
 const isValidKinderTwoToSixLrn = (value) => /^\d{12}$/.test(value)
 
-export default function AddStudentsModal({ open, onClose, editingStudent, isHistorical = false }) {
+export default function AddStudentsModal({ open, onClose, isHistorical = false }) {
   const [formData, setFormData] = useState(createEmptyFormData())
   const lrnByGradeRef = useRef({})
-  const isEditingKinderOne = Boolean(editingStudent && editingStudent.gradeLevel === 'Kinder 1')
 
-  // Populate form when editing
+  // Reset form when opening for a fresh add
   useEffect(() => {
-    if (editingStudent) {
-      lrnByGradeRef.current = {
-        [editingStudent.gradeLevel || '']: editingStudent.learnersReferenceNumber || '',
-      }
-
-      setFormData({
-        firstName: editingStudent.firstName || '',
-        lastName: editingStudent.lastName || '',
-        middleName: editingStudent.middleName || '',
-        gender: editingStudent.gender || '',
-        gradeLevel: editingStudent.gradeLevel || '',
-        dateOfBirth: editingStudent.dateOfBirth?.split('T')[0] || '',
-        address: editingStudent.address || '',
-        admissionDate: editingStudent.admissionDate?.split('T')[0] || '',
-        learnersReferenceNumber: editingStudent.learnersReferenceNumber || '',
-        parentGuardianName: editingStudent.parentGuardianName || '',
-        parentGuardianRelationship: editingStudent.parentGuardianRelationship || '',
-        parentGuardianContactNumber: editingStudent.parentGuardianContactNumber || '',
-      })
-    } else {
+    if (open) {
       lrnByGradeRef.current = {}
       setFormData(createEmptyFormData())
     }
-  }, [editingStudent, open])
+  }, [open])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -97,35 +77,30 @@ export default function AddStudentsModal({ open, onClose, editingStudent, isHist
         return
       }
 
-      if (!editingStudent) {
-        if (!formData.gradeLevel) {
-          setError('Please select a grade level')
-          setLoading(false)
-          return
-        }
-
-        if (formData.gradeLevel === 'Kinder 1' && !isValidKinderOneLrn(formData.learnersReferenceNumber)) {
-          setError('Kinder 1 LRN must be a 6-digit number')
-          setLoading(false)
-          return
-        }
-
-        if (formData.gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(formData.learnersReferenceNumber)) {
-          setError('Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number')
-          setLoading(false)
-          return
-        }
+      if (!formData.gradeLevel) {
+        setError('Please select a grade level')
+        setLoading(false)
+        return
       }
 
-      const method = editingStudent ? 'PUT' : 'POST'
-      const url = editingStudent ? `/api/students/${editingStudent._id}` : '/api/students'
-      const payload = editingStudent
-        ? formData
-        : {
-            ...formData,
-            learnersReferenceNumber:
-              formData.gradeLevel === 'Kinder 1' ? formData.learnersReferenceNumber : formData.learnersReferenceNumber.trim(),
-          }
+      if (formData.gradeLevel === 'Kinder 1' && !isValidKinderOneLrn(formData.learnersReferenceNumber)) {
+        setError('Kinder 1 LRN must be a 6-digit number')
+        setLoading(false)
+        return
+      }
+
+      if (formData.gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(formData.learnersReferenceNumber)) {
+        setError('Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number')
+        setLoading(false)
+        return
+      }
+
+      const method = 'POST'
+      const url = '/api/students'
+      const payload = {
+        ...formData,
+        learnersReferenceNumber: formData.gradeLevel === 'Kinder 1' ? formData.learnersReferenceNumber : formData.learnersReferenceNumber.trim(),
+      }
 
       const response = await fetch(url, {
         method: method,
@@ -172,7 +147,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent, isHist
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                   <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
-                    {editingStudent ? 'Edit Student' : 'Add New Student'}
+                    Add New Student
                   </DialogTitle>
 
                   {error && (
@@ -242,7 +217,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent, isHist
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                           value={formData.gradeLevel}
                           onChange={(e) => handleGradeLevelChange(e.target.value)}
-                          disabled={loading || isEditingKinderOne}
+                          disabled={loading}
                         >
                           <option value="">Select grade level</option>
                           {GRADE_LEVEL_OPTIONS.map((gradeLevel) => (
@@ -257,7 +232,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent, isHist
                         <label className="block text-sm font-medium text-gray-700">Learner&apos;s Reference Number (LRN) *</label>
                         <input
                           type="text"
-                          placeholder={editingStudent ? 'Enter LRN' : formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN'}
+                          placeholder={formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN'}
                           inputMode="numeric"
                           maxLength={formData.gradeLevel === 'Kinder 1' ? 6 : 12}
                           pattern={formData.gradeLevel === 'Kinder 1' ? '\\d{6}' : '\\d{12}'}
@@ -270,16 +245,16 @@ export default function AddStudentsModal({ open, onClose, editingStudent, isHist
                             }
                             setFormData({ ...formData, learnersReferenceNumber: digitsOnly })
                           }}
-                          readOnly={isEditingKinderOne || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
-                          disabled={loading || isEditingKinderOne || (!editingStudent && formData.gradeLevel === 'Kinder 1')}
+                          readOnly={formData.gradeLevel === 'Kinder 1'}
+                          disabled={loading || formData.gradeLevel === 'Kinder 1'}
                         />
-                        {!editingStudent && (
+                        (
                           <p className="mt-1 text-xs text-gray-500">
                             {formData.gradeLevel === 'Kinder 1'
                               ? 'Kinder 1 automatically uses a random 6-digit LRN.'
                               : 'Kinder 2 to Grade 6 require a 12-digit LRN.'}
                           </p>
-                        )}
+                        )
                       </div>
                     </div>
 
@@ -368,7 +343,7 @@ export default function AddStudentsModal({ open, onClose, editingStudent, isHist
                 disabled={loading || isHistorical}
                 className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:bg-blue-400 sm:ml-3 sm:w-auto"
               >
-                {loading ? (editingStudent ? 'Updating...' : 'Adding...') : (editingStudent ? 'Update Student' : 'Add Student')}
+                {loading ? 'Adding...' : 'Add Student'}
               </button>
               <button
                 type="button"

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X, Upload, Save, Edit2, Archive } from 'lucide-react';
+import FileUpload from '@/components/FileUpload';
 
 const GRADE_LEVEL_OPTIONS = [
   'Kinder 1',
