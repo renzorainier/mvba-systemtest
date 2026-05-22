@@ -90,6 +90,25 @@ export default function SchoolYearRolloverPage() {
     });
   };
 
+  const promotableIds = useMemo(() => students.filter((s) => String(s.gradeLevel || '').trim() !== highestGrade).map((s) => String(s._id)), [students]);
+
+  const allPromotableSelected = useMemo(() => {
+    if (promotableIds.length === 0) return false;
+    return promotableIds.every((id) => selectedPromotions.has(id));
+  }, [promotableIds, selectedPromotions]);
+
+  const toggleSelectAll = () => {
+    setSelectedPromotions((previous) => {
+      if (promotableIds.length === 0) return new Set(previous);
+
+      // if all selected -> clear, else select all promotable
+      const allSelected = promotableIds.every((id) => previous.has(id));
+      if (allSelected) return new Set();
+
+      return new Set(promotableIds);
+    });
+  };
+
   const handleRollover = async () => {
     if (isHistorical) {
       return;
@@ -194,8 +213,19 @@ export default function SchoolYearRolloverPage() {
               <div className="max-h-[38rem] overflow-auto">
                 <table className="min-w-full divide-y divide-slate-200 bg-white">
                   <thead className="sticky top-0 bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Promote</th>
+                      <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={allPromotableSelected}
+                            onChange={toggleSelectAll}
+                            className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                            aria-label="Select all promotable students"
+                          />
+                          <span>Promote</span>
+                        </div>
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Student</th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">LRN</th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Grade</th>

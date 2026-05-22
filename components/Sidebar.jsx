@@ -47,22 +47,22 @@ export default function Sidebar({ userRole = 'Admin' }) {
     },
 
     {
-      title: 'Enrollment & Students',
-      children: [
-        { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
-        { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
-        { name: 'Archived Students', href: '/portal/students/archived', icon: Archive, allowedRoles: ['Admin', 'Registrar'] },
-      ],
-    },
-
-    {
       title: 'Academics',
       children: [
         { name: 'Curriculum Management', href: '/portal/curriculums', icon: BookOpen, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Grade Curriculums', href: '/portal/curriculum-assignments', icon: LibraryBig, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Section Management', href: '/portal/sections', icon: School, allowedRoles: ['Admin', 'Registrar'] },
-        { name: 'Class Assignments', href: '/portal/classes', icon: Layers3, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Schedule Management', href: '/portal/schedules', icon: Calendar, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Class Assignments', href: '/portal/classes', icon: Layers3, allowedRoles: ['Admin', 'Registrar'] },
+      ],
+    },
+    
+    {
+      title: 'Enrollment & Students',
+      children: [
+        { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Archived Students', href: '/portal/students/archived', icon: Archive, allowedRoles: ['Admin', 'Registrar'] },
       ],
     },
 
