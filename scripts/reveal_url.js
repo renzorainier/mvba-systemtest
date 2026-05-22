@@ -1,7 +1,7 @@
 // reveal_url.js
 const dns = require('dns');
 
-// 1. Force Google DNS (Since this works on your machine)
+// 1. Force Google DNS (<Sin></Sin>ce this works on your machine)
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const srvAddress = '_mongodb._tcp.database.qhp2v7e.mongodb.net';
@@ -18,10 +18,10 @@ dns.resolveSrv(srvAddress, (err, addresses) => {
 
     // Construct the standard string
     const hosts = addresses.map(a => `${a.name}:${a.port}`).join(',');
-    
+
     // 👇 THIS IS THE STRING YOU NEED
     const longString = `mongodb://admin:admin123@${hosts}/mvba-database?ssl=true&authSource=admin&retryWrites=true&w=majority`;
-    
+
     console.log(longString);
     console.log("\n👉 Copy the string above and paste it into lib/mongodb.js");
 });
