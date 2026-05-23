@@ -14,7 +14,7 @@ const StudentSchema = new mongoose.Schema({
   dateOfBirth: { type: Date, required: [true, "Date of birth is required"] },
   address: { type: String, required: [true, "Address is required"] },
   admissionDate: { type: Date, required: [true, "Admission date is required"] },
-  learnersReferenceNumber: { type: String, required: [true, "LRN is required"], unique: true, sparse: true },
+  learnersReferenceNumber: { type: String, required: false },
   parentGuardianName: { type: String, required: false, default: '' },
   parentGuardianRelationship: { type: String, required: false, default: '' },
   parentGuardianContactNumber: { type: String, required: false, default: '' },
@@ -31,6 +31,50 @@ const StudentSchema = new mongoose.Schema({
   ],
 }, { timestamps: true });
 
+// Enforce uniqueness for LRNs except for the placeholder value 'TBA'
+StudentSchema.index(
+  { learnersReferenceNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      learnersReferenceNumber: { $exists: true, $ne: 'TBA' },
+    },
+  }
+);
+
 
 // Check if model exists before compiling to prevent overwrite errors in dev mode
 export default mongoose.models.Student || mongoose.model('Student', StudentSchema, 'students');
+
+// Ensure old unique index (learnersReferenceNumber_1) is removed and the new partial index exists.
+const ensureStudentIndexes = async () => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return;
+
+    const coll = db.collection('students');
+    const indexes = await coll.indexes().catch(() => []);
+
+    if (indexes.some((index) => index.name === 'learnersReferenceNumber_1')) {
+      await coll.dropIndex('learnersReferenceNumber_1').catch(() => {});
+    }
+
+    await coll.createIndex(
+      { learnersReferenceNumber: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { learnersReferenceNumber: { $exists: true, $ne: 'TBA' } },
+        name: 'learnersReferenceNumber_partial_unique',
+      }
+    ).catch(() => {});
+  } catch (err) {
+    // ignore errors — index operations may fail in some environments
+    // console.warn('ensureStudentIndexes error', err);
+  }
+};
+
+if (mongoose.connection && mongoose.connection.readyState === 1) {
+  ensureStudentIndexes();
+} else {
+  mongoose.connection.once('open', ensureStudentIndexes);
+}

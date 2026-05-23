@@ -51,27 +51,41 @@ export async function PUT(request, { params }) {
     }
 
     const gradeLevel = String(body.gradeLevel || existingStudent.gradeLevel || '').trim();
-    const learnersReferenceNumber = normalizeLearnersReferenceNumber(body.learnersReferenceNumber || existingStudent.learnersReferenceNumber);
+    const rawLrn = body.learnersReferenceNumber || existingStudent.learnersReferenceNumber;
+    const normalizedLrn = normalizeLearnersReferenceNumber(rawLrn);
+    let learnersReferenceNumber = '';
 
     if (!gradeLevel) {
       return NextResponse.json({ success: false, error: 'Grade level is required' }, { status: 400 });
     }
 
-    if (gradeLevel === 'Kinder 1' && !isValidKinderOneLrn(learnersReferenceNumber)) {
-      return NextResponse.json({ success: false, error: 'Kinder 1 LRN must be a 6-digit number' }, { status: 400 });
+    if (gradeLevel === 'Kinder 1') {
+      if (!isValidKinderOneLrn(normalizedLrn)) {
+        return NextResponse.json({ success: false, error: 'Kinder 1 LRN must be a 6-digit number' }, { status: 400 });
+      }
+      learnersReferenceNumber = normalizedLrn;
+    } else {
+      // For Kinder 2 and above, allow placeholder 'TBA' when not provided
+      if (!normalizedLrn) {
+        learnersReferenceNumber = 'TBA';
+      } else if (!isValidKinderTwoToSixLrn(normalizedLrn)) {
+        return NextResponse.json({ success: false, error: 'Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number' }, { status: 400 });
+      } else {
+        learnersReferenceNumber = normalizedLrn;
+      }
     }
 
-    if (gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(learnersReferenceNumber)) {
-      return NextResponse.json({ success: false, error: 'Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number' }, { status: 400 });
-    }
+    // Only enforce duplicate check for concrete numeric LRNs
+    const shouldCheckDuplicate = isValidKinderOneLrn(learnersReferenceNumber) || isValidKinderTwoToSixLrn(learnersReferenceNumber);
+    if (shouldCheckDuplicate) {
+      const duplicateStudent = await Student.findOne({
+        learnersReferenceNumber,
+        _id: { $ne: id },
+      });
 
-    const duplicateStudent = await Student.findOne({
-      learnersReferenceNumber,
-      _id: { $ne: id },
-    });
-
-    if (duplicateStudent) {
-      return NextResponse.json({ success: false, error: 'LRN already exists' }, { status: 409 });
+      if (duplicateStudent) {
+        return NextResponse.json({ success: false, error: 'LRN already exists' }, { status: 409 });
+      }
     }
 
     const defaultTotal = await getDefaultTotalForGrade(gradeLevel);

@@ -89,8 +89,9 @@ export default function AddStudentsModal({ open, onClose, isHistorical = false }
         return
       }
 
-      if (formData.gradeLevel !== 'Kinder 1' && !isValidKinderTwoToSixLrn(formData.learnersReferenceNumber)) {
-        setError('Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number')
+      // For Kinder 2+ and Grade 1-6, LRN is optional at create time — backend will use 'TBA' when not provided.
+      if (formData.gradeLevel !== 'Kinder 1' && formData.learnersReferenceNumber && !isValidKinderTwoToSixLrn(formData.learnersReferenceNumber)) {
+        setError('Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number when provided')
         setLoading(false)
         return
       }
@@ -232,7 +233,7 @@ export default function AddStudentsModal({ open, onClose, isHistorical = false }
                         <label className="block text-sm font-medium text-gray-700">Learner&apos;s Reference Number (LRN) *</label>
                         <input
                           type="text"
-                          placeholder={formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN'}
+                          placeholder={formData.gradeLevel === 'Kinder 1' ? 'Auto-generated for Kinder 1' : 'Enter 12-digit LRN or leave blank (TBA)'}
                           inputMode="numeric"
                           maxLength={formData.gradeLevel === 'Kinder 1' ? 6 : 12}
                           pattern={formData.gradeLevel === 'Kinder 1' ? '\\d{6}' : '\\d{12}'}
@@ -248,11 +249,11 @@ export default function AddStudentsModal({ open, onClose, isHistorical = false }
                           readOnly={formData.gradeLevel === 'Kinder 1'}
                           disabled={loading || formData.gradeLevel === 'Kinder 1'}
                         />
-                        (
+                          (
                           <p className="mt-1 text-xs text-gray-500">
                             {formData.gradeLevel === 'Kinder 1'
                               ? 'Kinder 1 automatically uses a random 6-digit LRN.'
-                              : 'Kinder 2 to Grade 6 require a 12-digit LRN.'}
+                              : 'Kinder 2 to Grade 6 can be left blank; the system will mark LRN as TBA until provided.'}
                           </p>
                         )
                       </div>
