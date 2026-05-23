@@ -18,7 +18,7 @@ const getNextSchoolYear = (schoolYear) => {
 };
 
 export default function SchoolYearRolloverPage() {
-  const { isHistorical } = useSchoolYearContext();
+  const { isHistorical, selectedSchoolYear } = useSchoolYearContext();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -52,8 +52,9 @@ export default function SchoolYearRolloverPage() {
         const nextYear = rolloverData.data.nextYearId || getNextSchoolYear(rolloverData.data.currentYearId || schoolYearsData.data.selectedSchoolYear);
 
         setStudents(Array.isArray(rolloverData.data.students) ? rolloverData.data.students : []);
-        setCurrentYearId(rolloverData.data.currentYearId || schoolYearsData.data.selectedSchoolYear || schoolYearsData.data.currentSchoolYear || '');
-        setNextYearId(nextYear || '');
+        // Prefer the server-provided selectedSchoolYear from context when available
+        setCurrentYearId(selectedSchoolYear || rolloverData.data.currentYearId || schoolYearsData.data.selectedSchoolYear || schoolYearsData.data.currentSchoolYear || '');
+        setNextYearId(nextYear || getNextSchoolYear(selectedSchoolYear) || '');
         setAvailableYears(Array.isArray(schoolYearsData.data.availableYears) ? schoolYearsData.data.availableYears : []);
         setSelectedPromotions(new Set());
       } catch (loadError) {
@@ -174,17 +175,12 @@ export default function SchoolYearRolloverPage() {
               <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Current Year ID</span>
                 <select
-                  value={currentYearId}
-                  onChange={(event) => {
-                    const nextYear = getNextSchoolYear(event.target.value);
-                    setCurrentYearId(event.target.value);
-                    setNextYearId(nextYear);
-                  }}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-cyan-500"
+                  value={currentYearId || selectedSchoolYear}
+                  onChange={() => {}}
+                  disabled={true}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-gray-50 px-3 py-2 text-sm font-semibold outline-none"
                 >
-                  {(availableYears.length > 0 ? availableYears : [currentYearId]).filter(Boolean).map((year) => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
+                  <option value={currentYearId || selectedSchoolYear}>{currentYearId || selectedSchoolYear}</option>
                 </select>
               </label>
               <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4">

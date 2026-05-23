@@ -15,7 +15,7 @@ const emptyForm = {
 };
 
 export default function CurriculumAssignmentsPage() {
-  const { isHistorical } = useSchoolYearContext();
+  const { isHistorical, selectedSchoolYear } = useSchoolYearContext();
   const [assignments, setAssignments] = useState([]);
   const [curriculums, setCurriculums] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function CurriculumAssignmentsPage() {
     setEditingId(assignment._id);
     setFormData({
       gl_curriculum_id: assignment.gl_curriculum_id || '',
-      school_year_id: assignment.school_year_id || '',
+      school_year_id: assignment.school_year_id || selectedSchoolYear || '',
       grade_level: assignment.grade_level || '',
       curriculum_id: assignment.curriculum_id?._id || assignment.curriculum_id || '',
       is_default: Boolean(assignment.is_default),
@@ -95,13 +95,15 @@ export default function CurriculumAssignmentsPage() {
       setSaving(true);
       setError('');
 
-      if (!formData.school_year_id || !formData.grade_level || !formData.curriculum_id) {
-        setError('School year, grade level, and curriculum are required');
+      if (!formData.grade_level || !formData.curriculum_id) {
+        setError('Grade level and curriculum are required');
         return;
       }
 
       const payload = {
         ...formData,
+        // ensure server gets the selected/current school year
+        school_year_id: selectedSchoolYear || formData.school_year_id,
         gl_curriculum_id: formData.gl_curriculum_id || `GLC-${Date.now()}`,
       };
 
@@ -275,13 +277,14 @@ export default function CurriculumAssignmentsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:gap-5">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">School Year *</label>
-                  <input
-                    type="text"
-                    value={formData.school_year_id}
-                    onChange={(e) => setFormData({ ...formData, school_year_id: e.target.value })}
-                    placeholder="2025-2026"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
+                    <input
+                      type="text"
+                      value={selectedSchoolYear || formData.school_year_id}
+                      readOnly={true}
+                      disabled={true}
+                      placeholder="2025-2026"
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 bg-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Grade Level *</label>

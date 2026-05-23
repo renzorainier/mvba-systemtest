@@ -1,16 +1,19 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react'
+import { useSchoolYearContext } from '@/components/SchoolYearContext'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
 export default function AddSectionsModal({ isOpen, onClose, editingSection, isHistorical = false }) {
     const gradeLevel = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
+    const { selectedSchoolYear } = useSchoolYearContext();
+
     const [formData, setFormData] = useState({
         sectionName: '',
         sectionId: '',
         gradeLevel: '',
-        schoolYear: '',
+        schoolYear: selectedSchoolYear || '',
         glCurriculumId: '',
         roomNumber: '',
     });
@@ -55,7 +58,8 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                 sectionName: editingSection.sectionName || '',
                 sectionId: editingSection.sectionId || '',
                 gradeLevel: editingSection.gradeLevel || '',
-                schoolYear: editingSection.schoolYear || '',
+                // keep section's school year in sync with selected/current school year
+                schoolYear: selectedSchoolYear || editingSection.schoolYear || '',
                 glCurriculumId: editingSection.glCurriculumId?._id || editingSection.glCurriculumId || '',
                 roomNumber: editingSection.roomNumber || '',
             });
@@ -64,12 +68,17 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                 sectionName: '',
                 sectionId: '',
                 gradeLevel: '',
-                schoolYear: '',
+                schoolYear: selectedSchoolYear || '',
                 glCurriculumId: '',
                 roomNumber: '',
             });
         }
     }, [editingSection, isOpen]);
+
+    // Keep schoolYear synced with the context if it changes
+    useEffect(() => {
+        setFormData((prev) => ({ ...prev, schoolYear: selectedSchoolYear || prev.schoolYear }));
+    }, [selectedSchoolYear]);
 
     useEffect(() => {
         const fetchCurriculums = async () => {
@@ -246,10 +255,10 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. 2025-2026"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-gray-50 focus:outline-none"
                                                     value={formData.schoolYear}
-                                                    onChange={(e) => setFormData({ ...formData, schoolYear: e.target.value })}
-                                                    disabled={loading || isHistorical}
+                                                    readOnly={true}
+                                                    disabled={true}
                                                 />
                                             </div>
                                         </div>

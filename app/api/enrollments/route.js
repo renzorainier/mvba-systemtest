@@ -61,20 +61,22 @@ export async function POST(request) {
         }
 
         const body = await request.json();
+        const { context } = schoolYearAccess;
+        const selectedSchoolYear = context?.selectedSchoolYear || '';
         // basic validation
         if (!body.learnersReferenceNumber) {
             return NextResponse.json({ success: false, error: "Learner's reference number is required" }, { status: 400 });
         }
 
-        // Prevent more than one enrollment per student
-        const existing = await Enrollment.findOne({ learnersReferenceNumber: body.learnersReferenceNumber }).lean();
+        // Prevent more than one enrollment per student for the selected school year
+        const existing = await Enrollment.findOne({ learnersReferenceNumber: body.learnersReferenceNumber, schoolYear: selectedSchoolYear }).lean();
         if (existing) {
-            return NextResponse.json({ success: false, error: 'Student already has an enrollment' }, { status: 400 });
+            return NextResponse.json({ success: false, error: 'Student already has an enrollment for the current school year' }, { status: 400 });
         }
 
         // Capacity check for section: max 15 students
         if (body.sectionId) {
-            const count = await Enrollment.countDocuments({ sectionId: body.sectionId });
+            const count = await Enrollment.countDocuments({ sectionId: body.sectionId, schoolYear: selectedSchoolYear });
             if (count >= 15) {
                 return NextResponse.json({ success: false, error: 'Selected section is full (15 students)' }, { status: 400 });
             }
@@ -85,7 +87,7 @@ export async function POST(request) {
             learnersReferenceNumber: body.learnersReferenceNumber,
             sectionId: body.sectionId,
             enrollmentDate: body.enrollmentDate,
-            schoolYear: body.schoolYear,
+            schoolYear: selectedSchoolYear,
             status: body.status,
         };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 import {
   Dialog,
   DialogBackdrop,
@@ -30,10 +31,12 @@ export default function AddEnrollmentsModal({
         return 'border-gray-300 bg-white text-gray-700 focus:border-blue-500 focus:ring-blue-500';
     }
   };
+  const { selectedSchoolYear } = useSchoolYearContext();
+
   const [formData, setFormData] = useState({
     learnersReferenceNumber: "",
     sectionId: "TBA",
-    schoolYear: "",
+    schoolYear: selectedSchoolYear || "",
     enrollmentDate: "",
     status: "",
   });
@@ -70,7 +73,7 @@ export default function AddEnrollmentsModal({
         learnersReferenceNumber:
           editingEnrollment.learnersReferenceNumber || "",
         sectionId: editingEnrollment.sectionId || "TBA",
-        schoolYear: editingEnrollment.schoolYear || "",
+        schoolYear: editingEnrollment.schoolYear || selectedSchoolYear || "",
         enrollmentDate: editingEnrollment.enrollmentDate?.split("T")[0] || "",
         status: editingEnrollment.status || "",
       });
@@ -78,12 +81,16 @@ export default function AddEnrollmentsModal({
       setFormData({
         learnersReferenceNumber: "",
         sectionId: "TBA",
-        schoolYear: "",
+        schoolYear: selectedSchoolYear || "",
         enrollmentDate: "",
         status: "",
       });
     }
   }, [editingEnrollment, open]);
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, schoolYear: selectedSchoolYear || prev.schoolYear }));
+  }, [selectedSchoolYear]);
 
   // Fetch students and sections when the modal opens
   useEffect(() => {
@@ -157,7 +164,6 @@ export default function AddEnrollmentsModal({
       // Validate required fields
       if (
         !formData.learnersReferenceNumber ||
-        !formData.schoolYear ||
         !formData.enrollmentDate ||
         !formData.status
       ) {
@@ -336,21 +342,16 @@ export default function AddEnrollmentsModal({
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
-                          School Year *
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 2025-2026"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.schoolYear}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              schoolYear: e.target.value,
-                            })
-                          }
-                          disabled={loading}
-                        />
+                            School Year *
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 2025-2026"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-gray-50 focus:outline-none"
+                            value={formData.schoolYear}
+                            readOnly={true}
+                            disabled={true}
+                          />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">

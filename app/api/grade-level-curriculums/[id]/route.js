@@ -53,6 +53,8 @@ export async function PUT(request, { params }) {
 
     const { id } = await params;
     const body = await request.json();
+    const { context } = schoolYearAccess;
+    const selectedSchoolYear = context?.selectedSchoolYear || '';
     const nextGlCurriculumId = String(body.gl_curriculum_id || body.glCurriculumId || '').trim();
 
     if (!nextGlCurriculumId) {
@@ -88,7 +90,8 @@ export async function PUT(request, { params }) {
         id,
         {
           gl_curriculum_id: nextGlCurriculumId,
-          school_year_id: body.school_year_id || dbExisting.school_year_id,
+          // enforce the server-selected school year for assignments
+          school_year_id: selectedSchoolYear || dbExisting.school_year_id,
           grade_level: body.grade_level || dbExisting.grade_level,
           curriculum_id: String(curriculum._id || curriculum._id),
           is_default: typeof body.is_default === 'boolean' ? body.is_default : dbExisting.is_default,
@@ -124,7 +127,7 @@ export async function PUT(request, { params }) {
     }
 
     existing.gl_curriculum_id = nextGlCurriculumId;
-    existing.school_year_id = body.school_year_id || existing.school_year_id;
+    existing.school_year_id = selectedSchoolYear || existing.school_year_id;
     existing.grade_level = body.grade_level || existing.grade_level;
     existing.curriculum_id = String(curriculum._id);
     existing.is_default = typeof body.is_default === 'boolean' ? body.is_default : existing.is_default;

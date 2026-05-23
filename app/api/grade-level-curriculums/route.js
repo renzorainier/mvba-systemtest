@@ -95,6 +95,8 @@ export async function POST(request) {
     }
 
     const body = await request.json();
+    const { context } = schoolYearAccess;
+    const selectedSchoolYear = context?.selectedSchoolYear || '';
 
     // prefer the normalized collections when available
     const dbCurriculum = await Curriculum.findOne({ $or: [{ _id: body.curriculum_id }, { curriculum_id: body.curriculum_id }] }).lean();
@@ -115,14 +117,14 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
     }
 
-    if (!body.school_year_id || !body.grade_level) {
-      return NextResponse.json({ success: false, error: 'School year and grade level are required' }, { status: 400 });
+    if (!selectedSchoolYear || !body.grade_level) {
+      return NextResponse.json({ success: false, error: 'Grade level is required' }, { status: 400 });
     }
 
     // check duplicates: prefer DB collection check when using DB
     if (useDb) {
       const existing = await GradeLevelCurriculum.findOne({
-        school_year_id: String(body.school_year_id).trim(),
+        school_year_id: String(selectedSchoolYear).trim(),
         grade_level: String(body.grade_level).trim(),
         curriculum_id: String(curriculum._id),
       }).lean();
@@ -130,7 +132,7 @@ export async function POST(request) {
 
       const glDoc = await GradeLevelCurriculum.create({
         gl_curriculum_id: body.gl_curriculum_id || `GLC-${Date.now()}`,
-        school_year_id: body.school_year_id,
+        school_year_id: selectedSchoolYear,
         grade_level: body.grade_level,
         curriculum_id: String(curriculum._id),
         is_default: Boolean(body.is_default),
@@ -144,7 +146,7 @@ export async function POST(request) {
     // fallback: legacy settings array
     const duplicate = settings.gradeLevelCurriculums.find(
       (assignment) =>
-        String(assignment.school_year_id || '').trim() === String(body.school_year_id || '').trim() &&
+        String(assignment.school_year_id || '').trim() === String(selectedSchoolYear || '').trim() &&
         String(assignment.grade_level || '').trim() === String(body.grade_level || '').trim() &&
         String(assignment.curriculum_id || '').trim() === String(curriculum._id).trim()
     );
@@ -156,7 +158,7 @@ export async function POST(request) {
     const glCurriculum = {
       _id: new mongoose.Types.ObjectId(),
       gl_curriculum_id: body.gl_curriculum_id || `GLC-${Date.now()}`,
-      school_year_id: body.school_year_id,
+      school_year_id: selectedSchoolYear,
       grade_level: body.grade_level,
       curriculum_id: String(curriculum._id),
       is_default: Boolean(body.is_default),

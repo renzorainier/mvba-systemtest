@@ -97,13 +97,15 @@ export async function PUT(request, { params }) {
 
     const { id } = await params;
     const body = await request.json();
-    
-    // Map form field names to database field names
+    const { context } = schoolYearAccess;
+    const selectedSchoolYear = context?.selectedSchoolYear || '';
+
+    // Map form field names to database field names. Use server-selected school year.
     const sectionData = {
       sectionName: body.sectionName,
       gradeLevel: body.gradeLevel,
-      schoolYear: body.schoolYear,
-        glCurriculumId: body.glCurriculumId || body.gl_curriculum_id,
+      schoolYear: selectedSchoolYear,
+      glCurriculumId: body.glCurriculumId || body.gl_curriculum_id,
       roomNumber: body.roomNumber,
       sectionId: body.sectionId,
     };
@@ -131,6 +133,8 @@ export async function PUT(request, { params }) {
       if (!gradeLevelCurriculum) {
         return NextResponse.json({ success: false, error: 'Selected grade-level curriculum not found' }, { status: 404 });
       }
+
+      const settings = await ensureSettings();
 
       if (String(gradeLevelCurriculum.school_year_id || '').trim() !== String(sectionData.schoolYear || '').trim() || String(gradeLevelCurriculum.grade_level || '').trim() !== String(sectionData.gradeLevel || '').trim()) {
         return NextResponse.json({ success: false, error: 'Selected curriculum does not match the section school year and grade level' }, { status: 400 });

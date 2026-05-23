@@ -111,10 +111,14 @@ export async function POST(request) {
         }
 
         const body = await request.json();
+        const { context } = schoolYearAccess;
+        const selectedSchoolYear = context?.selectedSchoolYear || '';
+
         const sectionData = {
             sectionName: body.sectionName,
             gradeLevel: body.gradeLevel,
-            schoolYear: body.schoolYear,
+            // use selected/current school year from context, do not trust client input
+            schoolYear: selectedSchoolYear,
             glCurriculumId: body.glCurriculumId || body.gl_curriculum_id,
             roomNumber: body.roomNumber,
             sectionId: body.sectionId || `S-${Date.now()}`, // Auto-generate if not provided
