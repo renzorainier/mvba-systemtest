@@ -29,15 +29,18 @@ async function run() {
 
     const curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
     const glCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
+    const currentSchoolYear = String(settings.currentSchoolYear || '').trim();
 
     console.log(`Found ${curriculums.length} curriculums and ${glCurriculums.length} grade-level curriculums to migrate.`);
 
     // Migrate curriculums
     for (const c of curriculums) {
       const curriculumId = String(c.curriculum_id || '').trim() || `CUR-${Date.now()}`;
+      const schoolYear = String(c.schoolYear || currentSchoolYear || '').trim();
       const filter = { curriculum_id: curriculumId };
       const payload = {
         curriculum_id: curriculumId,
+        schoolYear,
         curriculum_name: c.curriculum_name || '',
         description: c.description || '',
         effective_start_date: c.effective_start_date || new Date(),

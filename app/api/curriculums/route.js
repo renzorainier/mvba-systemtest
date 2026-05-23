@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Curriculum from '@/models/Curriculum';
 import { NextResponse } from 'next/server';
-import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -21,17 +21,26 @@ const ensureSettings = async () => {
   return settings;
 };
 
-export async function GET() {
+export async function GET(request) {
   try {
     await dbConnect();
-    // Prefer reading from dedicated curriculums collection. If empty, fall back to SystemSettings.
-    const fromCollection = await Curriculum.find().sort({ createdAt: -1 }).lean();
+    const { selectedSchoolYear } = await getSchoolYearContext(request);
+
+    const fromCollection = await Curriculum.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 }).lean();
     if (Array.isArray(fromCollection) && fromCollection.length > 0) {
       return NextResponse.json({ success: true, data: fromCollection }, { status: 200 });
     }
 
+    const legacyCollection = await Curriculum.find({ schoolYear: { $exists: false } }).sort({ createdAt: -1 }).lean();
+    if (Array.isArray(legacyCollection) && legacyCollection.length > 0) {
+      return NextResponse.json({ success: true, data: legacyCollection }, { status: 200 });
+    }
+
     const settings = await ensureSettings();
-    const curriculums = Array.isArray(settings?.curriculums) ? [...settings.curriculums].reverse() : [];
+    const settingsCurriculums = Array.isArray(settings?.curriculums) ? [...settings.curriculums] : [];
+    const yearScopedSettings = settingsCurriculums.filter((curriculum) => String(curriculum.schoolYear || '').trim() === String(selectedSchoolYear).trim());
+    const legacySettings = settingsCurriculums.filter((curriculum) => !curriculum.schoolYear);
+    const curriculums = (yearScopedSettings.length > 0 ? yearScopedSettings : legacySettings).reverse();
     return NextResponse.json({ success: true, data: curriculums }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -48,6 +57,8 @@ export async function POST(request) {
     }
 
     const body = await request.json();
+    const { context } = schoolYearAccess;
+    const selectedSchoolYear = context?.selectedSchoolYear || '';
 
     // Create curriculum in dedicated collection
     if (!body.curriculum_name || !body.effective_start_date || !body.effective_end_date) {
@@ -55,7 +66,7 @@ export async function POST(request) {
     }
 
     const curriculum_id = String(body.curriculum_id || `CUR-${Date.now()}`).trim();
-    const exists = await Curriculum.findOne({ curriculum_id }).lean();
+    const exists = await Curriculum.findOne({ curriculum_id, schoolYear: selectedSchoolYear }).lean();
     if (exists) {
       return NextResponse.json({ success: false, error: 'Curriculum code already exists' }, { status: 409 });
     }
@@ -70,6 +81,7 @@ export async function POST(request) {
 
     const payload = {
       curriculum_id,
+      schoolYear: selectedSchoolYear,
       curriculum_name: body.curriculum_name,
       description: body.description || '',
       effective_start_date: new Date(body.effective_start_date),

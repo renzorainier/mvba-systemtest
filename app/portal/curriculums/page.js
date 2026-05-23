@@ -10,6 +10,7 @@ const emptyForm = {
   description: '',
   effective_start_date: '',
   effective_end_date: '',
+  schoolYear: '',
   subjects: [],
   subjectsText: '',
 };
@@ -17,7 +18,7 @@ const emptyForm = {
 const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
 
 export default function CurriculumsPage() {
-  const { isHistorical } = useSchoolYearContext();
+  const { isHistorical, selectedSchoolYear } = useSchoolYearContext();
   const [curriculums, setCurriculums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,6 +66,7 @@ export default function CurriculumsPage() {
       description: curriculum.description || '',
       effective_start_date: toDateInput(curriculum.effective_start_date),
       effective_end_date: toDateInput(curriculum.effective_end_date),
+      schoolYear: curriculum.schoolYear || selectedSchoolYear || '',
       subjects: Array.isArray(curriculum.subjects) ? curriculum.subjects : [],
       subjectsText: Array.isArray(curriculum.subjects) ? curriculum.subjects.map(s => s.subject_name || s).join(', ') : '',
     });
@@ -92,6 +94,7 @@ export default function CurriculumsPage() {
 
       const payload = {
         ...formData,
+        schoolYear: selectedSchoolYear || formData.schoolYear,
         curriculum_id: formData.curriculum_id || `CUR-${Date.now()}`,
         subjects: formData.subjectsText
           ? formData.subjectsText.split(',').map(s => ({ subject_name: s.trim() })).filter(s => s.subject_name)
@@ -241,6 +244,16 @@ export default function CurriculumsPage() {
             {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">School Year</label>
+                <input
+                  type="text"
+                  value={selectedSchoolYear || formData.schoolYear}
+                  readOnly
+                  disabled
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 focus:outline-none"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Subjects</label>
                 <small className="text-xs text-slate-500">Add comma-separated subject names or provide objects.</small>

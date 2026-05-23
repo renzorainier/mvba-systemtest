@@ -26,6 +26,20 @@ const ensureSettings = async () => {
   return settings;
 };
 
+const findCurriculumsForSchoolYear = async (schoolYear) => {
+  const yearScoped = await Curriculum.find({ schoolYear }).lean();
+  if (Array.isArray(yearScoped) && yearScoped.length > 0) {
+    return yearScoped;
+  }
+
+  const legacy = await Curriculum.find({ schoolYear: { $exists: false } }).lean();
+  if (Array.isArray(legacy) && legacy.length > 0) {
+    return legacy;
+  }
+
+  return [];
+};
+
 const buildAssignmentPayload = (assignment, curriculums = []) => {
   const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
   const curriculum = curriculums.find((item) => String(item._id) === String(assignment.curriculum_id)) || null;
@@ -51,7 +65,7 @@ export async function GET(request) {
     const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
     const settings = await ensureSettings();
     const { searchParams } = new URL(request.url);
-    const schoolYearId = searchParams.get('schoolYearId') || searchParams.get('school_year_id') || '';
+    const schoolYearId = searchParams.get('schoolYearId') || searchParams.get('school_year_id') || selectedSchoolYear || '';
     const gradeLevel = searchParams.get('gradeLevel') || searchParams.get('grade_level') || '';
 
     let sourceAssignments = [];
@@ -59,22 +73,26 @@ export async function GET(request) {
     if (isHistorical) {
       sourceAssignments = await ArchivedGradeLevelCurriculum.find({ schoolYear: selectedSchoolYear }).lean();
     } else {
-      // prefer DB collection when there are documents
-      const dbFilter = {};
+      const dbFilter = { school_year_id: selectedSchoolYear };
       if (schoolYearId) dbFilter.school_year_id = schoolYearId;
       if (gradeLevel) dbFilter.grade_level = gradeLevel;
+
       const dbAssignments = await GradeLevelCurriculum.find(dbFilter).lean();
       if (Array.isArray(dbAssignments) && dbAssignments.length > 0) {
         sourceAssignments = dbAssignments;
       } else {
-        sourceAssignments = settings.gradeLevelCurriculums;
+        const yearScopedSettings = settings.gradeLevelCurriculums.filter(
+          (assignment) => String(assignment.school_year_id || '').trim() === String(selectedSchoolYear || '').trim()
+        );
+        const legacySettings = settings.gradeLevelCurriculums.filter((assignment) => !assignment.school_year_id);
+        sourceAssignments = yearScopedSettings.length > 0 ? yearScopedSettings : legacySettings;
       }
     }
 
-    const curriculumsSource = (await Curriculum.find({}).lean()) || settings.curriculums || [];
+    const curriculumsSource = await findCurriculumsForSchoolYear(selectedSchoolYear);
 
     const assignments = sourceAssignments
-      .filter((assignment) => !schoolYearId || String(assignment.school_year_id || assignment.schoolYear || '').trim() === schoolYearId)
+      .filter((assignment) => !schoolYearId || String(assignment.school_year_id || assignment.schoolYear || '').trim() === String(schoolYearId).trim())
       .filter((assignment) => !gradeLevel || String(assignment.grade_level || '').trim() === gradeLevel)
       .map((assignment) => buildAssignmentPayload(assignment, curriculumsSource))
       .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0));
@@ -95,12 +113,15 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { context } = schoolYearAccess;
-    const selectedSchoolYear = context?.selectedSchoolYear || '';
-
-    // prefer the normalized collections when available
-    const dbCurriculum = await Curriculum.findOne({ $or: [{ _id: body.curriculum_id }, { curriculum_id: body.curriculum_id }] }).lean();
+    const selectedSchoolYear = schoolYearAccess.context?.selectedSchoolYear || '';
     const settings = await ensureSettings();
+
+    const dbCurriculum = await Curriculum.findOne({
+      $and: [
+        { $or: [{ _id: body.curriculum_id }, { curriculum_id: body.curriculum_id }] },
+        { $or: [{ schoolYear: selectedSchoolYear }, { schoolYear: { $exists: false } }] },
+      ],
+    }).lean();
 
     let curriculum = null;
     let useDb = false;
@@ -109,8 +130,12 @@ export async function POST(request) {
       curriculum = dbCurriculum;
       useDb = true;
     } else {
-      const curriculums = settings.curriculums || [];
-      curriculum = curriculums.find((item) => String(item._id) === String(body.curriculum_id) || String(item.curriculum_id) === String(body.curriculum_id));
+      const curriculums = await findCurriculumsForSchoolYear(selectedSchoolYear);
+      curriculum = curriculums.find(
+        (item) =>
+          (String(item._id) === String(body.curriculum_id) || String(item.curriculum_id) === String(body.curriculum_id)) &&
+          (!item.schoolYear || String(item.schoolYear || '').trim() === String(selectedSchoolYear || '').trim())
+      );
     }
 
     if (!curriculum) {
@@ -121,14 +146,16 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Grade level is required' }, { status: 400 });
     }
 
-    // check duplicates: prefer DB collection check when using DB
     if (useDb) {
       const existing = await GradeLevelCurriculum.findOne({
         school_year_id: String(selectedSchoolYear).trim(),
         grade_level: String(body.grade_level).trim(),
         curriculum_id: String(curriculum._id),
       }).lean();
-      if (existing) return NextResponse.json({ success: false, error: 'This grade level curriculum assignment already exists' }, { status: 409 });
+
+      if (existing) {
+        return NextResponse.json({ success: false, error: 'This grade level curriculum assignment already exists' }, { status: 409 });
+      }
 
       const glDoc = await GradeLevelCurriculum.create({
         gl_curriculum_id: body.gl_curriculum_id || `GLC-${Date.now()}`,
@@ -138,12 +165,10 @@ export async function POST(request) {
         is_default: Boolean(body.is_default),
       });
 
-      // return enriched payload
-      const allCurriculums = await Curriculum.find({}).lean();
+      const allCurriculums = await findCurriculumsForSchoolYear(selectedSchoolYear);
       return NextResponse.json({ success: true, data: buildAssignmentPayload(glDoc.toObject ? glDoc.toObject() : glDoc, allCurriculums) }, { status: 201 });
     }
 
-    // fallback: legacy settings array
     const duplicate = settings.gradeLevelCurriculums.find(
       (assignment) =>
         String(assignment.school_year_id || '').trim() === String(selectedSchoolYear || '').trim() &&
@@ -172,7 +197,7 @@ export async function POST(request) {
       { $set: { curriculums: settings.curriculums, gradeLevelCurriculums: settings.gradeLevelCurriculums } }
     );
 
-    return NextResponse.json({ success: true, data: buildAssignmentPayload(glCurriculum, settings.curriculums || []) }, { status: 201 });
+    return NextResponse.json({ success: true, data: buildAssignmentPayload(glCurriculum, await findCurriculumsForSchoolYear(selectedSchoolYear)) }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

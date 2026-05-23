@@ -24,6 +24,16 @@ const ensureSettings = async () => {
   return settings;
 };
 
+const findCurriculumsForSchoolYear = async (schoolYear) => {
+  const yearScoped = await Curriculum.find({ schoolYear }).lean();
+  if (Array.isArray(yearScoped) && yearScoped.length > 0) {
+    return yearScoped;
+  }
+
+  const legacy = await Curriculum.find({ schoolYear: { $exists: false } }).lean();
+  return Array.isArray(legacy) ? legacy : [];
+};
+
 const buildAssignmentPayload = (assignment, curriculums = []) => {
   const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
   const curriculum = curriculums.find((item) => String(item._id) === String(assignment.curriculum_id)) || null;
@@ -81,8 +91,12 @@ export async function PUT(request, { params }) {
       const dbCurriculum = await Curriculum.findById(body.curriculum_id || dbExisting.curriculum_id).lean();
       let curriculum = dbCurriculum;
       if (!curriculum) {
-        // fallback to settings
-        curriculum = (settings.curriculums || []).find((item) => String(item._id) === String(body.curriculum_id) || String(item.curriculum_id) === String(body.curriculum_id));
+        const curriculums = await findCurriculumsForSchoolYear(selectedSchoolYear);
+        curriculum = curriculums.find(
+          (item) =>
+            (String(item._id) === String(body.curriculum_id) || String(item.curriculum_id) === String(body.curriculum_id)) &&
+            (!item.schoolYear || String(item.schoolYear || '').trim() === String(selectedSchoolYear || '').trim())
+        );
         if (!curriculum) return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
       }
 
@@ -99,7 +113,7 @@ export async function PUT(request, { params }) {
         { new: true, runValidators: true }
       ).lean();
 
-      const allCurriculums = await Curriculum.find({}).lean();
+      const allCurriculums = await findCurriculumsForSchoolYear(selectedSchoolYear);
       return NextResponse.json({ success: true, data: buildAssignmentPayload(updated, allCurriculums) }, { status: 200 });
     }
 
@@ -111,7 +125,11 @@ export async function PUT(request, { params }) {
     }
 
     const curriculumId = body.curriculum_id || existing.curriculum_id?.toString();
-    const curriculum = settings.curriculums.find((item) => String(item._id) === String(curriculumId) || String(item.curriculum_id) === String(curriculumId));
+    const curriculum = (await findCurriculumsForSchoolYear(selectedSchoolYear)).find(
+      (item) =>
+        (String(item._id) === String(curriculumId) || String(item.curriculum_id) === String(curriculumId)) &&
+        (!item.schoolYear || String(item.schoolYear || '').trim() === String(selectedSchoolYear || '').trim())
+    );
     if (!curriculum) {
       return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
     }
@@ -186,7 +204,7 @@ export async function DELETE(request, { params }) {
       { $set: { curriculums: settings.curriculums, gradeLevelCurriculums: settings.gradeLevelCurriculums } }
     );
 
-    return NextResponse.json({ success: true, data: existing }, { status: 200 });
+    return NextResponse.json({ success: true, data: buildAssignmentPayload(existing, await findCurriculumsForSchoolYear(selectedSchoolYear)) }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
