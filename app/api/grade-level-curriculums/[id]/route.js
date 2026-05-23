@@ -53,12 +53,28 @@ export async function PUT(request, { params }) {
 
     const { id } = await params;
     const body = await request.json();
+    const nextGlCurriculumId = String(body.gl_curriculum_id || body.glCurriculumId || '').trim();
+
+    if (!nextGlCurriculumId) {
+      return NextResponse.json({ success: false, error: 'Assignment code is required' }, { status: 400 });
+    }
 
     // prefer DB collection
     const dbExisting = await GradeLevelCurriculum.findById(id).lean();
     const settings = await ensureSettings();
 
     if (dbExisting) {
+      if (nextGlCurriculumId !== String(dbExisting.gl_curriculum_id || '').trim()) {
+        const duplicateCode = await GradeLevelCurriculum.findOne({
+          gl_curriculum_id: nextGlCurriculumId,
+          _id: { $ne: id },
+        }).lean();
+
+        if (duplicateCode) {
+          return NextResponse.json({ success: false, error: 'Assignment code already exists' }, { status: 409 });
+        }
+      }
+
       // resolve curriculum in DB first
       const dbCurriculum = await Curriculum.findById(body.curriculum_id || dbExisting.curriculum_id).lean();
       let curriculum = dbCurriculum;
@@ -71,6 +87,7 @@ export async function PUT(request, { params }) {
       const updated = await GradeLevelCurriculum.findByIdAndUpdate(
         id,
         {
+          gl_curriculum_id: nextGlCurriculumId,
           school_year_id: body.school_year_id || dbExisting.school_year_id,
           grade_level: body.grade_level || dbExisting.grade_level,
           curriculum_id: String(curriculum._id || curriculum._id),
@@ -96,6 +113,17 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
     }
 
+    if (nextGlCurriculumId !== String(existing.gl_curriculum_id || '').trim()) {
+      const duplicateCode = settings.gradeLevelCurriculums.find(
+        (item) => String(item.gl_curriculum_id || '').trim() === nextGlCurriculumId && String(item._id) !== String(existing._id)
+      );
+
+      if (duplicateCode) {
+        return NextResponse.json({ success: false, error: 'Assignment code already exists' }, { status: 409 });
+      }
+    }
+
+    existing.gl_curriculum_id = nextGlCurriculumId;
     existing.school_year_id = body.school_year_id || existing.school_year_id;
     existing.grade_level = body.grade_level || existing.grade_level;
     existing.curriculum_id = String(curriculum._id);
