@@ -23,9 +23,10 @@ export async function GET(request) {
         $or: [
           { learnersReferenceNumber: { $in: studentIds } },
           { _id: { $in: objectIds } },
+          ...(isHistorical ? [{ sourceStudentId: { $in: objectIds } }] : []),
         ],
       },
-      { _id: 1, firstName: 1, lastName: 1, learnersReferenceNumber: 1 }
+      { _id: 1, firstName: 1, lastName: 1, learnersReferenceNumber: 1, sourceStudentId: 1 }
     ).lean();
 
     const studentByLrn = new Map(
@@ -42,10 +43,19 @@ export async function GET(request) {
       ])
     );
 
+    const studentBySourceId = new Map(
+      students
+        .filter((student) => student.sourceStudentId)
+        .map((student) => [
+          String(student.sourceStudentId),
+          `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        ])
+    );
+
     const enrichedFinancials = financials.map((record) => {
       const key = String(record.studentId || '');
       // Prefer lookup by DB id first, then by LRN fallback
-      const studentName = studentById.get(key) || studentByLrn.get(key) || record.studentId;
+      const studentName = record.studentName || studentById.get(key) || studentBySourceId.get(key) || studentByLrn.get(key) || record.studentId;
 
       return {
         ...record,

@@ -7,6 +7,7 @@ import ArchivedStudent from '@/models/ArchivedStudent';
 import ArchivedSection from '@/models/ArchivedSection';
 import ArchivedSchedule from '@/models/ArchivedSchedule';
 import ArchivedClassAssignment from '@/models/ArchivedClassAssignment';
+import ArchivedCurriculum from '@/models/ArchivedCurriculum';
 import ArchivedGradeLevelCurriculum from '@/models/ArchivedGradeLevelCurriculum';
 import SystemSettings from '@/models/SystemSettings';
 import { normalizeSchoolYear } from '@/lib/school-year';
@@ -28,6 +29,7 @@ export async function GET(request) {
       ArchivedSection.distinct('schoolYear'),
       ArchivedSchedule.distinct('schoolYear'),
       ArchivedClassAssignment.distinct('schoolYear'),
+      ArchivedCurriculum.distinct('schoolYear'),
       ArchivedGradeLevelCurriculum.distinct('schoolYear'),
     ]);
 

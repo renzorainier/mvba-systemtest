@@ -2,6 +2,7 @@ import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Curriculum from '@/models/Curriculum';
+import ArchivedCurriculum from '@/models/ArchivedCurriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
@@ -24,7 +25,14 @@ const ensureSettings = async () => {
 export async function GET(request) {
   try {
     await dbConnect();
-    const { selectedSchoolYear } = await getSchoolYearContext(request);
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+
+    if (isHistorical) {
+      const archivedCurriculums = await ArchivedCurriculum.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 }).lean();
+      if (Array.isArray(archivedCurriculums) && archivedCurriculums.length > 0) {
+        return NextResponse.json({ success: true, data: archivedCurriculums }, { status: 200 });
+      }
+    }
 
     const fromCollection = await Curriculum.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 }).lean();
     if (Array.isArray(fromCollection) && fromCollection.length > 0) {
