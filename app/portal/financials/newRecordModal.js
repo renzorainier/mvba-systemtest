@@ -70,7 +70,8 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
   const selectStudent = (student) => {
     setFormData((prev) => ({
       ...prev,
-      studentId: student.learnersReferenceNumber,
+      // Use the DB _id for studentId to avoid collisions when LRN is a placeholder like 'TBA'
+      studentId: String(student._id),
     }))
     setStudentQuery(`${student.learnersReferenceNumber} - ${student.firstName} ${student.lastName}`)
     setShowStudentSuggestions(false)
@@ -99,7 +100,8 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
         const uploadFormData = new FormData()
         uploadFormData.append('file', selectedFile)
         uploadFormData.append('relatedRecordType', 'financials')
-        uploadFormData.append('relatedRecordId', formData.studentId)
+        // relatedRecordId should reference the student DB id, not a placeholder LRN
+        uploadFormData.append('relatedRecordId', String(formData.studentId))
 
         const uploadResponse = await fetch('/api/upload-file', {
           method: 'POST',

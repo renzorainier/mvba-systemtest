@@ -11,7 +11,10 @@ export default function MonthlyBalanceModal({ open, onClose, student }) {
     setError(null);
     setData(null);
 
-    const id = student.learnersReferenceNumber || student._id;
+    // learnersReferenceNumber can be a placeholder like 'TBA'.
+    // Only use it when it's a meaningful value; otherwise fall back to the DB _id.
+    const lrn = String(student.learnersReferenceNumber || '').trim();
+    const id = lrn && lrn.toUpperCase() !== 'TBA' ? lrn : student._id;
 
     fetch(`/api/financials/monthly/${id}`)
       .then((r) => r.json())
