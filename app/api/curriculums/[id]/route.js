@@ -2,6 +2,7 @@ import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import Curriculum from '@/models/Curriculum';
 import SystemSettings from '@/models/SystemSettings';
+import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
@@ -115,6 +116,22 @@ export async function DELETE(request, { params }) {
     if (!schoolYearAccess.allowed) return NextResponse.json(schoolYearAccess.response, { status: 403 });
 
     const { id } = await params;
+
+    // Prevent deletion if referenced by any GradeLevelCurriculum (DB)
+    const dbRef = await GradeLevelCurriculum.findOne({ curriculum_id: id }).lean();
+    if (dbRef) {
+      return NextResponse.json({ success: false, error: 'Curriculum is assigned to a grade level and cannot be deleted' }, { status: 409 });
+    }
+
+    // Prevent deletion if referenced in SystemSettings.gradeLevelCurriculums (embedded)
+    const settings = await ensureSettings();
+    const embeddedRefExists = Array.isArray(settings.gradeLevelCurriculums)
+      ? settings.gradeLevelCurriculums.some((assignment) => String(assignment.curriculum_id || '') === String(id))
+      : false;
+
+    if (embeddedRefExists) {
+      return NextResponse.json({ success: false, error: 'Curriculum is assigned to a grade level and cannot be deleted' }, { status: 409 });
+    }
 
     // Try deleting from dedicated collection
     const deleted = await Curriculum.findByIdAndDelete(id);
