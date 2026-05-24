@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
-import AddStudentsModal from '../students/addStudentsModal';
 import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function App() {
   const { isHistorical } = useSchoolYearContext();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,14 +26,12 @@ export default function App() {
       maximumFractionDigits: 0,
     }).format(Number(value || 0));
 
-  const openModal = () => {
+  const openCreateModal = () => {
     if (isHistorical) {
       return;
     }
-    setIsModalOpen(true);
-  };
-  const closeModal = () => {
-    setIsModalOpen(false);
+    setSelectedStudent(null);
+    setProfileModalOpen(true);
   };
 
   const openBalanceModal = (student) => {
@@ -60,7 +56,9 @@ export default function App() {
 
   const handleStudentUpdate = (updatedStudent) => {
     setStudents((prev) =>
-      prev.map((s) => (s._id === updatedStudent._id ? updatedStudent : s))
+      prev.some((s) => s._id === updatedStudent._id)
+        ? prev.map((s) => (s._id === updatedStudent._id ? updatedStudent : s))
+        : [updatedStudent, ...prev]
     );
   };
 
@@ -111,7 +109,7 @@ export default function App() {
       {/* Header Section */}
       <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Student Management</h1>
-        <button onClick={openModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
+        <button onClick={openCreateModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
           <Plus size={18} />
           Add New Student
         </button>
@@ -239,7 +237,6 @@ export default function App() {
 
       </div>
 
-      <AddStudentsModal open={isModalOpen} onClose={closeModal} isHistorical={isHistorical} />
       <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
       <StudentProfileModal
         open={profileModalOpen}

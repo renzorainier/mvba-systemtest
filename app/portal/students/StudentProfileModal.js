@@ -69,6 +69,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       setIsEditing(false);
       setError('');
       setSuccess('');
+    } else if (open) {
+      setFormData(createEmptyFormData());
+      setDocuments([]);
+      setDocumentsToRemove([]);
+      setProfilePicture(null);
+      setProfilePicturePreview(null);
+      setIsEditing(true);
+      setError('');
+      setSuccess('');
     }
   }, [student, open]);
 
@@ -165,6 +174,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         return;
       }
 
+      const isCreating = !student;
       const updateData = new FormData();
       Object.keys(formData).forEach((key) => {
         updateData.append(key, formData[key]);
@@ -174,29 +184,26 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         updateData.append('profilePicture', profilePicture);
       }
 
-      // Add documents
       documents.forEach((doc, index) => {
         if (doc.file) {
-          // New document
           updateData.append(`documents[${index}]`, doc.file);
           updateData.append(`documentNames[${index}]`, doc.name);
         }
       });
 
-      // Add documents to remove
-      if (documentsToRemove.length > 0) {
+      if (!isCreating && documentsToRemove.length > 0) {
         updateData.append('documentsToRemove', JSON.stringify(documentsToRemove));
       }
 
-      const response = await fetch(`/api/students/${student._id}`, {
-        method: 'PUT',
+      const response = await fetch(isCreating ? '/api/students' : `/api/students/${student._id}`, {
+        method: isCreating ? 'POST' : 'PUT',
         body: updateData,
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setSuccess('Student profile updated successfully');
+        setSuccess(isCreating ? 'Student created successfully' : 'Student profile updated successfully');
         setIsEditing(false);
         setProfilePicture(null);
         setDocuments([]);
@@ -260,8 +267,6 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
     }
   };
 
-  if (!student) return null;
-
   return (
     <Dialog open={open} onClose={onClose} className="relative z-50">
       <DialogBackdrop className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
@@ -271,7 +276,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
               <DialogTitle className="text-lg font-bold text-white">
-                {isEditing ? 'Edit Student Profile' : 'Student Profile'}
+                {student ? (isEditing ? 'Edit Student Profile' : 'Student Profile') : 'Add New Student'}
               </DialogTitle>
               <button
                 onClick={onClose}
@@ -304,7 +309,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       {profilePicturePreview ? (
                         <img
                           src={profilePicturePreview}
-                          alt={`${student.firstName} ${student.lastName}`}
+                          alt={student ? `${student.firstName} ${student.lastName}` : 'New student profile'}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -336,21 +341,21 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                   {/* Student Information */}
                   <div className="flex-1 pt-2">
                     <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1 leading-tight truncate">
-                      {student.firstName} {student.lastName}
+                      {student ? `${student.firstName} ${student.lastName}` : 'New Student'}
                     </h3>
 
                     <p className="text-sm text-gray-600 mb-2">
                       <span className="text-gray-400 mr-2">#</span>
                       <span className="font-medium">Student ID:</span>
-                      <span className="ml-2 text-gray-800 font-semibold">{student.learnersReferenceNumber}</span>
+                      <span className="ml-2 text-gray-800 font-semibold">{student?.learnersReferenceNumber || 'Pending'}</span>
                     </p>
 
                     <div className="flex items-center gap-3 mb-4">
                       <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-100">
-                        {student.gradeLevel || '—'}
+                        {student?.gradeLevel || formData.gradeLevel || '—'}
                       </span>
                       <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                        Admitted: {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '—'}
+                        Admitted: {student?.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '—'}
                       </span>
                     </div>
                   </div>
@@ -449,7 +454,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.gradeLevel}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
                     >
                       <option value="">Select Grade Level</option>
                       {GRADE_LEVEL_OPTIONS.map((grade) => (
@@ -490,10 +495,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       type="text"
                       name="learnersReferenceNumber"
                       value={formData.learnersReferenceNumber}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-600 disabled:text-gray-600"
+                      onChange={handleInputChange}
+                      disabled={!isEditing || formData.gradeLevel === 'Kinder 1'}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600"
                     />
-                    <p className="text-xs text-gray-500 mt-1">This field cannot be changed</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.gradeLevel === 'Kinder 1'
+                        ? 'This field cannot be changed for Kinder 1.'
+                        : 'Editable while this profile is in edit mode.'}
+                    </p>
                   </div>
 
                   {/* Admission Date */}
@@ -640,7 +650,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
             {/* Footer / Action Buttons */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-              {!isEditing && (
+              {student && !isEditing && (
                 <button
                   onClick={handleArchive}
                   disabled={loading || archiving}
@@ -664,7 +674,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
                   <Edit2 size={18} />
-                  Edit Profile
+                  {student ? 'Edit Profile' : 'Create Student'}
                 </button>
               ) : (
                 <>
@@ -681,7 +691,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={18} />
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    {loading ? 'Saving...' : student ? 'Save Changes' : 'Create Student'}
                   </button>
                 </>
               )}

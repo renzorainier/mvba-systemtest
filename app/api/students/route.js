@@ -16,8 +16,10 @@ import {
   getTuitionAmountForGrade,
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
+import { getGridFSBucket } from '@/lib/gridfs';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
+import { Readable } from 'stream';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -107,7 +109,9 @@ export async function POST(request) {
       return NextResponse.json(schoolYearAccess.response, { status: 403 });
     }
 
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    const formData = contentType.includes('multipart/form-data') ? await request.formData() : null;
+    const body = formData ? Object.fromEntries(formData) : await request.json();
     const gradeLevel = String(body.gradeLevel || '').trim();
     const normalizedLrn = normalizeLearnersReferenceNumber(body.learnersReferenceNumber);
 
@@ -143,6 +147,67 @@ export async function POST(request) {
     }
 
     const defaultTotal = await getDefaultTotalForGrade(gradeLevel);
+    let profilePictureUrl = '';
+    const documents = [];
+
+    if (formData) {
+      const profilePictureFile = formData.get('profilePicture');
+      if (profilePictureFile && typeof profilePictureFile === 'object' && typeof profilePictureFile.arrayBuffer === 'function') {
+        const bucket = await getGridFSBucket();
+        const buffer = Buffer.from(await profilePictureFile.arrayBuffer());
+        const uploadStream = bucket.openUploadStream(`student-profile-${Date.now()}`, {
+          metadata: {
+            uploadedAt: new Date(),
+          },
+        });
+
+        const readable = Readable.from([buffer]);
+        const fileId = await new Promise((resolve, reject) => {
+          readable.pipe(uploadStream)
+            .on('error', reject)
+            .on('finish', () => {
+              resolve(uploadStream.id.toString());
+            });
+        });
+
+        profilePictureUrl = `/api/download-file/${fileId}`;
+      }
+
+      try {
+        const bucket = await getGridFSBucket();
+        for (let i = 0; i < 10; i++) {
+          const docFile = formData.get(`documents[${i}]`);
+          const docName = body[`documentNames[${i}]`];
+
+          if (docFile && typeof docFile === 'object' && typeof docFile.arrayBuffer === 'function' && docName) {
+            const buffer = Buffer.from(await docFile.arrayBuffer());
+            const uploadStream = bucket.openUploadStream(docName, {
+              metadata: {
+                uploadedAt: new Date(),
+              },
+            });
+
+            const readable = Readable.from([buffer]);
+            const fileId = await new Promise((resolve, reject) => {
+              readable.pipe(uploadStream)
+                .on('error', reject)
+                .on('finish', () => {
+                  resolve(uploadStream.id.toString());
+                });
+            });
+
+            documents.push({
+              fileId,
+              fileName: docName,
+              uploadedAt: new Date(),
+            });
+          }
+        }
+      } catch (fileError) {
+        console.error('Document upload error:', fileError);
+        return NextResponse.json({ success: false, error: 'Failed to upload documents' }, { status: 500 });
+      }
+    }
     
     // Map form field names to database field names
     const studentData = {
@@ -158,6 +223,8 @@ export async function POST(request) {
       parentGuardianName: body.parentGuardianName || '',
       parentGuardianRelationship: body.parentGuardianRelationship || '',
       parentGuardianContactNumber: body.parentGuardianContactNumber || '',
+      profilePicture: profilePictureUrl,
+      documents,
       totalEstimatedCost: defaultTotal,
       remainingBalance: defaultTotal,
     };
