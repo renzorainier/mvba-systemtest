@@ -4,7 +4,9 @@ import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSetting
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
+import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import ArchivedClassAssignment from '@/models/ArchivedClassAssignment';
+import Curriculum from '@/models/Curriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
@@ -49,14 +51,35 @@ const resolveCurriculumAssignmentId = (value) => {
   return String(value);
 };
 
-const enrichAssignment = (assignment, settings) => {
+const enrichAssignment = async (assignment, settings, selectedSchoolYear) => {
   const section = assignment.section?.toObject ? assignment.section.toObject() : assignment.section;
-  const assignmentLink = section?.glCurriculumId
-    ? (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId))
-    : null;
-  const curriculum = assignmentLink
-    ? (settings.curriculums || []).find((item) => String(item._id) === String(assignmentLink.curriculum_id))
-    : null;
+
+  let assignmentLink = null;
+  let curriculum = null;
+
+  if (section?.glCurriculumId) {
+    // Try DB year-scoped GradeLevelCurriculum first
+    const dbGl = await GradeLevelCurriculum.findOne({
+      $or: [{ _id: section.glCurriculumId }, { gl_curriculum_id: section.glCurriculumId }],
+    }).lean();
+
+    if (dbGl && String(dbGl.school_year_id || '').trim() === String(selectedSchoolYear || '').trim()) {
+      assignmentLink = dbGl;
+      if (dbGl.curriculum_id) {
+        curriculum = await Curriculum.findById(dbGl.curriculum_id).lean();
+      }
+    }
+  }
+
+  if (!assignmentLink) {
+    assignmentLink = section?.glCurriculumId
+      ? (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId))
+      : null;
+
+    if (assignmentLink) {
+      curriculum = (settings.curriculums || []).find((item) => String(item._id) === String(assignmentLink.curriculum_id)) || null;
+    }
+  }
 
   return {
     ...assignment.toObject(),
@@ -65,7 +88,7 @@ const enrichAssignment = (assignment, settings) => {
           ...section,
           glCurriculumId: assignmentLink
             ? {
-                      ...(assignmentLink?.toObject ? assignmentLink.toObject() : assignmentLink),
+                ...(assignmentLink?.toObject ? assignmentLink.toObject() : assignmentLink),
                 curriculum_id: curriculum
                   ? {
                       _id: curriculum._id,
@@ -96,10 +119,14 @@ export async function GET(request) {
     await dbConnect();
     const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
     const settings = await ensureSettings();
-    const assignments = isHistorical
-      ? await ArchivedClassAssignment.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 })
-      : await buildAssignmentQuery();
-    return NextResponse.json({ success: true, data: isHistorical ? assignments : assignments.map((assignment) => enrichAssignment(assignment, settings)) }, { status: 200 });
+    if (isHistorical) {
+      const assignments = await ArchivedClassAssignment.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
+      return NextResponse.json({ success: true, data: assignments }, { status: 200 });
+    }
+
+    const assignments = await buildAssignmentQuery();
+    const enriched = await Promise.all(assignments.map((assignment) => enrichAssignment(assignment, settings, selectedSchoolYear)));
+    return NextResponse.json({ success: true, data: enriched }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -145,7 +172,27 @@ export async function POST(request) {
 
     const settings = await ensureSettings();
     const sectionCurriculumId = resolveCurriculumAssignmentId(section.glCurriculumId);
-    const sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
+
+    // Prefer year-scoped grade-level curriculum documents in the DB, fallback to legacy settings
+    const selectedSchoolYear = schoolYearAccess.context?.selectedSchoolYear || '';
+    let sectionCurriculum = null;
+
+    if (sectionCurriculumId) {
+      const dbGl = await GradeLevelCurriculum.findOne({
+        $and: [
+          { $or: [{ _id: sectionCurriculumId }, { gl_curriculum_id: sectionCurriculumId }] },
+          { school_year_id: selectedSchoolYear },
+        ],
+      }).lean();
+
+      if (dbGl) {
+        sectionCurriculum = dbGl;
+      }
+    }
+
+    if (!sectionCurriculum) {
+      sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
+    }
 
     if (!sectionCurriculum) {
       return NextResponse.json({ success: false, error: 'Section must be linked to a grade-level curriculum before creating a class assignment' }, { status: 400 });
