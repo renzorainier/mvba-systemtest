@@ -44,7 +44,8 @@ export async function GET(request) {
 
     const enrichedFinancials = financials.map((record) => {
       const key = String(record.studentId || '');
-      const studentName = studentByLrn.get(key) || studentById.get(key) || record.studentId;
+      // Prefer lookup by DB id first, then by LRN fallback
+      const studentName = studentById.get(key) || studentByLrn.get(key) || record.studentId;
 
       return {
         ...record,
@@ -69,10 +70,20 @@ export async function POST(request) {
 
     const body = await request.json();
     
-    // Ensure all required fields are present
+    // Prefer and require Mongo DB object id for student identity to avoid collisions with placeholder LRNs.
+    if (!body.studentId || !mongoose.Types.ObjectId.isValid(String(body.studentId))) {
+      return NextResponse.json({ success: false, error: 'studentId must be a valid MongoDB ObjectId' }, { status: 400 });
+    }
+
+    const resolvedStudent = await Student.findById(String(body.studentId)).lean();
+    if (!resolvedStudent) {
+      return NextResponse.json({ success: false, error: 'studentId does not match any student' }, { status: 400 });
+    }
+
     const financialData = {
-      paymentId: body.paymentId || `P-${Date.now()}`, // Auto-generate if not provided
-      studentId: body.studentId,
+      paymentId: body.paymentId || `P-${Date.now()}`,
+      // store canonical DB id string
+      studentId: String(resolvedStudent._id),
       amountPaid: body.amountPaid,
       dateOfPayment: body.dateOfPayment,
       paymentMethod: body.paymentMethod,
@@ -80,7 +91,7 @@ export async function POST(request) {
       status: body.status,
       remarks: body.remarks || '',
       receivedBy: body.receivedBy,
-      documents: [], // Initialize empty documents array
+      documents: [],
     };
     
     // Add proof of payment if provided
@@ -97,13 +108,7 @@ export async function POST(request) {
     const financial = await Financial.create(financialData);
 
     if (String(financialData.status).toLowerCase() === 'completed' && Number(financialData.amountPaid) > 0) {
-      const studentSearchFilters = [{ learnersReferenceNumber: financialData.studentId }];
-
-      if (mongoose.Types.ObjectId.isValid(financialData.studentId)) {
-        studentSearchFilters.push({ _id: financialData.studentId });
-      }
-
-      const student = await Student.findOne({ $or: studentSearchFilters });
+      const student = await Student.findById(String(financialData.studentId));
 
       if (student) {
         const currentBalance = Number(student.remainingBalance || 0);

@@ -35,6 +35,7 @@ export default function AddEnrollmentsModal({
 
   const [formData, setFormData] = useState({
     learnersReferenceNumber: "",
+    studentId: "",
     sectionId: "TBA",
     schoolYear: selectedSchoolYear || "",
     enrollmentDate: "",
@@ -50,11 +51,9 @@ export default function AddEnrollmentsModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const selectedStudent = students.find(
-    (student) =>
-      student.learnersReferenceNumber === formData.learnersReferenceNumber ||
-      student._id === formData.learnersReferenceNumber
-  );
+  // Resolve selected student by DB _id only. Do not rely on learnersReferenceNumber
+  // for grade/section resolution to avoid ambiguous LRN matches.
+  const selectedStudent = students.find((student) => String(student._id) === String(formData.studentId));
 
   const selectedSection = sections.find(
     (section) => (section.sectionId || section._id) === formData.sectionId
@@ -72,6 +71,7 @@ export default function AddEnrollmentsModal({
       setFormData({
         learnersReferenceNumber:
           editingEnrollment.learnersReferenceNumber || "",
+        studentId: editingEnrollment.studentId || "",
         sectionId: editingEnrollment.sectionId || "TBA",
         schoolYear: editingEnrollment.schoolYear || selectedSchoolYear || "",
         enrollmentDate: editingEnrollment.enrollmentDate?.split("T")[0] || "",
@@ -80,6 +80,7 @@ export default function AddEnrollmentsModal({
     } else {
       setFormData({
         learnersReferenceNumber: "",
+        studentId: "",
         sectionId: "TBA",
         schoolYear: selectedSchoolYear || "",
         enrollmentDate: "",
@@ -121,6 +122,22 @@ export default function AddEnrollmentsModal({
     }
   }, [open]);
 
+  // When students load, if we have an editingEnrollment that only contains learnersReferenceNumber,
+  // try to resolve and set the corresponding studentId so the select shows correctly.
+  useEffect(() => {
+    if (students.length > 0 && editingEnrollment) {
+      // Prefer using the explicit studentId on the editing enrollment to resolve the select.
+      if (editingEnrollment.studentId) {
+        const foundById = students.find((s) => String(s._id) === String(editingEnrollment.studentId));
+        if (foundById) {
+          setFormData((prev) => ({ ...prev, studentId: String(foundById._id) }));
+        }
+      }
+      // If no studentId is present on the editingEnrollment, do not auto-resolve by LRN
+      // to avoid choosing the wrong student when LRNs are ambiguous (e.g., 'TBA').
+    }
+  }, [students, editingEnrollment]);
+
   // When enrollments or sections change, annotate sections with current student counts
   useEffect(() => {
     if (sections.length > 0 && enrollments.length > 0) {
@@ -137,14 +154,15 @@ export default function AddEnrollmentsModal({
 
   // Client-side check: if adding (not editing) and selected student already has an enrollment, show error
   useEffect(() => {
-    if (formData.learnersReferenceNumber && enrollments.length > 0) {
+    if (formData.studentId && enrollments.length > 0) {
       const exists = enrollments.find((e) => {
-        const sameStudent = e.learnersReferenceNumber === formData.learnersReferenceNumber;
+        const sameStudentById = e.studentId && String(e.studentId) === String(formData.studentId);
         const sameRecord = editingEnrollment && e._id === editingEnrollment._id;
-        return sameStudent && !sameRecord;
+        return sameStudentById && !sameRecord;
       });
       setIsDuplicate(Boolean(exists));
     } else {
+      // If studentId is not set, do not mark as duplicate based solely on shared LRN placeholders like 'TBA'.
       setIsDuplicate(false);
     }
 
@@ -195,12 +213,32 @@ export default function AddEnrollmentsModal({
         }
       }
 
+      // Ensure students list is loaded so we can resolve the selected student's DB id and LRN
+      let resolvedStudent = students.find((s) => String(s._id) === String(formData.studentId)) || null;
+      if (!resolvedStudent && (!formData.studentId || students.length === 0)) {
+        try {
+          const r = await fetch('/api/students');
+          const j = await r.json();
+          if (r.ok && j.success) {
+            setStudents(j.data || []);
+            resolvedStudent = (j.data || []).find((s) => String(s._id) === String(formData.studentId)) || null;
+          }
+        } catch (err) {
+          // ignore — resolvedStudent will remain null and server-side checks will catch ambiguity
+        }
+      }
+      const payload = {
+        ...formData,
+        studentId: formData.studentId || (resolvedStudent ? String(resolvedStudent._id) : undefined),
+        learnersReferenceNumber: formData.learnersReferenceNumber || (resolvedStudent ? String(resolvedStudent.learnersReferenceNumber || '') : ''),
+      };
+
       const response = await fetch(url, {
         method: method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -274,23 +312,24 @@ export default function AddEnrollmentsModal({
                         </label>
                         <select
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.learnersReferenceNumber}
-                          onChange={(e) =>
+                          value={formData.studentId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const found = students.find((s) => String(s._id) === String(val));
                             setFormData((prev) => ({
                               ...prev,
-                              learnersReferenceNumber: e.target.value,
+                              studentId: val,
+                              learnersReferenceNumber: found ? String(found.learnersReferenceNumber || '') : '',
                               sectionId: "TBA",
                             }))
-                          }
+                          }}
                           disabled={loading || students.length === 0}
                         >
                           <option value="">Select a student</option>
                           {students.map((student) => (
                             <option
                               key={student._id}
-                              value={
-                                student.learnersReferenceNumber || student._id
-                              }
+                              value={String(student._id)}
                             >
                               {student.firstName} {student.lastName} (
                               {student.learnersReferenceNumber})

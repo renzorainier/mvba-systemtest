@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const EnrollmentSchema = new mongoose.Schema({
      enrollmentId: { type: String, required: [true, "Enrollment ID is required"], unique: true },
      learnersReferenceNumber: { type: String, required: [true, "Learner's reference number is required"] },
+     studentId: { type: String },
      sectionId: { type: String, required: [true, "Section ID is required"] },
      enrollmentDate: { type: Date, required: [true, "Enrollment date is required"] },
      schoolYear: { type: String, required: [true, "School year is required"] },
