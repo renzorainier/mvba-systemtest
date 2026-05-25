@@ -119,6 +119,162 @@ export default function Financials() {
     setViewerOpen(true);
   }
 
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 }).format(Number(value || 0));
+  }
+
+  const printReceipt = (record) => {
+    const receiptHtml = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Receipt ${record.paymentId}</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          html,body { height:100%; }
+          body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color:#1f2937; padding:0; margin:0; box-sizing:border-box }
+          .container { display:flex; gap:8mm; padding:8mm; height:100vh }
+          .receipt { width:calc(50% - 4mm); box-sizing:border-box; padding:8mm; display:flex; flex-direction:column }
+          .header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px }
+          .brand { font-weight:800; font-size:24px; }
+          .badge { background:#ecfdf5; color:#059669; padding:4px 8px; border-radius:9999px; font-weight:700; font-size:11px; }
+          .panel { display:flex; gap:8px; margin-top:8px }
+          .box { background:#f8fafc; padding:8px; border-radius:6px; flex:1 }
+          .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; font-weight:700 }
+          .amount { font-size:20px; color:#059669; font-weight:800 }
+          table { width:100%; margin-top:10px; border-collapse:collapse }
+          th, td { padding:6px 0; border-bottom:1px solid #e6e9ee }
+          .right { text-align:right }
+          .footer { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end }
+          @media print { @page { size: A4 landscape; margin:8mm } body{padding:0} }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="receipt">
+            <div class="header">
+              <div>
+                <div class="brand">OFFICIAL RECEIPT</div>
+                <div style="color:#6b7280;">Standard Academy Institute<br/>123 Education Blvd, Metro Manila</div>
+              </div>
+              <div style="text-align:right">
+                <div class="badge">${record.status || 'Completed'}</div>
+                <div style="margin-top:6px;">Receipt No: <strong>#${record.paymentId}</strong></div>
+                <div>Date: ${new Date(record.dateOfPayment).toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="box">
+                <div class="label">Received From</div>
+                <div style="font-weight:700; margin-top:6px">${record.studentName || ''}</div>
+                <div style="color:#475569; margin-top:4px">LRN: ${record.learnersReferenceNumber || record.studentId || ''}</div>
+              </div>
+              <div class="box">
+                <div class="label">Payment Details</div>
+                <div style="margin-top:6px">Method: ${record.paymentMethod || 'Not Specified'}</div>
+                <div>Ref Number: ${record.referenceNumber || 'N/A'}</div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr><th style="text-align:left">Description</th><th class="right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>School Fees / Assessment Payment</td>
+                  <td class="right">${formatCurrency(record.amountPaid)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="footer">
+              <div>
+                <div style="font-size:12px;color:#6b7280">Remarks</div>
+                <div style="background:#f8fafc;padding:6px;border-radius:6px;margin-top:6px;font-style:italic">${record.remarks ? record.remarks : ''}</div>
+                <div class="signature" style="margin-top:12px">_____</div>
+                <div style="font-size:12px;color:#64748b">AUTHORIZED RECEIVER</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:12px;color:#64748b">Total Amount Paid</div>
+                <div class="amount">${formatCurrency(record.amountPaid)}</div>
+                <div style="color:#94a3b8;margin-top:6px;font-size:12px">Thank you for your payment.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="receipt">
+            <div class="header">
+              <div>
+                <div class="brand">OFFICIAL RECEIPT</div>
+                <div style="color:#6b7280;">Standard Academy Institute<br/>123 Education Blvd, Metro Manila</div>
+              </div>
+              <div style="text-align:right">
+                <div class="badge">${record.status || 'Completed'}</div>
+                <div style="margin-top:6px;">Receipt No: <strong>#${record.paymentId}</strong></div>
+                <div>Date: ${new Date(record.dateOfPayment).toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="box">
+                <div class="label">Received From</div>
+                <div style="font-weight:700; margin-top:6px">${record.studentName || ''}</div>
+                <div style="color:#475569; margin-top:4px">LRN: ${record.learnersReferenceNumber || record.studentId || ''}</div>
+              </div>
+              <div class="box">
+                <div class="label">Payment Details</div>
+                <div style="margin-top:6px">Method: ${record.paymentMethod || 'Not Specified'}</div>
+                <div>Ref Number: ${record.referenceNumber || 'N/A'}</div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr><th style="text-align:left">Description</th><th class="right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>School Fees / Assessment Payment</td>
+                  <td class="right">${formatCurrency(record.amountPaid)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="footer">
+              <div>
+                <div style="font-size:12px;color:#6b7280">Remarks</div>
+                <div style="background:#f8fafc;padding:6px;border-radius:6px;margin-top:6px;font-style:italic">${record.remarks ? record.remarks : ''}</div>
+                <div class="signature" style="margin-top:12px">_____</div>
+                <div style="font-size:12px;color:#64748b">AUTHORIZED RECEIVER</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:12px;color:#64748b">Total Amount Paid</div>
+                <div class="amount">${formatCurrency(record.amountPaid)}</div>
+                <div style="color:#94a3b8;margin-top:6px;font-size:12px">Thank you for your payment.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write(receiptHtml);
+    w.document.close();
+    w.focus();
+    // Give the new window a short moment to render before printing
+    setTimeout(() => {
+      try { w.print(); } catch (e) { console.error('Print failed', e); }
+    }, 500);
+  }
+
   const closeViewer = () => {
     setViewerOpen(false);
     setSelectedFileId(null);
@@ -219,19 +375,28 @@ export default function Financials() {
                           {record.receivedBy}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {record.documents && record.documents.length > 0 ? (
+                          <div className="flex items-center gap-3">
+                            {record.documents && record.documents.length > 0 ? (
+                              <button
+                                onClick={() =>
+                                  viewProofOfPayment(record.documents[0].fileId)
+                                }
+                                className="inline-flex text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                                title={record.documents[0].fileName}
+                              >
+                                View
+                              </button>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+
                             <button
-                              onClick={() =>
-                                viewProofOfPayment(record.documents[0].fileId)
-                              }
-                              className="inline-flex text-blue-600 hover:text-blue-900 font-medium transition-colors"
-                              title={record.documents[0].fileName}
+                              onClick={() => printReceipt(record)}
+                              className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1 rounded text-sm font-medium text-slate-700"
                             >
-                              View
+                              Receipt
                             </button>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     ))
