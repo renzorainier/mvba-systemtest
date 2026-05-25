@@ -5,12 +5,14 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/re
 import FileUpload from '@/components/FileUpload';
 
 export default function AddNewRecord({ open, onClose, isHistorical = false }) {
+  const todayIso = new Date().toISOString().slice(0, 10)
+
   const [formData, setFormData] = useState({
     studentId: '',
     amountPaid: '',
-    dateOfPayment: '',
+    dateOfPayment: todayIso,
     paymentMethod: '',
-    referenceNumber: '',
+    referenceNumber: 'N/A',
     status: 'Pending',
     remarks: '',
     receivedBy: '',
@@ -48,7 +50,21 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
     if (!open) {
       setStudentQuery('')
       setShowStudentSuggestions(false)
+      return
     }
+
+    // Initialize form when modal opens so defaults are applied each time
+    setFormData({
+      studentId: '',
+      amountPaid: '',
+      dateOfPayment: todayIso,
+      paymentMethod: '',
+      referenceNumber: 'N/A',
+      status: 'Pending',
+      proofOfPayment: null,
+      remarks: '',
+      receivedBy: '',
+    })
   }, [open])
 
   const filteredStudents = useMemo(() => {
@@ -140,13 +156,13 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
         throw new Error(data.error || 'Failed to record payment')
       }
       
-      // Reset form and close modal
+      // Reset form and close modal (use defaults)
       setFormData({
         studentId: '',
         amountPaid: '',
-        dateOfPayment: '',
+        dateOfPayment: todayIso,
         paymentMethod: '',
-        referenceNumber: '',
+        referenceNumber: 'N/A',
         status: 'Pending',
         proofOfPayment: null,
         remarks: '',
