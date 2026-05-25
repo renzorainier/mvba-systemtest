@@ -132,11 +132,12 @@ export default function Financials() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Receipt ${record.paymentId}</title>
         <style>
-          @page { size: A4 landscape; margin: 8mm; }
+          @page { size: letter portrait; margin: 8mm; }
           html,body { height:100%; }
           body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color:#1f2937; padding:0; margin:0; box-sizing:border-box }
-          .container { display:flex; gap:8mm; padding:8mm; height:100vh }
-          .receipt { width:calc(50% - 4mm); box-sizing:border-box; padding:8mm; display:flex; flex-direction:column }
+          /* single receipt per Letter page, centered */
+          .container { display:block; padding:8mm; height:100vh; box-sizing:border-box }
+          .receipt { width:100%; max-width:100%; box-sizing:border-box; padding:12mm; display:flex; flex-direction:column; height:100% }
           .header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px }
           .brand { font-weight:800; font-size:24px; }
           .badge { background:#ecfdf5; color:#059669; padding:4px 8px; border-radius:9999px; font-weight:700; font-size:11px; }
@@ -148,7 +149,7 @@ export default function Financials() {
           th, td { padding:6px 0; border-bottom:1px solid #e6e9ee }
           .right { text-align:right }
           .footer { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end }
-          @media print { @page { size: A4 landscape; margin:8mm } body{padding:0} }
+          @media print { @page { size: letter portrait; margin:8mm } body{padding:0} }
         </style>
       </head>
       <body>
