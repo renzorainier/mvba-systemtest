@@ -103,7 +103,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex bg-gray-50 overflow-hidden font-sans">
       {/* Left Side - Login Form */}
-      <div className="w-full md:w-5/12 lg:w-1/2 flex items-center justify-center p-8 lg:p-12 relative z-10">
+      <div className="w-full md:w-5/12 lg:w-1/2 flex items-center justify-center lg:p-12 relative z-10">
         
         {/* Subtle Background Decoration for Left Side */}
         <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-blue-100 rounded-full blur-[100px] opacity-40 pointer-events-none"></div>

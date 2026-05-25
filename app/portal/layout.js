@@ -7,7 +7,7 @@
 //       <Sidebar />
 
 //       {/* The Page Content is pushed to the right */}
-//       <main className="flex-1 ml-64 p-8">
+//       <main className="flex-1 ml-64">
 //         {children}
 //       </main>
 //     </div>
@@ -46,13 +46,13 @@ export default async function DashboardLayout({ children }) {
 
   return (
     <SchoolYearProvider value={{ currentSchoolYear, selectedSchoolYear, isHistorical }}>
-      <div className="flex bg-gray-100 min-h-screen">
+      <div className="flex bg-white min-h-screen">
 
       {/* 5. Pass the userRole directly into the Sidebar as a prop! */}
       <Sidebar userRole={userRole} />
 
       {/* The Page Content is pushed to the right */}
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 ml-72 p-4 md:p-10">
         {isHistorical && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 shadow-sm">
             Historical school year selected: {selectedSchoolYear}. The portal is in read-only mode until you switch back to {currentSchoolYear}.

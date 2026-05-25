@@ -99,7 +99,7 @@ export default function ClassAssignmentsPage() {
   }, [searchTerm]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 font-sans text-slate-800 md:p-8">
+    <div className="min-h-screen bg-white p-4 font-sans text-slate-800">
       <div className="mx-auto mb-6 flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">

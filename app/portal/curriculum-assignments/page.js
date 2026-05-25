@@ -155,7 +155,7 @@ export default function CurriculumAssignmentsPage() {
   const selectedCurriculum = curriculums.find((curriculum) => curriculum._id === formData.curriculum_id);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 text-slate-800 md:p-8">
+    <div className="min-h-screen bg-white p-4 text-slate-800">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

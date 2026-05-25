@@ -145,8 +145,8 @@ export default function SchoolYearRolloverPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef4ff_40%,_#edf2f7_100%)] text-slate-900">
-      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 lg:px-10 lg:py-8">
+    <div className="min-h-screen bg-white text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">Admin Tool</p>
           <h1 className="text-3xl font-black tracking-tight md:text-4xl">School Year Rollover</h1>

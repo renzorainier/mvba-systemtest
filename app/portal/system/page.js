@@ -583,8 +583,8 @@ export default function SystemSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.12),_transparent_28%),linear-gradient(180deg,_#f7fbff_0%,_#eef4ff_48%,_#eef2f7_100%)] p-4 text-slate-800 md:p-8 lg:p-10">
-      <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.1)] backdrop-blur md:p-8 lg:p-10">
+    <div className="min-h-screen bg-white p-4 text-slate-800 lg:p-10">
+      <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.1)] backdrop-blur lg:p-10">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="space-y-4">
             <div className="inline-flex items-center rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-800">

@@ -339,8 +339,8 @@ export default function ScheduleManagement() {
   const gradeLevels = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans text-slate-800">
-      <main className="flex-1 p-4 md:p-8 w-full max-w-7xl mx-auto">
+    <div className="flex min-h-screen bg-white font-sans text-slate-800">
+      <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
         
         {/* VIEW 1: SCHEDULE LIST */}
         {viewMode === 'list' && (

@@ -141,8 +141,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef4ff_42%,_#edf2f7_100%)] font-sans text-slate-800">
-      <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 md:px-8 lg:px-10 lg:py-8">
+    <div className="min-h-screen bg-white font-sans text-slate-800">
+      <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">Admin Portal</p>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

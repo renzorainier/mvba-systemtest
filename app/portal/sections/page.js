@@ -103,7 +103,7 @@ export default function Dashboard() {
 
 
     return (
-      <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
+      <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
         {/* Header Section */}
         <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Section Management</h1>
