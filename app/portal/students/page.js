@@ -167,7 +167,7 @@ export default function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => openProfileModal(student)}
-                          className="text-blue-600 hover:text-blue-900 hover:underline transition-colors"
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 hover:text-blue-900 hover:shadow-md cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
                         >
                           {student.learnersReferenceNumber}
                         </button>
@@ -185,7 +185,10 @@ export default function App() {
                         {new Date(student.admissionDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-rose-600">
-                        <button onClick={() => openBalanceModal(student)} className="hover:underline">
+                        <button
+                          onClick={() => openBalanceModal(student)}
+                          className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-900 hover:shadow-md cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2"
+                        >
                           {formatPhp(student.remainingBalance)}
                         </button>
                       </td>

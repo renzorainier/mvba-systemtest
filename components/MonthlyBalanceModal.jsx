@@ -66,6 +66,10 @@ export default function MonthlyBalanceModal({ open, onClose, student }) {
                       ) : m.payments && m.payments.length > 0 && (
                         <div className="text-sm text-gray-600 mt-1">Payments: {m.payments.map(p=>`${new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:0}).format(p.amountPaid)} (${new Date(p.dateOfPayment).toLocaleDateString()})`).join(' • ')}</div>
                       )}
+
+                      {m.status === 'partial' && (
+                        <div className="text-sm text-rose-600 mt-2">Remaining: <span className="font-semibold">{new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:0}).format(Math.max(0, Number(m.expectedAmount || 0) - Number(m.paidAmount || 0)))}</span></div>
+                      )}
                     </div>
                     <div>
                       <span className={`px-2 py-1 rounded text-sm font-medium ${m.status==='paid'? 'bg-green-100 text-green-800' : m.status==='partial' ? 'bg-yellow-100 text-yellow-800' : m.status==='unpaid' ? 'bg-rose-100 text-rose-800' : 'bg-gray-100 text-gray-700'}`}>
