@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -22,11 +22,74 @@ export default function Sidebar({ userRole = 'Admin' }) {
   const router = useRouter();
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState({});
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const idleLogoutTimerRef = useRef(null);
+  const idleWarningTimerRef = useRef(null);
+  const isAdmin = userRole === 'Admin';
 
-  const handleLogout = async () => {
+  const clearIdleTimers = useCallback(() => {
+    if (idleWarningTimerRef.current) {
+      clearTimeout(idleWarningTimerRef.current);
+      idleWarningTimerRef.current = null;
+    }
+
+    if (idleLogoutTimerRef.current) {
+      clearTimeout(idleLogoutTimerRef.current);
+      idleLogoutTimerRef.current = null;
+    }
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    clearIdleTimers();
+    setShowIdleWarning(false);
     await fetch('/api/logout', { method: 'POST' });
     router.refresh();
     router.push('/');
+  }, [clearIdleTimers, router]);
+
+  const scheduleIdleLogout = useCallback(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    clearIdleTimers();
+    idleWarningTimerRef.current = setTimeout(() => {
+      setShowIdleWarning(true);
+      idleLogoutTimerRef.current = setTimeout(() => {
+        handleLogout();
+      }, 10000);
+    }, 60000);
+  }, [clearIdleTimers, handleLogout, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      clearIdleTimers();
+      return undefined;
+    }
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+
+    const resetIdleTimer = () => {
+      if (showIdleWarning) {
+        return;
+      }
+
+      scheduleIdleLogout();
+    };
+
+    scheduleIdleLogout();
+
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
+
+    return () => {
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
+      clearIdleTimers();
+    };
+  }, [clearIdleTimers, isAdmin, scheduleIdleLogout, showIdleWarning]);
+
+  const staySignedIn = () => {
+    setShowIdleWarning(false);
+    scheduleIdleLogout();
   };
 
   const isActive = (path, exact = false) => {
@@ -194,6 +257,33 @@ export default function Sidebar({ userRole = 'Admin' }) {
           <span className="text-base">Log Out</span>
         </button>
       </div>
+
+      {showIdleWarning && isAdmin && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900">Session inactive</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              No activity was detected for 1 minute. You will be logged out automatically shortly.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={staySignedIn}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Stay signed in
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Log out now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

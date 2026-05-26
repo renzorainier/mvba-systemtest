@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Archive, ArrowRightLeft, CheckCircle2, RotateCw, School, Users } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
@@ -48,6 +49,7 @@ const getOutcome = (student) => {
 
 export default function SchoolYearRolloverPage() {
   const { isHistorical, selectedSchoolYear } = useSchoolYearContext();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -127,6 +129,9 @@ export default function SchoolYearRolloverPage() {
       }
 
       setSuccess(`Rollover completed: ${data.data.promotedCount} promoted, ${data.data.archivedStudentCount} archived.`);
+
+      await fetch('/api/logout', { method: 'POST' });
+      router.replace('/');
     } catch (rolloverError) {
       setError(rolloverError.message || 'Failed to rollover school year');
     } finally {
