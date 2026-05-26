@@ -10,6 +10,8 @@ const ROLE_RULES = {
   enrollments: ['Admin', 'Registrar'],
   studentProfile: ['Admin', 'Registrar', 'Teacher'],
   studentDocuments: ['Admin', 'Registrar', 'Teacher'],
+  'student-profile': ['Admin', 'Registrar', 'Teacher'],
+  'student-document': ['Admin', 'Registrar', 'Teacher'],
 };
 
 function canAccessFile(user, metadata) {
@@ -44,17 +46,9 @@ async function resolveFileContext(objectId, metadata) {
     return relatedRecordType;
   }
 
-  // Check if it's a student profile picture
-  if (metadata?.studentId) {
-    return 'studentProfile';
-  }
-
-  const linkedFinancialRecord = await Financial.exists({ 'documents.fileId': objectId });
-
-  if (linkedFinancialRecord) {
-    return 'financials';
-  }
-
+  // For files without explicit relatedRecordType, we require it to be set during upload
+  // This ensures consistent authorization across upload and download
+  // Note: Files without relatedRecordType will fall back to uploadedByRole comparison
   return '';
 }
 
