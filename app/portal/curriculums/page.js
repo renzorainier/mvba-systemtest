@@ -25,6 +25,7 @@ export default function CurriculumsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState('');
 
   const fetchCurriculums = async () => {
@@ -229,6 +230,7 @@ export default function CurriculumsPage() {
     }
 
     setEditingId(curriculum._id);
+    setIsFormOpen(true);
     setFormData({
       curriculum_id: curriculum.curriculum_id || '',
       curriculum_name: curriculum.curriculum_name || '',
@@ -241,7 +243,19 @@ export default function CurriculumsPage() {
     });
   };
 
-  const resetForm = () => {
+  const openNewForm = () => {
+    if (isHistorical) {
+      return;
+    }
+
+    setEditingId(null);
+    setFormData(emptyForm);
+    setError('');
+    setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
     setEditingId(null);
     setFormData(emptyForm);
     setError('');
@@ -282,7 +296,7 @@ export default function CurriculumsPage() {
       }
 
       await fetchCurriculums();
-      resetForm();
+      closeForm();
     } catch (saveError) {
       setError(saveError.message || 'Failed to save curriculum');
     } finally {
@@ -308,7 +322,7 @@ export default function CurriculumsPage() {
 
       await fetchCurriculums();
       if (editingId === curriculum._id) {
-        resetForm();
+        closeForm();
       }
     } catch (deleteError) {
       setError(deleteError.message || 'Failed to delete curriculum');
@@ -327,148 +341,148 @@ export default function CurriculumsPage() {
             <h1 className="text-3xl font-black tracking-tight text-slate-950">Curriculum Management</h1>
             <p className="mt-1 text-sm text-slate-600">Define curriculum versions and keep them tied to grade-level assignments.</p>
           </div>
-          <button onClick={resetForm} disabled={isHistorical} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+          <button onClick={openNewForm} disabled={isHistorical} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
             <Plus size={18} />
             New Curriculum
           </button>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 p-4">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search curriculums by code, name, or description..."
-                  className="block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Code</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Effective Range</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
-                  {!loading && filteredCurriculums.length > 0 ? filteredCurriculums.map((curriculum) => (
-                    <tr key={curriculum._id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 text-sm font-medium text-blue-600">{curriculum.curriculum_id}</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                        {curriculum.curriculum_name}
-                        <div className="mt-1 text-xs font-normal text-slate-500">{curriculum.description || 'No description'}</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {toDateInput(curriculum.effective_start_date)} to {toDateInput(curriculum.effective_end_date)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => startEdit(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-900 disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300">
-                            <PencilLine size={16} />
-                            Edit
-                          </button>
-                          <button onClick={() => printCurriculum(curriculum)} className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-950">
-                            <BookOpen size={16} />
-                            Print
-                          </button>
-                          <button onClick={() => handleDelete(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-900 disabled:cursor-not-allowed disabled:text-red-300 disabled:hover:text-red-300">
-                            <Trash2 size={16} />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )) : loading ? (
-                    <tr>
-                      <td colSpan="4" className="px-6 py-12 text-center text-slate-500">Loading curriculums...</td>
-                    </tr>
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="px-6 py-12 text-center text-slate-500">No curriculums found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 p-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search curriculums by code, name, or description..."
+                className="block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex items-center justify-between">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Code</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Effective Range</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {!loading && filteredCurriculums.length > 0 ? filteredCurriculums.map((curriculum) => (
+                  <tr key={curriculum._id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-sm font-medium text-blue-600">{curriculum.curriculum_id}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                      {curriculum.curriculum_name}
+                      <div className="mt-1 text-xs font-normal text-slate-500">{curriculum.description || 'No description'}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {toDateInput(curriculum.effective_start_date)} to {toDateInput(curriculum.effective_end_date)}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => startEdit(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-900 disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300">
+                          <PencilLine size={16} />
+                          Edit
+                        </button>
+                        <button onClick={() => printCurriculum(curriculum)} className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-950">
+                          <BookOpen size={16} />
+                          Print
+                        </button>
+                        <button onClick={() => handleDelete(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-900 disabled:cursor-not-allowed disabled:text-red-300 disabled:hover:text-red-300">
+                          <Trash2 size={16} />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : loading ? (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-12 text-center text-slate-500">Loading curriculums...</td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-12 text-center text-slate-500">No curriculums found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 py-6">
+          <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
               <div>
                 <h2 className="text-lg font-bold text-slate-950">{editingId ? 'Edit Curriculum' : 'New Curriculum'}</h2>
                 <p className="text-sm text-slate-600">Use a stable code so grade assignments can reference it later.</p>
               </div>
-              {editingId && (
-                <button onClick={resetForm} disabled={isHistorical} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
-                  <X size={14} />
-                  Clear
-                </button>
-              )}
+              <button onClick={closeForm} disabled={saving} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+                <X size={14} />
+                Close
+              </button>
             </div>
 
-            {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+            <div className="max-h-[calc(100vh-180px)] overflow-y-auto px-6 py-5">
+              {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">School Year</label>
-                <input
-                  type="text"
-                  value={selectedSchoolYear || formData.schoolYear}
-                  readOnly
-                  disabled
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Subjects</label>
-                <small className="text-xs text-slate-500">Add comma-separated subject names or provide objects.</small>
-                <textarea
-                  value={formData.subjectsText || ''}
-                  onChange={(e) => setFormData({ ...formData, subjectsText: e.target.value })}
-                  rows={2}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. Math, Science, English"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Curriculum Code</label>
-                <input
-                  type="text"
-                  value={formData.curriculum_id}
-                  onChange={(e) => setFormData({ ...formData, curriculum_id: e.target.value })}
-                  placeholder="CUR-2026-01"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Curriculum Name *</label>
-                <input
-                  type="text"
-                  value={formData.curriculum_name}
-                  onChange={(e) => setFormData({ ...formData, curriculum_name: e.target.value })}
-                  placeholder="e.g. Competency-Based Basic Curriculum"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Optional summary of the curriculum content and scope"
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700">School Year</label>
+                  <input
+                    type="text"
+                    value={selectedSchoolYear || formData.schoolYear}
+                    readOnly
+                    disabled
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 focus:outline-none"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700">Subjects</label>
+                  <small className="text-xs text-slate-500">Add comma-separated subject names or provide objects.</small>
+                  <textarea
+                    value={formData.subjectsText || ''}
+                    onChange={(e) => setFormData({ ...formData, subjectsText: e.target.value })}
+                    rows={2}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="e.g. Math, Science, English"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Curriculum Code</label>
+                  <input
+                    type="text"
+                    value={formData.curriculum_id}
+                    onChange={(e) => setFormData({ ...formData, curriculum_id: e.target.value })}
+                    placeholder="CUR-2026-01"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Curriculum Name *</label>
+                  <input
+                    type="text"
+                    value={formData.curriculum_name}
+                    onChange={(e) => setFormData({ ...formData, curriculum_name: e.target.value })}
+                    placeholder="e.g. Competency-Based Basic Curriculum"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={4}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Optional summary of the curriculum content and scope"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Effective Start *</label>
                   <input
@@ -488,10 +502,11 @@ export default function CurriculumsPage() {
                   />
                 </div>
               </div>
+
               <button
                 onClick={handleSave}
                 disabled={saving || isHistorical}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:bg-blue-400"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:bg-blue-400"
               >
                 <Save size={16} />
                 {saving ? 'Saving...' : editingId ? 'Update Curriculum' : 'Save Curriculum'}
@@ -499,7 +514,7 @@ export default function CurriculumsPage() {
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
