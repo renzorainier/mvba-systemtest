@@ -24,11 +24,11 @@ export async function GET(request) {
                         isHistorical
                                 ? ArchivedStudent.find(
                                         { $or: [ { learnersReferenceNumber: { $in: learnerRefs } }, { _id: { $in: studentIds } } ], schoolYear: selectedSchoolYear },
-                                        { firstName: 1, lastName: 1, learnersReferenceNumber: 1 }
+                                        { firstName: 1, lastName: 1, learnersReferenceNumber: 1, gradeLevel: 1 }
                                     ).lean()
                                 : Student.find(
                                         { $or: [ { learnersReferenceNumber: { $in: learnerRefs } }, { _id: { $in: studentIds } } ] },
-                                        { firstName: 1, lastName: 1, learnersReferenceNumber: 1 }
+                                        { firstName: 1, lastName: 1, learnersReferenceNumber: 1, gradeLevel: 1 }
                                     ).lean(),
             isHistorical
                 ? ArchivedSection.find({ sectionId: { $in: sectionIds }, schoolYear: selectedSchoolYear }, { sectionId: 1, sectionName: 1 }).lean()
@@ -49,6 +49,20 @@ export async function GET(request) {
             ])
         );
 
+        const studentGradeByLrn = new Map(
+            students.map((student) => [
+                student.learnersReferenceNumber,
+                student.gradeLevel || '',
+            ])
+        );
+
+        const studentGradeById = new Map(
+            students.map((student) => [
+                String(student._id),
+                student.gradeLevel || '',
+            ])
+        );
+
         const sectionNameById = new Map(
             sections.map((section) => [section.sectionId, section.sectionName])
         );
@@ -57,6 +71,7 @@ export async function GET(request) {
             ...enrollment,
             studentName: (enrollment.studentId && studentNameById.get(String(enrollment.studentId))) || studentNameByLrn.get(enrollment.learnersReferenceNumber) || enrollment.learnersReferenceNumber,
             sectionName: sectionNameById.get(enrollment.sectionId) || enrollment.sectionId,
+            studentGradeLevel: (enrollment.studentId && studentGradeById.get(String(enrollment.studentId))) || studentGradeByLrn.get(enrollment.learnersReferenceNumber) || '',
         }));
 
         return NextResponse.json({ success: true, data: enrichedEnrollments }, { status: 200 });
@@ -125,7 +140,7 @@ export async function POST(request) {
         }
 
         // Capacity check for section: max 15 students
-        if (body.sectionId) {
+        if (body.sectionId && String(body.sectionId).trim() !== 'TBA') {
             const count = await Enrollment.countDocuments({ sectionId: body.sectionId, schoolYear: selectedSchoolYear });
             if (count >= 15) {
                 return NextResponse.json({ success: false, error: 'Selected section is full (15 students)' }, { status: 400 });

@@ -35,7 +35,7 @@ export async function PUT(request, { params }) {
     }
 
     // If sectionId is being changed, ensure target section is not full (max 15)
-    if (enrollmentData.sectionId) {
+    if (enrollmentData.sectionId && String(enrollmentData.sectionId).trim() !== 'TBA') {
       // get current enrollment to compare
         const current = await Enrollment.findById(id).lean();
       const isChangingSection = current && current.sectionId !== enrollmentData.sectionId;

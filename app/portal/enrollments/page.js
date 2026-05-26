@@ -9,11 +9,13 @@ export default function App() {
   const { isHistorical } = useSchoolYearContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [enrollments, setEnrollments] = useState([]);
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusUpdating, setStatusUpdating] = useState(null);
+  const [sectionUpdating, setSectionUpdating] = useState(null);
 
   const openModal = () => {
     if (isHistorical) {
@@ -36,11 +38,17 @@ export default function App() {
 
   useEffect(() => {
     fetchEnrollments();
+    fetchSections();
 
 
-    window.addEventListener('enrollmentAdded', fetchEnrollments);
+    const handleEnrollmentAdded = () => {
+      fetchEnrollments();
+      fetchSections();
+    };
 
-    return () => window.removeEventListener('enrollmentAdded', fetchEnrollments);
+    window.addEventListener('enrollmentAdded', handleEnrollmentAdded);
+
+    return () => window.removeEventListener('enrollmentAdded', handleEnrollmentAdded);
   }, []);
 
   const fetchEnrollments = async () => {
@@ -56,6 +64,19 @@ export default function App() {
       console.error('Failed to fetch enrollments:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSections = async () => {
+    try {
+      const response = await fetch('/api/sections');
+      const data = await response.json();
+
+      if (data.success) {
+        setSections(Array.isArray(data.data) ? data.data : []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch sections:', error);
     }
   };
 
@@ -138,6 +159,59 @@ export default function App() {
     }
   };
 
+  const updateEnrollmentSection = async (enrollment, newSectionId) => {
+    try {
+      setSectionUpdating(enrollment._id);
+
+      const res = await fetch(`/api/enrollments/${enrollment._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          learnersReferenceNumber: enrollment.learnersReferenceNumber,
+          sectionId: newSectionId,
+          enrollmentDate: enrollment.enrollmentDate,
+          status: enrollment.status,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update section');
+
+      const selectedSection = sections.find((section) => String(section.sectionId || section._id) === String(newSectionId));
+
+      setEnrollments((prev) => prev.map((e) => (
+        e._id === enrollment._id
+          ? {
+              ...e,
+              sectionId: newSectionId,
+              sectionName: selectedSection?.sectionName || newSectionId,
+            }
+          : e
+      )));
+    } catch (err) {
+      console.error('Failed to update section:', err);
+      alert(err.message || 'Failed to update section');
+    } finally {
+      setSectionUpdating(null);
+    }
+  };
+
+  const getSectionOptionsForEnrollment = (enrollment) => {
+    const selectedSectionId = String(enrollment.sectionId || '').trim();
+    const selectedSection = sections.find((section) => String(section.sectionId || section._id) === selectedSectionId);
+    const enrollmentGradeLevel = String(enrollment.studentGradeLevel || selectedSection?.gradeLevel || '').trim();
+
+    if (!enrollmentGradeLevel) {
+      return sections;
+    }
+
+    return sections.filter((section) => {
+      const sectionGradeLevel = String(section.gradeLevel || '').trim();
+      const sectionValue = String(section.sectionId || section._id || '').trim();
+      return sectionGradeLevel === enrollmentGradeLevel || sectionValue === selectedSectionId;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
       <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -205,7 +279,38 @@ export default function App() {
                         {enrollment.studentName || enrollment.learnersReferenceNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {enrollment.sectionName || enrollment.sectionId}
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const sectionOptions = getSectionOptionsForEnrollment(enrollment);
+
+                            return (
+                          <select
+                            value={enrollment.sectionId || 'TBA'}
+                            onChange={(e) => updateEnrollmentSection(enrollment, e.target.value)}
+                            disabled={isHistorical || sectionUpdating === enrollment._id}
+                            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <option value="TBA">TBA</option>
+                            {sectionOptions.map((section) => {
+                              const optionValue = section.sectionId || section._id;
+                              const optionLabel = section.sectionName || section.sectionId || 'Unnamed Section';
+
+                              return (
+                                <option key={section._id || section.sectionId} value={optionValue}>
+                                  {optionLabel}
+                                </option>
+                              );
+                            })}
+                          </select>
+                            );
+                          })()}
+                          {sectionUpdating === enrollment._id && (
+                            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {enrollment.schoolYear}
