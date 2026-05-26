@@ -11,6 +11,7 @@ const StudentSchema = new mongoose.Schema({
     required: false,
       enum: ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'],
   },
+  gwa: { type: Number, required: false, default: null, min: 0, max: 100 },
   dateOfBirth: { type: Date, required: [true, "Date of birth is required"] },
   address: { type: String, required: [true, "Address is required"] },
   admissionDate: { type: Date, required: [true, "Admission date is required"] },

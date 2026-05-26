@@ -14,6 +14,15 @@ import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
+const parseGwa = (value, fallback = null) => {
+  if (value === '' || value === null || value === undefined) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : NaN;
+};
+
 const getTuitionPlans = async () => {
   const settings = await SystemSettings.findOne({ key: SETTINGS_KEY });
   return normalizeTuitionPlans(settings?.tuitionPlans?.length ? settings.tuitionPlans : DEFAULT_SETTINGS_PAYLOAD.tuitionPlans || createDefaultTuitionPlans());
@@ -29,6 +38,34 @@ const getDefaultTotalForGrade = async (gradeLevel) => {
   const fallbackTotal = calculateTotalFromTuitionPlans(tuitionPlans);
   return getTuitionAmountForGrade(tuitionPlans, gradeLevel, fallbackTotal);
 };
+
+export async function PATCH(request, { params }) {
+  try {
+    await dbConnect();
+
+    const { id } = await params;
+    const body = await request.json();
+    const gwa = parseGwa(body.gwa, null);
+
+    if (Number.isNaN(gwa)) {
+      return NextResponse.json({ success: false, error: 'GWA must be a valid number.' }, { status: 400 });
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { $set: { gwa } },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return NextResponse.json({ success: false, error: 'Student not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updatedStudent }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
 
 export async function PUT(request, { params }) {
   try {
@@ -172,21 +209,28 @@ export async function PUT(request, { params }) {
     }
 
     // Map form field names to database field names
+    const gwa = parseGwa(body.gwa, existingStudent.gwa ?? null);
+
+    if (Number.isNaN(gwa)) {
+      return NextResponse.json({ success: false, error: 'GWA must be a valid number.' }, { status: 400 });
+    }
+
     const studentData = {
-      firstName: body.firstName,
-      lastName: body.lastName,
-      middleName: body.middleName,
-      gender: body.gender,
+      firstName: body.firstName ?? existingStudent.firstName,
+      lastName: body.lastName ?? existingStudent.lastName,
+      middleName: body.middleName ?? existingStudent.middleName,
+      gender: body.gender ?? existingStudent.gender,
       gradeLevel,
-      dateOfBirth: body.dateOfBirth,
-      address: body.address,
-      admissionDate: body.admissionDate,
+      gwa,
+      dateOfBirth: body.dateOfBirth ?? existingStudent.dateOfBirth,
+      address: body.address ?? existingStudent.address,
+      admissionDate: body.admissionDate ?? existingStudent.admissionDate,
       learnersReferenceNumber,
       totalEstimatedCost: Number(existingStudent.totalEstimatedCost ?? defaultTotal),
       remainingBalance: Number(existingStudent.remainingBalance ?? defaultTotal),
-      parentGuardianName: body.parentGuardianName || '',
-      parentGuardianRelationship: body.parentGuardianRelationship || '',
-      parentGuardianContactNumber: body.parentGuardianContactNumber || '',
+      parentGuardianName: body.parentGuardianName ?? existingStudent.parentGuardianName ?? '',
+      parentGuardianRelationship: body.parentGuardianRelationship ?? existingStudent.parentGuardianRelationship ?? '',
+      parentGuardianContactNumber: body.parentGuardianContactNumber ?? existingStudent.parentGuardianContactNumber ?? '',
       profilePicture: profilePictureUrl,
       documents: updatedDocuments,
     };

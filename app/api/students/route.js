@@ -23,6 +23,15 @@ import { Readable } from 'stream';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
+const parseGwa = (value) => {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : NaN;
+};
+
 const getDefaultTotal = async () => {
   const settings = await SystemSettings.findOne({ key: SETTINGS_KEY });
 
@@ -210,12 +219,19 @@ export async function POST(request) {
     }
     
     // Map form field names to database field names
+    const gwa = parseGwa(body.gwa);
+
+    if (Number.isNaN(gwa)) {
+      return NextResponse.json({ success: false, error: 'GWA must be a valid number.' }, { status: 400 });
+    }
+
     const studentData = {
       firstName: body.firstName,
       lastName: body.lastName,
       middleName: body.middleName,
       gender: body.gender,
       gradeLevel,
+      gwa,
       dateOfBirth: body.dateOfBirth,
       address: body.address,
       admissionDate: body.admissionDate,

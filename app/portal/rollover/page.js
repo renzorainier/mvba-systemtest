@@ -1,10 +1,20 @@
 'use client';
-
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, School, RotateCw, Archive, ArrowRightLeft, Users } from 'lucide-react';
+import { Archive, ArrowRightLeft, CheckCircle2, RotateCw, School, Users } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
-const highestGrade = 'Grade 6';
+const PASSING_GWA = 75;
+const GRADE_ORDER = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+
+const getNextGradeLevel = (gradeLevel) => {
+  const index = GRADE_ORDER.indexOf(String(gradeLevel || '').trim());
+
+  if (index < 0 || index >= GRADE_ORDER.length - 1) {
+    return null;
+  }
+
+  return GRADE_ORDER[index + 1];
+};
 
 const getNextSchoolYear = (schoolYear) => {
   const match = String(schoolYear || '').match(/^(\d{4})-(\d{4})$/);
@@ -17,6 +27,25 @@ const getNextSchoolYear = (schoolYear) => {
   return `${startYear + 1}-${startYear + 2}`;
 };
 
+const getOutcome = (student) => {
+  const gwa = Number(student?.gwa);
+  const nextGradeLevel = getNextGradeLevel(student?.gradeLevel);
+
+  if (!Number.isFinite(gwa)) {
+    return { label: 'Archive', tone: 'bg-slate-100 text-slate-600', icon: Archive, note: 'No GWA entered' };
+  }
+
+  if (gwa >= PASSING_GWA && nextGradeLevel) {
+    return { label: 'Promote', tone: 'bg-emerald-50 text-emerald-700', icon: CheckCircle2, note: `Passing at ${gwa.toFixed(2)}` };
+  }
+
+  if (gwa >= PASSING_GWA) {
+    return { label: 'Graduate', tone: 'bg-amber-50 text-amber-700', icon: Archive, note: `Passing at ${gwa.toFixed(2)}` };
+  }
+
+  return { label: 'Archive', tone: 'bg-rose-50 text-rose-700', icon: Archive, note: `Failed at ${gwa.toFixed(2)}` };
+};
+
 export default function SchoolYearRolloverPage() {
   const { isHistorical, selectedSchoolYear } = useSchoolYearContext();
   const [loading, setLoading] = useState(true);
@@ -26,8 +55,6 @@ export default function SchoolYearRolloverPage() {
   const [students, setStudents] = useState([]);
   const [currentYearId, setCurrentYearId] = useState('');
   const [nextYearId, setNextYearId] = useState('');
-  const [selectedPromotions, setSelectedPromotions] = useState(() => new Set());
-  const [availableYears, setAvailableYears] = useState([]);
 
   useEffect(() => {
     const loadRolloverData = async () => {
@@ -51,12 +78,16 @@ export default function SchoolYearRolloverPage() {
 
         const nextYear = rolloverData.data.nextYearId || getNextSchoolYear(rolloverData.data.currentYearId || schoolYearsData.data.selectedSchoolYear);
 
-        setStudents(Array.isArray(rolloverData.data.students) ? rolloverData.data.students : []);
-        // Prefer the server-provided selectedSchoolYear from context when available
+        const loadedStudents = Array.isArray(rolloverData.data.students) ? rolloverData.data.students : [];
+        loadedStudents.sort((left, right) => {
+          const leftName = `${left.lastName || ''} ${left.firstName || ''}`.toLowerCase();
+          const rightName = `${right.lastName || ''} ${right.firstName || ''}`.toLowerCase();
+          return leftName.localeCompare(rightName);
+        });
+
+        setStudents(loadedStudents);
         setCurrentYearId(selectedSchoolYear || rolloverData.data.currentYearId || schoolYearsData.data.selectedSchoolYear || schoolYearsData.data.currentSchoolYear || '');
         setNextYearId(nextYear || getNextSchoolYear(selectedSchoolYear) || '');
-        setAvailableYears(Array.isArray(schoolYearsData.data.availableYears) ? schoolYearsData.data.availableYears : []);
-        setSelectedPromotions(new Set());
       } catch (loadError) {
         setError(loadError.message || 'Failed to load rollover data');
       } finally {
@@ -65,55 +96,16 @@ export default function SchoolYearRolloverPage() {
     };
 
     loadRolloverData();
-  }, []);
+  }, [selectedSchoolYear]);
 
-  const promotedStudents = useMemo(
-    () => students.filter((student) => selectedPromotions.has(String(student._id))),
-    [students, selectedPromotions]
-  );
-
-  const archivedStudents = useMemo(
-    () => students.filter((student) => !selectedPromotions.has(String(student._id))),
-    [students, selectedPromotions]
-  );
-
-  const togglePromotion = (studentId) => {
-    setSelectedPromotions((previous) => {
-      const next = new Set(previous);
-
-      if (next.has(studentId)) {
-        next.delete(studentId);
-      } else {
-        next.add(studentId);
-      }
-
-      return next;
-    });
-  };
-
-  const promotableIds = useMemo(() => students.filter((s) => String(s.gradeLevel || '').trim() !== highestGrade).map((s) => String(s._id)), [students]);
-
-  const allPromotableSelected = useMemo(() => {
-    if (promotableIds.length === 0) return false;
-    return promotableIds.every((id) => selectedPromotions.has(id));
-  }, [promotableIds, selectedPromotions]);
-
-  const toggleSelectAll = () => {
-    setSelectedPromotions((previous) => {
-      if (promotableIds.length === 0) return new Set(previous);
-
-      // if all selected -> clear, else select all promotable
-      const allSelected = promotableIds.every((id) => previous.has(id));
-      if (allSelected) return new Set();
-
-      return new Set(promotableIds);
-    });
-  };
+  const promotedStudents = useMemo(() => students.filter((student) => getOutcome(student).label === 'Promote'), [students]);
+  const archivedStudents = useMemo(() => students.filter((student) => getOutcome(student).label !== 'Promote'), [students]);
 
   const handleRollover = async () => {
     if (isHistorical) {
       return;
     }
+
     try {
       setSubmitting(true);
       setError('');
@@ -125,7 +117,6 @@ export default function SchoolYearRolloverPage() {
         body: JSON.stringify({
           currentYearId,
           nextYearId,
-          promotedStudentIds: Array.from(selectedPromotions),
         }),
       });
 
@@ -136,7 +127,6 @@ export default function SchoolYearRolloverPage() {
       }
 
       setSuccess(`Rollover completed: ${data.data.promotedCount} promoted, ${data.data.archivedStudentCount} archived.`);
-      setSelectedPromotions(new Set());
     } catch (rolloverError) {
       setError(rolloverError.message || 'Failed to rollover school year');
     } finally {
@@ -145,13 +135,13 @@ export default function SchoolYearRolloverPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.08),_transparent_35%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-900">
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">Admin Tool</p>
           <h1 className="text-3xl font-black tracking-tight md:text-4xl">School Year Rollover</h1>
           <p className="max-w-3xl text-sm text-slate-600">
-            Promote selected students, archive the current school year, and initialize the next year in one atomic step.
+            Promotion is now driven by each student&apos;s GWA: &gt;= 75 promotes to the next grade, below 75 is archived.
           </p>
         </div>
 
@@ -160,7 +150,7 @@ export default function SchoolYearRolloverPage() {
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Current Year</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-900">Select students to promote</h2>
+                <h2 className="mt-1 text-xl font-bold text-slate-900">GWA-based promotion list</h2>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -172,17 +162,10 @@ export default function SchoolYearRolloverPage() {
             </div>
 
             <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Current Year ID</span>
-                <select
-                  value={currentYearId || selectedSchoolYear}
-                  onChange={() => {}}
-                  disabled={true}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-gray-50 px-3 py-2 text-sm font-semibold outline-none"
-                >
-                  <option value={currentYearId || selectedSchoolYear}>{currentYearId || selectedSchoolYear}</option>
-                </select>
-              </label>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{currentYearId || selectedSchoolYear || 'Loading...'}</p>
+              </div>
               <label className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Next Year ID</span>
                 <input
@@ -195,7 +178,7 @@ export default function SchoolYearRolloverPage() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
                   <ArrowRightLeft size={14} />
-                  Selection Summary
+                  Auto Summary
                 </div>
                 <p className="mt-2 font-semibold text-slate-900">{promotedStudents.length} promoted</p>
                 <p>{archivedStudents.length} archived</p>
@@ -209,62 +192,33 @@ export default function SchoolYearRolloverPage() {
               <div className="max-h-[38rem] overflow-auto">
                 <table className="min-w-full divide-y divide-slate-200 bg-white">
                   <thead className="sticky top-0 bg-slate-50">
-                      <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={allPromotableSelected}
-                            onChange={toggleSelectAll}
-                            className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                            aria-label="Select all promotable students"
-                          />
-                          <span>Promote</span>
-                        </div>
-                      </th>
+                    <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Student</th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">LRN</th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Grade</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">GWA</th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Outcome</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {!loading && students.length > 0 ? students.map((student) => {
-                      const studentId = String(student._id);
-                      const canPromote = String(student.gradeLevel || '').trim() !== highestGrade;
-                      const isPromoted = selectedPromotions.has(studentId);
+                      const outcome = getOutcome(student);
+                      const OutcomeIcon = outcome.icon;
 
                       return (
-                        <tr key={studentId} className="hover:bg-slate-50/70">
-                          <td className="px-4 py-4">
-                            {canPromote ? (
-                              <input
-                                type="checkbox"
-                                checked={isPromoted}
-                                onChange={() => togglePromotion(studentId)}
-                                className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                              />
-                            ) : (
-                              <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">Graduate</span>
-                            )}
-                          </td>
+                        <tr key={String(student._id)} className="hover:bg-slate-50/70">
                           <td className="px-4 py-4 text-sm font-semibold text-slate-900">
                             {student.firstName} {student.lastName}
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">{student.learnersReferenceNumber}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{student.gradeLevel || 'Unassigned'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{Number.isFinite(Number(student.gwa)) ? Number(student.gwa).toFixed(2) : '—'}</td>
                           <td className="px-4 py-4 text-sm">
-                            {canPromote ? (
-                              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${isPromoted ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                <CheckCircle2 size={14} />
-                                {isPromoted ? 'Promoting' : 'Archive'}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                                <Archive size={14} />
-                                Graduate to archive
-                              </span>
-                            )}
+                            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${outcome.tone}`}>
+                              <OutcomeIcon size={14} />
+                              {outcome.label}
+                            </span>
+                            <p className="mt-1 text-xs text-slate-500">{outcome.note}</p>
                           </td>
                         </tr>
                       );
@@ -315,15 +269,15 @@ export default function SchoolYearRolloverPage() {
                 Execute Rollover
               </button>
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                This will archive all current-year students, enrollments, sections, schedules, class assignments, grade-level curricula, payments, and receipts before creating next-year promotion records.
+                This will archive current-year students, enrollments, sections, schedules, class assignments, grade-level curricula, payments, and receipts before creating next-year promotion records.
               </p>
             </div>
 
             <div className="rounded-[1.75rem] border border-cyan-100 bg-cyan-50/70 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Rollover Notes</p>
               <ul className="mt-4 space-y-3 text-sm text-cyan-950/90">
-                <li>Promoted students keep their records and move up one grade level.</li>
-                <li>Students at the highest grade are archived automatically.</li>
+                <li>Students with GWA &gt;= 75 are promoted to the next grade level.</li>
+                <li>Students below 75, or students without a next grade level, are archived.</li>
                 <li>The next school year starts with fresh enrollments and curriculum assignments.</li>
               </ul>
             </div>

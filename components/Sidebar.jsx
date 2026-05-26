@@ -62,6 +62,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
       children: [
         { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Student GWA Registry', href: '/portal/academics', icon: School, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Archived Students', href: '/portal/students/archived', icon: Archive, allowedRoles: ['Admin', 'Registrar'] },
       ],
     },
