@@ -4,7 +4,9 @@ import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSetting
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
+import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -87,6 +89,12 @@ const getPopulatedAssignment = (id) => (
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const existingAssignment = await ClassAssignment.findById(id);
@@ -127,7 +135,27 @@ export async function PUT(request, { params }) {
 
     const settings = await ensureSettings();
     const sectionCurriculumId = resolveCurriculumAssignmentId(section.glCurriculumId);
-    const sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
+
+    // Prefer DB year-scoped grade-level curriculum, fallback to legacy settings
+    const selectedSchoolYear = schoolYearAccess.context?.selectedSchoolYear || '';
+    let sectionCurriculum = null;
+
+    if (sectionCurriculumId) {
+      const dbGl = await GradeLevelCurriculum.findOne({
+        $and: [
+          { $or: [{ _id: sectionCurriculumId }, { gl_curriculum_id: sectionCurriculumId }] },
+          { school_year_id: selectedSchoolYear },
+        ],
+      }).lean();
+
+      if (dbGl) {
+        sectionCurriculum = dbGl;
+      }
+    }
+
+    if (!sectionCurriculum) {
+      sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
+    }
 
     if (!sectionCurriculum) {
       return NextResponse.json({ success: false, error: 'Section must be linked to a grade-level curriculum before creating a class assignment' }, { status: 400 });
@@ -140,6 +168,16 @@ export async function PUT(request, { params }) {
     const duplicateAssignment = await ClassAssignment.findOne({ section: sectionId, _id: { $ne: id } });
     if (duplicateAssignment) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });
+    }
+
+    const duplicateTeacher = await ClassAssignment.findOne({ teacher: teacherId, _id: { $ne: id } });
+    if (duplicateTeacher) {
+      return NextResponse.json({ success: false, error: 'This teacher already has a class assignment' }, { status: 409 });
+    }
+
+    const duplicateSchedule = await ClassAssignment.findOne({ schedule: scheduleId, _id: { $ne: id } });
+    if (duplicateSchedule) {
+      return NextResponse.json({ success: false, error: 'This schedule already has a class assignment' }, { status: 409 });
     }
 
     const assignment = await ClassAssignment.findByIdAndUpdate(
@@ -166,6 +204,12 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const { id } = await params;
     const assignment = await ClassAssignment.findByIdAndDelete(id);
 

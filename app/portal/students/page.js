@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
-import AddStudentsModal from '../students/addStudentsModal';
 import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isHistorical } = useSchoolYearContext();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingStudent, setEditingStudent] = useState(null);
+  
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [modalStudent, setModalStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,17 +26,12 @@ export default function App() {
       maximumFractionDigits: 0,
     }).format(Number(value || 0));
 
-  const openModal = () => {
-    setEditingStudent(null);
-    setIsModalOpen(true);
-  };
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingStudent(null);
-  };
-  const openEditModal = (student) => {
-    setEditingStudent(student);
-    setIsModalOpen(true);
+  const openCreateModal = () => {
+    if (isHistorical) {
+      return;
+    }
+    setSelectedStudent(null);
+    setProfileModalOpen(true);
   };
 
   const openBalanceModal = (student) => {
@@ -61,7 +56,9 @@ export default function App() {
 
   const handleStudentUpdate = (updatedStudent) => {
     setStudents((prev) =>
-      prev.map((s) => (s._id === updatedStudent._id ? updatedStudent : s))
+      prev.some((s) => s._id === updatedStudent._id)
+        ? prev.map((s) => (s._id === updatedStudent._id ? updatedStudent : s))
+        : [updatedStudent, ...prev]
     );
   };
 
@@ -108,11 +105,11 @@ export default function App() {
   }, [searchTerm]);
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
+    <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
       {/* Header Section */}
       <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Student Management</h1>
-        <button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+        <button onClick={openCreateModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
           <Plus size={18} />
           Add New Student
         </button>
@@ -161,9 +158,6 @@ export default function App() {
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Remaining Balance
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -173,7 +167,7 @@ export default function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => openProfileModal(student)}
-                          className="text-blue-600 hover:text-blue-900 hover:underline transition-colors"
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 hover:text-blue-900 hover:shadow-md cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
                         >
                           {student.learnersReferenceNumber}
                         </button>
@@ -191,29 +185,24 @@ export default function App() {
                         {new Date(student.admissionDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-rose-600">
-                        <button onClick={() => openBalanceModal(student)} className="hover:underline">
-                          {formatPhp(student.remainingBalance)}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
-                          onClick={() => openEditModal(student)}
-                          className="text-blue-600 hover:text-blue-900 font-medium transition-colors"
+                          onClick={() => openBalanceModal(student)}
+                          className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-900 hover:shadow-md cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2"
                         >
-                          Edit
+                          {formatPhp(student.remainingBalance)}
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                       Loading students...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                       No students found matching your search.
                     </td>
                   </tr>
@@ -251,7 +240,6 @@ export default function App() {
 
       </div>
 
-      <AddStudentsModal open={isModalOpen} onClose={closeModal} editingStudent={editingStudent} />
       <MonthlyBalanceModal open={balanceModalOpen} onClose={closeBalanceModal} student={modalStudent} />
       <StudentProfileModal
         open={profileModalOpen}
@@ -259,6 +247,7 @@ export default function App() {
         student={selectedStudent}
         onStudentUpdate={handleStudentUpdate}
         onArchived={fetchStudents}
+        isHistorical={isHistorical}
       />
     </div>
   );

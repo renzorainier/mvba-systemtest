@@ -10,6 +10,9 @@ const ArchivedPaymentSchema = new mongoose.Schema({
   receivedBy: { type: String, required: [true, "Receiver's name is required"] },
   paymentId: { type: String, required: [true, 'Payment ID is required'] },
   studentId: { type: String, required: [true, 'Student ID is required'] },
+  studentName: { type: String, required: false, default: '' },
+  learnersReferenceNumber: { type: String, required: false, default: '' },
+  schoolYear: { type: String, required: [true, 'School year is required'] },
   documents: {
     type: [
       {

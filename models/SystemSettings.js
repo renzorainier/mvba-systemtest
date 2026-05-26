@@ -55,6 +55,7 @@ const SubjectSchema = new mongoose.Schema(
 const CurriculumSchema = new mongoose.Schema(
   {
     curriculum_id: { type: String, required: true },
+    schoolYear: { type: String, required: true },
     curriculum_name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     effective_start_date: { type: Date },

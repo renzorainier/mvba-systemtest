@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const MONGODB_URI = "mongodb://admin:admin123@ac-nzerx24-shard-00-00.qhp2v7e.mongodb.net:27017,ac-nzerx24-shard-00-02.qhp2v7e.mongodb.net:27017,ac-nzerx24-shard-00-01.qhp2v7e.mongodb.net:27017/mvba-database?ssl=true&authSource=admin&retryWrites=true&w=majority";
 
 function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
+  const salt = crypto.randomBytes(16).toStsring('hex');
   const iterations = 120000;
   const hash = crypto
     .pbkdf2Sync(password, salt, iterations, 32, 'sha256')

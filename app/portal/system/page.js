@@ -1,13 +1,13 @@
 "use client";
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from "react";
 import {
   calculateTotalFromTuitionPlans,
   createDefaultTuitionPlans,
   normalizeTuitionPlans,
 } from "@/lib/tuition-settings";
-
-// School-year rollover functionality removed: helper functions and rollover handler were deleted
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 const formatPhp = (value) => {
   return new Intl.NumberFormat("en-PH", {
@@ -359,6 +359,7 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
 };
 
 export default function SystemSettingsPage() {
+  const { isHistorical } = useSchoolYearContext();
   const [title, setTitle] = useState("");
   const [currentSchoolYear, setCurrentSchoolYear] = useState("2025-2026");
   const [tuitionPlans, setTuitionPlans] = useState(createDefaultTuitionPlans().map(createPlanState));
@@ -401,6 +402,10 @@ export default function SystemSettingsPage() {
   }, []);
 
   const openEditMode = () => {
+    if (isHistorical) {
+      return;
+    }
+
     setError("");
     setSuccess("");
     setIsEditing(true);
@@ -409,7 +414,6 @@ export default function SystemSettingsPage() {
   const cancelEditMode = () => {
     setIsEditing(false);
     setConfirmingPassword(false);
-    // rollover removed
     setCurrentPassword("");
     setError("");
     setSuccess("");
@@ -451,7 +455,7 @@ export default function SystemSettingsPage() {
   };
 
   const addPlan = () => {
-    if (!isEditing) {
+    if (!isEditing || isHistorical) {
       return;
     }
 
@@ -459,7 +463,7 @@ export default function SystemSettingsPage() {
   };
 
   const removePlan = (planIndex) => {
-    if (!isEditing) {
+    if (!isEditing || isHistorical) {
       return;
     }
 
@@ -525,6 +529,10 @@ export default function SystemSettingsPage() {
   };
 
   const handleSave = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
@@ -574,11 +582,9 @@ export default function SystemSettingsPage() {
     }
   };
 
-  // Rollover handler removed per request — advancing school year disabled.
-
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.12),_transparent_28%),linear-gradient(180deg,_#f7fbff_0%,_#eef4ff_48%,_#eef2f7_100%)] p-4 text-slate-800 md:p-8 lg:p-10">
-      <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.1)] backdrop-blur md:p-8 lg:p-10">
+    <div className="min-h-screen bg-white p-4 text-slate-800 lg:p-10">
+      <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.1)] backdrop-blur lg:p-10">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="space-y-4">
             <div className="inline-flex items-center rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-800">
@@ -600,6 +606,22 @@ export default function SystemSettingsPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Current School Year</p>
             <p className="mt-2 text-2xl font-black tracking-tight text-slate-950">{currentSchoolYear}</p>
             <p className="mt-1 text-xs text-slate-500">This is the active tuition cycle.</p>
+            <Link
+              href="/portal/rollover"
+              aria-disabled={isHistorical}
+              tabIndex={isHistorical ? -1 : 0}
+              onClick={(event) => {
+                if (isHistorical) {
+                  event.preventDefault();
+                }
+              }}
+              className={`mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 ${isHistorical ? 'pointer-events-none opacity-50' : ''}`}
+            >
+              Open School Year Rollover
+            </Link>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Promote students and prepare the next school year from here.
+            </p>
           </div>
         </div>
 
@@ -627,7 +649,8 @@ export default function SystemSettingsPage() {
                   <button
                     type="button"
                     onClick={openEditMode}
-                    className="inline-flex items-center justify-center rounded-2xl bg-cyan-600 px-5 py-4 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                    disabled={isHistorical}
+                    className="inline-flex items-center justify-center rounded-2xl bg-cyan-600 px-5 py-4 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
                   >
                     Edit Tuition Plans
                   </button>
@@ -643,7 +666,8 @@ export default function SystemSettingsPage() {
                     <button
                       type="button"
                       onClick={() => setConfirmingPassword(true)}
-                      className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                      disabled={isHistorical}
+                      className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                     >
                       Save Changes
                     </button>
@@ -686,7 +710,8 @@ export default function SystemSettingsPage() {
                   <button
                     type="button"
                     onClick={addPlan}
-                    className="rounded-2xl border border-dashed border-cyan-300 bg-white px-5 py-4 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+                    disabled={isHistorical}
+                    className="rounded-2xl border border-dashed border-cyan-300 bg-white px-5 py-4 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add Grade Block
                   </button>
@@ -727,7 +752,7 @@ export default function SystemSettingsPage() {
                     <button
                       type="button"
                       onClick={handleSave}
-                      disabled={saving}
+                      disabled={saving || isHistorical}
                       className="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-400"
                     >
                       {saving ? "Saving..." : "Confirm and Save"}

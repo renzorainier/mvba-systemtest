@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 
-export default function AddTeachersModal({ isOpen, onClose, editingTeacher }) {
+export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHistorical = false }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',

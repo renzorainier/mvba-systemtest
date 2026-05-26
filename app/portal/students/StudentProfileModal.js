@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X, Upload, Save, Edit2, Archive } from 'lucide-react';
+import FileUpload from '@/components/FileUpload';
 
 const GRADE_LEVEL_OPTIONS = [
   'Kinder 1',
@@ -36,7 +37,7 @@ const createEmptyFormData = () => ({
   parentGuardianContactNumber: '',
 });
 
-export default function StudentProfileModal({ open, onClose, student, onStudentUpdate, onArchived }) {
+export default function StudentProfileModal({ open, onClose, student, onStudentUpdate, onArchived, isHistorical = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
@@ -114,6 +115,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         })
       );
       setIsEditing(false);
+      setError('');
+      setSuccess('');
+    } else if (open) {
+      setFormData(createEmptyFormData());
+      setDocuments([]);
+      setDocumentsToRemove([]);
+      setProfilePicture(null);
+      setProfilePicturePreview(null);
+      setIsEditing(true);
       setError('');
       setSuccess('');
     }
@@ -253,6 +263,10 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   };
 
   const handleSave = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -265,6 +279,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         return;
       }
 
+      const isCreating = !student;
       const updateData = new FormData();
       Object.keys(formData).forEach((key) => {
         updateData.append(key, formData[key]);
@@ -309,15 +324,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         updateData.append('documentsToRemove', JSON.stringify(documentsToRemove));
       }
 
-      const response = await fetch(`/api/students/${student._id}`, {
-        method: 'PUT',
+      const response = await fetch(isCreating ? '/api/students' : `/api/students/${student._id}`, {
+        method: isCreating ? 'POST' : 'PUT',
         body: updateData,
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setSuccess('Student profile updated successfully');
+        setSuccess(isCreating ? 'Student created successfully' : 'Student profile updated successfully');
         setIsEditing(false);
         setProfilePicture(null);
         setDocumentsToRemove([]);
@@ -328,7 +343,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
           onClose();
         }, 1500);
       } else {
-        setError(result.message || 'Failed to update student');
+        setError(result.error || result.message || 'Failed to update student');
       }
     } catch (error) {
       console.error('Error updating student:', error);
@@ -339,7 +354,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   };
 
   const handleArchive = async () => {
-    if (!student) return;
+    if (!student || isHistorical) return;
 
     const confirmed = window.confirm(
       'Archive this student and all linked enrollments, payments, and receipt records? You can restore them later from Archived Students.'
@@ -358,16 +373,17 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       });
 
       const result = await response.json();
+      const alreadyArchived = response.status === 409 && result.error === 'Student is already archived.';
 
-      if (!response.ok || !result.success) {
+      if ((!response.ok || !result.success) && !alreadyArchived) {
         throw new Error(result.error || 'Failed to archive student');
       }
 
       if (onArchived) {
-        onArchived(result.data);
+        onArchived(result.data || student);
       }
 
-      setSuccess('Student archived successfully');
+      setSuccess(alreadyArchived ? 'Student was already archived' : 'Student archived successfully');
       setTimeout(() => {
         onClose();
       }, 900);
@@ -379,8 +395,6 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
     }
   };
 
-  if (!student) return null;
-
   return (
     <Dialog open={open} onClose={onClose} className="relative z-50">
       <DialogBackdrop className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
@@ -390,7 +404,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
               <DialogTitle className="text-lg font-bold text-white">
-                {isEditing ? 'Edit Student Profile' : 'Student Profile'}
+                {student ? (isEditing ? 'Edit Student Profile' : 'Student Profile') : 'Add New Student'}
               </DialogTitle>
               <button
                 onClick={onClose}
@@ -441,7 +455,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       {profilePicturePreview ? (
                         <img
                           src={profilePicturePreview}
-                          alt={`${student.firstName} ${student.lastName}`}
+                          alt={student ? `${student.firstName} ${student.lastName}` : 'New student profile'}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -460,11 +474,11 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                     />
 
                     <button
-                      type="button"
-                      onClick={() => isEditing && fileInputRef.current?.click()}
-                      disabled={!isEditing}
-                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors disabled:cursor-not-allowed ${isEditing ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
-                      title={isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
+                      onClick={() => isEditing && !isHistorical && fileInputRef.current?.click()}
+                      aria-disabled={!isEditing || isHistorical}
+                      disabled={!isEditing || isHistorical}
+                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors disabled:cursor-not-allowed ${isEditing && !isHistorical ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
+                      title={isHistorical ? 'Historical school years are read-only' : isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
                     >
                       <Upload size={16} />
                     </button>
@@ -473,21 +487,21 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                   {/* Student Information */}
                   <div className="flex-1 pt-2">
                     <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1 leading-tight truncate">
-                      {student.firstName} {student.lastName}
+                      {student ? `${student.firstName} ${student.lastName}` : 'New Student'}
                     </h3>
 
                     <p className="text-sm text-gray-600 mb-2">
                       <span className="text-gray-400 mr-2">#</span>
                       <span className="font-medium">Student ID:</span>
-                      <span className="ml-2 text-gray-800 font-semibold">{student.learnersReferenceNumber}</span>
+                      <span className="ml-2 text-gray-800 font-semibold">{student?.learnersReferenceNumber || 'Pending'}</span>
                     </p>
 
                     <div className="flex items-center gap-3 mb-4">
                       <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-100">
-                        {student.gradeLevel || '—'}
+                        {student?.gradeLevel || formData.gradeLevel || '—'}
                       </span>
                       <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                        Admitted: {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '—'}
+                        Admitted: {student?.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : '—'}
                       </span>
                     </div>
                   </div>
@@ -586,7 +600,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.gradeLevel}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
                     >
                       <option value="">Select Grade Level</option>
                       {GRADE_LEVEL_OPTIONS.map((grade) => (
@@ -627,10 +641,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       type="text"
                       name="learnersReferenceNumber"
                       value={formData.learnersReferenceNumber}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-600 disabled:text-gray-600"
+                      onChange={handleInputChange}
+                      disabled={!isEditing || formData.gradeLevel === 'Kinder 1'}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600"
                     />
-                    <p className="text-xs text-gray-500 mt-1">This field cannot be changed</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.gradeLevel === 'Kinder 1'
+                        ? 'This field cannot be changed for Kinder 1.'
+                        : 'Editable while this profile is in edit mode.'}
+                    </p>
                   </div>
 
                   {/* Admission Date */}
@@ -734,8 +753,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                             ) : (
                               <span className="text-xs text-green-700 font-medium">Pending save</span>
                             )}
-
-                            {isEditing && (
+                            {isEditing && !isHistorical && (
                               <button
                                 type="button"
                                 onClick={() => removeDocument(index)}
@@ -775,7 +793,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
             {/* Footer / Action Buttons */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-              {!isEditing && (
+              {student && !isEditing && (
                 <button
                   onClick={handleArchive}
                   disabled={loading || archiving}
@@ -794,11 +812,12 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               </button>
               {!isEditing ? (
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                  onClick={() => !isHistorical && setIsEditing(true)}
+                  disabled={isHistorical}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:cursor-not-allowed disabled:bg-blue-300"
                 >
                   <Edit2 size={18} />
-                  Edit Profile
+                  {student ? 'Edit Profile' : 'Create Student'}
                 </button>
               ) : (
                 <>
@@ -811,11 +830,11 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                   </button>
                   <button
                     onClick={handleSave}
-                    disabled={loading}
+                    disabled={loading || isHistorical}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={18} />
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    {loading ? 'Saving...' : student ? 'Save Changes' : 'Create Student'}
                   </button>
                 </>
               )}

@@ -11,7 +11,10 @@ export default function MonthlyBalanceModal({ open, onClose, student }) {
     setError(null);
     setData(null);
 
-    const id = student.learnersReferenceNumber || student._id;
+    // learnersReferenceNumber can be a placeholder like 'TBA'.
+    // Only use it when it's a meaningful value; otherwise fall back to the DB _id.
+    const lrn = String(student.learnersReferenceNumber || '').trim();
+    const id = lrn && lrn.toUpperCase() !== 'TBA' ? lrn : student._id;
 
     fetch(`/api/financials/monthly/${id}`)
       .then((r) => r.json())
@@ -62,6 +65,10 @@ export default function MonthlyBalanceModal({ open, onClose, student }) {
                         <div className="text-sm text-gray-600 mt-1">Payments: {m.allocations.map(a=>`${new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:0}).format(a.amount)} (${new Date(a.dateOfPayment).toLocaleDateString()})`).join(' • ')}</div>
                       ) : m.payments && m.payments.length > 0 && (
                         <div className="text-sm text-gray-600 mt-1">Payments: {m.payments.map(p=>`${new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:0}).format(p.amountPaid)} (${new Date(p.dateOfPayment).toLocaleDateString()})`).join(' • ')}</div>
+                      )}
+
+                      {m.status === 'partial' && (
+                        <div className="text-sm text-rose-600 mt-2">Remaining: <span className="font-semibold">{new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:0}).format(Math.max(0, Number(m.expectedAmount || 0) - Number(m.paidAmount || 0)))}</span></div>
                       )}
                     </div>
                     <div>

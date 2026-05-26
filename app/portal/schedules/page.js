@@ -21,6 +21,8 @@ export default function ScheduleManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [scheduleCurriculumMap, setScheduleCurriculumMap] = useState({});
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [currentScheduleCode, setCurrentScheduleCode] = useState('');
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
@@ -82,6 +84,8 @@ export default function ScheduleManagement() {
     setCurrentScheduleName('');
     setSelectedGrade('Kinder 1');
     setScheduleItems([]);
+    setCurrentScheduleCode('');
+    setEditingScheduleId(null);
     setError('');
     setViewMode('editor');
   };
@@ -91,6 +95,8 @@ export default function ScheduleManagement() {
     setCurrentScheduleName(schedule.name);
     setSelectedGrade(schedule.gradeLevel);
     setScheduleItems(schedule.items || []);
+    setCurrentScheduleCode(schedule.scheduleId || '');
+    setEditingScheduleId(schedule._id);
     setError('');
     setViewMode('editor');
   };
@@ -162,6 +168,82 @@ export default function ScheduleManagement() {
     setScheduleItems(newItems);
   };
 
+  const printSchedule = () => {
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    const title = `${currentScheduleName || 'Schedule'} - ${selectedGrade || ''}`;
+
+    // Build columns content
+    const columnsHtml = days.map(day => {
+      const items = scheduleItems.filter(i => i.day === day).sort((a,b) => a.startTime.localeCompare(b.startTime));
+      const blocks = items.map(it => {
+        const cls = it.type === 'recess' ? 'recess' : (it.type === 'lunch' ? 'lunch' : '');
+        return `<div class="block ${cls}"><div class="subject">${escapeHtml(it.subject)}</div><div class="time">${escapeHtml(it.startTime)} - ${escapeHtml(it.endTime)}</div></div>`;
+      }).join('');
+      return `<div class="col"><div class="col-header">${day}</div>${blocks}<div class="spacer"></div><div class="col-footer">Notes:</div></div>`;
+    }).join('');
+
+    const html = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          @page { size: letter landscape; margin: 10mm }
+          html,body{height:100%}
+          body{font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial; margin:0; padding:0; color:#111827}
+          /* container set to printable content height for letter landscape (height 8.5in minus margins) */
+          .container{width:100%;height:calc(8.5in - 20mm);display:flex;flex-direction:column;padding:8mm;box-sizing:border-box}
+          .head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:4px}
+          .title{font-weight:800;font-size:20px}
+          .meta{font-size:12px;color:#6b7280}
+          /* grid fills remaining vertical space so columns stretch to bottom */
+          .grid{display:flex;gap:10px;margin-top:12px;flex:1;height:calc(100% - 44px);align-items:stretch}
+          .col{flex:1;background:#fff;border:1px solid #e6e9ee;padding:10px;box-sizing:border-box;height:100%;display:flex;flex-direction:column}
+          .col-header{font-weight:700;margin-bottom:10px;text-align:center;font-size:14px}
+          .block{border-left:5px solid #3b82f6;background:#eff6ff;padding:10px;margin-bottom:10px;border-radius:4px}
+          .block .subject{font-weight:800;font-size:13px}
+          .block .time{font-size:12px;color:#374151;margin-top:4px}
+          /* special styles for recess and lunch */
+          .block.recess{ border-left-color:#f59e0b; background:#fffbeb }
+          .block.lunch{ border-left-color:#10b981; background:#ecfdf5 }
+          .spacer{flex:1}
+          .col-footer{margin-top:8px;font-size:12px;color:#6b7280;border-top:1px dashed #e6e9ee;padding-top:8px}
+          @media print { body{padding:0} .container{padding:0} }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="head">
+            <div>
+              <div class="title">${escapeHtml(currentScheduleName || 'Schedule')}</div>
+              <div class="meta">Grade: ${escapeHtml(selectedGrade || '')}</div>
+            </div>
+            <div class="meta">Generated: ${new Date().toLocaleString()}</div>
+          </div>
+          <div class="grid">
+            ${columnsHtml}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const w = window.open('','_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(()=>{ try{ w.print(); }catch(e){console.error(e)} }, 400);
+  }
+
+  const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str).replace(/[&<>\"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]; });
+  }
+
   // --- SAVE TO MONGODB ---
   const handleSaveSchedule = async () => {
     if (!currentScheduleName) {
@@ -173,6 +255,7 @@ export default function ScheduleManagement() {
     setError('');
 
     const payload = {
+      scheduleId: currentScheduleCode || undefined,
       name: currentScheduleName,
       gradeLevel: selectedGrade,
       totalSubjects: scheduleItems.filter(i => i.type === 'class').length,
@@ -180,8 +263,8 @@ export default function ScheduleManagement() {
     };
 
     try {
-      const response = await fetch('/api/schedules', {
-        method: 'POST',
+      const response = await fetch(editingScheduleId ? `/api/schedules/${editingScheduleId}` : '/api/schedules', {
+        method: editingScheduleId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
@@ -195,6 +278,8 @@ export default function ScheduleManagement() {
       setViewMode('list');
       setScheduleItems([]);
       setCurrentScheduleName('');
+      setCurrentScheduleCode('');
+      setEditingScheduleId(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -254,8 +339,8 @@ export default function ScheduleManagement() {
   const gradeLevels = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans text-slate-800">
-      <main className="flex-1 p-4 md:p-8 w-full max-w-7xl mx-auto">
+    <div className="flex min-h-screen bg-white font-sans text-slate-800">
+      <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
         
         {/* VIEW 1: SCHEDULE LIST */}
         {viewMode === 'list' && (
@@ -381,13 +466,19 @@ export default function ScheduleManagement() {
                 >
                   <Wand2 className="w-4 h-4 mr-2" /> Auto-Generate
                 </button>
+                <button
+                  onClick={() => printSchedule()}
+                  className="bg-gray-200 hover:bg-gray-300 text-slate-800 px-4 py-2 rounded-md text-sm font-medium flex items-center shadow-sm"
+                >
+                  Print
+                </button>
                 <button 
                   onClick={handleSaveSchedule}
                   disabled={saving}
                   className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-6 py-2 rounded-md text-sm font-medium flex items-center shadow-sm"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {saving ? 'Saving...' : 'Save Schedule'}
+                  {saving ? 'Saving...' : editingScheduleId ? 'Update Schedule' : 'Save Schedule'}
                 </button>
               </div>
             </div>

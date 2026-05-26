@@ -1,6 +1,8 @@
 import dbConnect from '@/lib/mongodb';
 import Financial from '@/models/Financial';
 import Student from '@/models/Student';
+import ArchivedPayment from '@/models/ArchivedPayment';
+import ArchivedStudent from '@/models/ArchivedStudent';
 import SystemSettings from '@/models/SystemSettings';
 import { getTuitionPlanForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import mongoose from 'mongoose';
@@ -17,7 +19,22 @@ const findStudentByIdentifier = async (studentId) => {
     studentSearchFilters.push({ _id: studentId });
   }
 
-  return Student.findOne({ $or: studentSearchFilters });
+  const activeStudent = await Student.findOne({ $or: studentSearchFilters });
+  if (activeStudent) {
+    return { student: activeStudent, isArchived: false };
+  }
+
+  const archivedSearchFilters = [...studentSearchFilters];
+  if (mongoose.Types.ObjectId.isValid(studentId)) {
+    archivedSearchFilters.push({ sourceStudentId: studentId });
+  }
+
+  const archivedStudent = await ArchivedStudent.findOne({ $or: archivedSearchFilters });
+  if (archivedStudent) {
+    return { student: archivedStudent, isArchived: true };
+  }
+
+  return null;
 };
 
 const parseStartMonth = (text) => {
@@ -107,11 +124,13 @@ export async function GET(request, { params }) {
 
     const { studentId } = await params;
 
-    const student = await findStudentByIdentifier(studentId);
+    const resolvedStudent = await findStudentByIdentifier(studentId);
 
-    if (!student) {
+    if (!resolvedStudent) {
       return NextResponse.json({ success: false, error: 'Student not found.' }, { status: 404 });
     }
+
+    const { student, isArchived } = resolvedStudent;
 
     const settings = await SystemSettings.findOne({ key: 'tuition-breakdown' });
     const tuitionPlans = normalizeTuitionPlans(settings?.tuitionPlans || []);
@@ -150,9 +169,29 @@ export async function GET(request, { params }) {
     }
 
     // fetch payments for this student (completed payments are the only ones applied)
-    const payments = await Financial.find({
-      $or: [ { studentId: String(student.learnersReferenceNumber) }, { studentId: String(student._id) } ]
-    }).sort({ dateOfPayment: 1 }).lean();
+    const paymentIds = [String(student.learnersReferenceNumber || '')].filter(Boolean);
+
+    if (isArchived) {
+      paymentIds.push(String(student.sourceStudentId || student._id));
+    } else {
+      paymentIds.push(String(student._id));
+    }
+
+    const paymentQuery = { $or: paymentIds.map((value) => ({ studentId: value })) };
+
+    const [activePayments, archivedPayments] = await Promise.all([
+      Financial.find(paymentQuery).sort({ dateOfPayment: 1 }).lean(),
+      ArchivedPayment.find(paymentQuery).sort({ dateOfPayment: 1 }).lean(),
+    ]);
+
+    const paymentsById = new Map();
+    for (const payment of [...activePayments, ...archivedPayments]) {
+      paymentsById.set(String(payment._id), payment);
+    }
+
+    const payments = [...paymentsById.values()].sort(
+      (left, right) => new Date(left.dateOfPayment || 0) - new Date(right.dateOfPayment || 0)
+    );
 
     const paymentBuckets = createPaymentBuckets(payments);
     const completedPaymentsTotal = paymentBuckets.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
@@ -234,6 +273,7 @@ export async function GET(request, { params }) {
             learnersReferenceNumber: student.learnersReferenceNumber,
             gradeLevel: student.gradeLevel,
             remainingBalance: student.remainingBalance,
+            archivedAt: isArchived ? student.archivedAt : undefined,
           },
           settings: {
             title: settings?.title || 'Tuition breakdown',

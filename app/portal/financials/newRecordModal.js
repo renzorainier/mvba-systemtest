@@ -4,13 +4,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import FileUpload from '@/components/FileUpload';
 
-export default function AddNewRecord({ open, onClose }) {
+export default function AddNewRecord({ open, onClose, isHistorical = false }) {
+  const todayIso = new Date().toISOString().slice(0, 10)
+
   const [formData, setFormData] = useState({
     studentId: '',
     amountPaid: '',
-    dateOfPayment: '',
+    dateOfPayment: todayIso,
     paymentMethod: '',
-    referenceNumber: '',
+    referenceNumber: 'N/A',
     status: 'Pending',
     remarks: '',
     receivedBy: '',
@@ -48,7 +50,21 @@ export default function AddNewRecord({ open, onClose }) {
     if (!open) {
       setStudentQuery('')
       setShowStudentSuggestions(false)
+      return
     }
+
+    // Initialize form when modal opens so defaults are applied each time
+    setFormData({
+      studentId: '',
+      amountPaid: '',
+      dateOfPayment: todayIso,
+      paymentMethod: '',
+      referenceNumber: 'N/A',
+      status: 'Pending',
+      proofOfPayment: null,
+      remarks: '',
+      receivedBy: '',
+    })
   }, [open])
 
   const filteredStudents = useMemo(() => {
@@ -70,13 +86,18 @@ export default function AddNewRecord({ open, onClose }) {
   const selectStudent = (student) => {
     setFormData((prev) => ({
       ...prev,
-      studentId: student.learnersReferenceNumber,
+      // Use the DB _id for studentId to avoid collisions when LRN is a placeholder like 'TBA'
+      studentId: String(student._id),
     }))
     setStudentQuery(`${student.learnersReferenceNumber} - ${student.firstName} ${student.lastName}`)
     setShowStudentSuggestions(false)
   }
 
   const handleSubmit = async () => {
+    if (isHistorical) {
+      return;
+    }
+
     setLoading(true)
     setError('')
     
@@ -95,7 +116,8 @@ export default function AddNewRecord({ open, onClose }) {
         const uploadFormData = new FormData()
         uploadFormData.append('file', selectedFile)
         uploadFormData.append('relatedRecordType', 'financials')
-        uploadFormData.append('relatedRecordId', formData.studentId)
+        // relatedRecordId should reference the student DB id, not a placeholder LRN
+        uploadFormData.append('relatedRecordId', String(formData.studentId))
 
         const uploadResponse = await fetch('/api/upload-file', {
           method: 'POST',
@@ -134,13 +156,13 @@ export default function AddNewRecord({ open, onClose }) {
         throw new Error(data.error || 'Failed to record payment')
       }
       
-      // Reset form and close modal
+      // Reset form and close modal (use defaults)
       setFormData({
         studentId: '',
         amountPaid: '',
-        dateOfPayment: '',
+        dateOfPayment: todayIso,
         paymentMethod: '',
-        referenceNumber: '',
+        referenceNumber: 'N/A',
         status: 'Pending',
         proofOfPayment: null,
         remarks: '',
@@ -341,7 +363,7 @@ export default function AddNewRecord({ open, onClose }) {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading || isHistorical}
                 className="inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-green-500 disabled:bg-green-400 sm:ml-3 sm:w-auto"
               >
                 {loading ? 'Recording...' : 'Record Payment'}

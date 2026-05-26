@@ -1,8 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
-// 1. Add 'Calendar' to your imports
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -22,11 +21,75 @@ import {
 export default function Sidebar({ userRole = 'Admin' }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [openGroups, setOpenGroups] = useState({});
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const idleLogoutTimerRef = useRef(null);
+  const idleWarningTimerRef = useRef(null);
+  const isAdmin = userRole === 'Admin';
 
-  const handleLogout = async () => {
+  const clearIdleTimers = useCallback(() => {
+    if (idleWarningTimerRef.current) {
+      clearTimeout(idleWarningTimerRef.current);
+      idleWarningTimerRef.current = null;
+    }
+
+    if (idleLogoutTimerRef.current) {
+      clearTimeout(idleLogoutTimerRef.current);
+      idleLogoutTimerRef.current = null;
+    }
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    clearIdleTimers();
+    setShowIdleWarning(false);
     await fetch('/api/logout', { method: 'POST' });
     router.refresh();
     router.push('/');
+  }, [clearIdleTimers, router]);
+
+  const scheduleIdleLogout = useCallback(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    clearIdleTimers();
+    idleWarningTimerRef.current = setTimeout(() => {
+      setShowIdleWarning(true);
+      idleLogoutTimerRef.current = setTimeout(() => {
+        handleLogout();
+      }, 10000);
+    }, 60000);
+  }, [clearIdleTimers, handleLogout, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      clearIdleTimers();
+      return undefined;
+    }
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+
+    const resetIdleTimer = () => {
+      if (showIdleWarning) {
+        return;
+      }
+
+      scheduleIdleLogout();
+    };
+
+    scheduleIdleLogout();
+
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
+
+    return () => {
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
+      clearIdleTimers();
+    };
+  }, [clearIdleTimers, isAdmin, scheduleIdleLogout, showIdleWarning]);
+
+  const staySignedIn = () => {
+    setShowIdleWarning(false);
+    scheduleIdleLogout();
   };
 
   const isActive = (path, exact = false) => {
@@ -47,22 +110,23 @@ export default function Sidebar({ userRole = 'Admin' }) {
     },
 
     {
-      title: 'Enrollment & Students',
-      children: [
-        { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
-        { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
-        { name: 'Archived Students', href: '/portal/students/archived', icon: Archive, allowedRoles: ['Admin', 'Registrar'] },
-      ],
-    },
-
-    {
       title: 'Academics',
       children: [
         { name: 'Curriculum Management', href: '/portal/curriculums', icon: BookOpen, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Grade Curriculums', href: '/portal/curriculum-assignments', icon: LibraryBig, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Section Management', href: '/portal/sections', icon: School, allowedRoles: ['Admin', 'Registrar'] },
-        { name: 'Class Assignments', href: '/portal/classes', icon: Layers3, allowedRoles: ['Admin', 'Registrar'] },
         { name: 'Schedule Management', href: '/portal/schedules', icon: Calendar, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Class Assignments', href: '/portal/classes', icon: Layers3, allowedRoles: ['Admin', 'Registrar'] },
+      ],
+    },
+    
+    {
+      title: 'Enrollment & Students',
+      children: [
+        { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Student GWA Registry', href: '/portal/academics', icon: School, allowedRoles: ['Admin', 'Registrar'] },
+        { name: 'Archived Students', href: '/portal/students/archived', icon: Archive, allowedRoles: ['Admin', 'Registrar'] },
       ],
     },
 
@@ -88,8 +152,6 @@ export default function Sidebar({ userRole = 'Admin' }) {
       ],
     },
   ];
-
-  const [openGroups, setOpenGroups] = useState({});
 
   function GroupHeader({ title, active, onClickToggle, isOpen }) {
     return (
@@ -184,11 +246,44 @@ export default function Sidebar({ userRole = 'Admin' }) {
       </nav>
 
       <div className="p-4 border-t border-gray-100">
+        {userRole === 'Admin' && (
+          <Link href="/portal/rollover" className={`mb-3 flex items-center gap-3 w-full text-left py-3 px-3 rounded-md transition-all font-medium ${pathname.startsWith('/portal/rollover') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+            <Archive size={22} />
+            <span className="text-base">School Year Rollover</span>
+          </Link>
+        )}
         <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left py-3 px-3 text-red-500 hover:bg-red-50 rounded-md transition-all font-medium">
           <LogOut size={22} />
           <span className="text-base">Log Out</span>
         </button>
       </div>
+
+      {showIdleWarning && isAdmin && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900">Session inactive</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              No activity was detected for 1 minute. You will be logged out automatically shortly.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={staySignedIn}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Stay signed in
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Log out now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

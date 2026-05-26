@@ -3,8 +3,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, RotateCcw, Search } from 'lucide-react';
+import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function ArchivedStudentsPage() {
+  const { isHistorical } = useSchoolYearContext();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,6 +50,10 @@ export default function ArchivedStudentsPage() {
   }, [students, searchTerm]);
 
   const handleRestore = async (student) => {
+    if (isHistorical) {
+      return;
+    }
+
     const confirmed = window.confirm(
       `Restore ${student.firstName} ${student.lastName} and all linked enrollment and payment records?`
     );
@@ -79,7 +85,7 @@ export default function ArchivedStudentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-white p-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

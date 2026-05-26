@@ -1,25 +1,32 @@
 import dbConnect from '@/lib/mongodb';
 import Financial from '@/models/Financial';
 import Student from '@/models/Student';
+import ArchivedPayment from '@/models/ArchivedPayment';
+import ArchivedStudent from '@/models/ArchivedStudent';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 export async function GET(request) {
   try {
     await dbConnect();
-    const financials = await Financial.find({}).lean();
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const financials = isHistorical
+      ? await ArchivedPayment.find({ schoolYear: selectedSchoolYear }).lean()
+      : await Financial.find({}).lean();
 
     const studentIds = [...new Set(financials.map((item) => item.studentId).filter(Boolean))];
     const objectIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
 
-    const students = await Student.find(
+    const students = await (isHistorical ? ArchivedStudent : Student).find(
       {
         $or: [
           { learnersReferenceNumber: { $in: studentIds } },
           { _id: { $in: objectIds } },
+          ...(isHistorical ? [{ sourceStudentId: { $in: objectIds } }] : []),
         ],
       },
-      { _id: 1, firstName: 1, lastName: 1, learnersReferenceNumber: 1 }
+      { _id: 1, firstName: 1, lastName: 1, learnersReferenceNumber: 1, sourceStudentId: 1 }
     ).lean();
 
     const studentByLrn = new Map(
@@ -36,9 +43,19 @@ export async function GET(request) {
       ])
     );
 
+    const studentBySourceId = new Map(
+      students
+        .filter((student) => student.sourceStudentId)
+        .map((student) => [
+          String(student.sourceStudentId),
+          `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        ])
+    );
+
     const enrichedFinancials = financials.map((record) => {
       const key = String(record.studentId || '');
-      const studentName = studentByLrn.get(key) || studentById.get(key) || record.studentId;
+      // Prefer lookup by DB id first, then by LRN fallback
+      const studentName = record.studentName || studentById.get(key) || studentBySourceId.get(key) || studentByLrn.get(key) || record.studentId;
 
       return {
         ...record,
@@ -55,12 +72,28 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
     const body = await request.json();
     
-    // Ensure all required fields are present
+    // Prefer and require Mongo DB object id for student identity to avoid collisions with placeholder LRNs.
+    if (!body.studentId || !mongoose.Types.ObjectId.isValid(String(body.studentId))) {
+      return NextResponse.json({ success: false, error: 'studentId must be a valid MongoDB ObjectId' }, { status: 400 });
+    }
+
+    const resolvedStudent = await Student.findById(String(body.studentId)).lean();
+    if (!resolvedStudent) {
+      return NextResponse.json({ success: false, error: 'studentId does not match any student' }, { status: 400 });
+    }
+
     const financialData = {
-      paymentId: body.paymentId || `P-${Date.now()}`, // Auto-generate if not provided
-      studentId: body.studentId,
+      paymentId: body.paymentId || `P-${Date.now()}`,
+      // store canonical DB id string
+      studentId: String(resolvedStudent._id),
       amountPaid: body.amountPaid,
       dateOfPayment: body.dateOfPayment,
       paymentMethod: body.paymentMethod,
@@ -68,7 +101,7 @@ export async function POST(request) {
       status: body.status,
       remarks: body.remarks || '',
       receivedBy: body.receivedBy,
-      documents: [], // Initialize empty documents array
+      documents: [],
     };
     
     // Add proof of payment if provided
@@ -85,13 +118,7 @@ export async function POST(request) {
     const financial = await Financial.create(financialData);
 
     if (String(financialData.status).toLowerCase() === 'completed' && Number(financialData.amountPaid) > 0) {
-      const studentSearchFilters = [{ learnersReferenceNumber: financialData.studentId }];
-
-      if (mongoose.Types.ObjectId.isValid(financialData.studentId)) {
-        studentSearchFilters.push({ _id: financialData.studentId });
-      }
-
-      const student = await Student.findOne({ $or: studentSearchFilters });
+      const student = await Student.findById(String(financialData.studentId));
 
       if (student) {
         const currentBalance = Number(student.remainingBalance || 0);

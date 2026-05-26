@@ -1,6 +1,10 @@
 import dbConnect from '@/lib/mongodb';
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
+import mongoose from 'mongoose';
+import Curriculum from '@/models/Curriculum';
+import SystemSettings from '@/models/SystemSettings';
+import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import { NextResponse } from 'next/server';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -10,55 +14,96 @@ const ensureSettings = async () => {
   if (!settings) {
     await collection.updateOne(
       { key: SETTINGS_KEY },
-      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
+      { $setOnInsert: { curriculums: [], gradeLevelCurriculums: [] } },
       { upsert: true }
     );
     settings = await collection.findOne({ key: SETTINGS_KEY });
   }
-
-  settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
-  settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
   return settings;
 };
 
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+    if (!schoolYearAccess.allowed) return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    const { context } = schoolYearAccess;
+    const selectedSchoolYear = context?.selectedSchoolYear || (await getSchoolYearContext(request)).selectedSchoolYear || '';
+
     const { id } = await params;
     const body = await request.json();
 
+    if (!body.curriculum_name || !body.effective_start_date || !body.effective_end_date) {
+      return NextResponse.json({ success: false, error: 'Curriculum name and effective dates are required' }, { status: 400 });
+    }
+
+    // Try updating dedicated collection first
+    const byId = await Curriculum.findById(id);
+    const subjects = Array.isArray(body.subjects) ? body.subjects.map(s => ({
+      subject_id: s.subject_id || `SUB-${Date.now()}`,
+      subject_name: s.subject_name,
+      code: s.code || '',
+      description: s.description || '',
+      default_class_hours: Number(s.default_class_hours || 0),
+    })) : [];
+
+    if (byId) {
+      const recordSchoolYear = String(byId.schoolYear || '').trim();
+      const shouldCloneToSelectedYear = recordSchoolYear && recordSchoolYear === String(selectedSchoolYear || '').trim() ? false : true;
+
+      // check duplicate curriculum_id
+      if (body.curriculum_id && String(body.curriculum_id).trim() !== String(byId.curriculum_id)) {
+        const exists = await Curriculum.findOne({ curriculum_id: String(body.curriculum_id).trim(), schoolYear: selectedSchoolYear || byId.schoolYear });
+        if (exists) return NextResponse.json({ success: false, error: 'Curriculum code already exists' }, { status: 409 });
+      }
+
+      if (shouldCloneToSelectedYear) {
+        const created = await Curriculum.create({
+          curriculum_id: body.curriculum_id || byId.curriculum_id,
+          schoolYear: selectedSchoolYear,
+          curriculum_name: body.curriculum_name,
+          description: body.description || '',
+          effective_start_date: new Date(body.effective_start_date),
+          effective_end_date: new Date(body.effective_end_date),
+          subjects,
+        });
+
+        return NextResponse.json({ success: true, data: created }, { status: 200 });
+      }
+
+      byId.curriculum_id = body.curriculum_id || byId.curriculum_id;
+      byId.schoolYear = selectedSchoolYear || byId.schoolYear;
+      byId.curriculum_name = body.curriculum_name;
+      byId.description = body.description || '';
+      byId.effective_start_date = new Date(body.effective_start_date);
+      byId.effective_end_date = new Date(body.effective_end_date);
+      byId.subjects = subjects;
+      await byId.save();
+      return NextResponse.json({ success: true, data: byId }, { status: 200 });
+    }
+
+    // Fallback: update embedded curriculum inside SystemSettings
     const settings = await ensureSettings();
-    const curriculum = settings.curriculums.find((item) => String(item._id) === String(id) || String(item.curriculum_id) === String(id));
-    if (!curriculum) {
+    const arrayFilter = [{ 'elem._id': new mongoose.Types.ObjectId(id) }];
+    const updateFields = {
+      'curriculums.$[elem].curriculum_id': body.curriculum_id || `CUR-${Date.now()}`,
+      'curriculums.$[elem].schoolYear': selectedSchoolYear,
+      'curriculums.$[elem].curriculum_name': body.curriculum_name,
+      'curriculums.$[elem].description': body.description || '',
+      'curriculums.$[elem].effective_start_date': body.effective_start_date,
+      'curriculums.$[elem].effective_end_date': body.effective_end_date,
+      'curriculums.$[elem].subjects': subjects.map(s => ({ _id: new mongoose.Types.ObjectId(), ...s })),
+    };
+
+    const result = await SystemSettings.collection.updateOne({ key: SETTINGS_KEY }, { $set: updateFields }, { arrayFilters: arrayFilter });
+    if (result.matchedCount === 0 && result.modifiedCount === 0) {
       return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
     }
 
-    const updatedCurriculum = {
-      ...curriculum,
-      curriculum_id: body.curriculum_id ?? curriculum.curriculum_id,
-      curriculum_name: body.curriculum_name ?? curriculum.curriculum_name,
-      description: body.description ?? curriculum.description,
-      effective_start_date: body.effective_start_date ?? curriculum.effective_start_date,
-      effective_end_date: body.effective_end_date ?? curriculum.effective_end_date,
-      subjects: Array.isArray(body.subjects)
-        ? body.subjects.map((s) => ({
-            _id: s._id || new mongoose.Types.ObjectId(),
-            subject_id: s.subject_id || `SUB-${Date.now()}`,
-            subject_name: s.subject_name,
-            code: s.code || '',
-            description: s.description || '',
-            default_class_hours: Number(s.default_class_hours || 0),
-          }))
-        : curriculum.subjects || [],
-    };
-
-    settings.curriculums = settings.curriculums.map((item) => (String(item._id) === String(curriculum._id) ? updatedCurriculum : item));
-    await SystemSettings.collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $set: { curriculums: settings.curriculums, gradeLevelCurriculums: settings.gradeLevelCurriculums } }
-    );
-
-    return NextResponse.json({ success: true, data: updatedCurriculum }, { status: 200 });
+    // Return updated doc from settings
+    const refreshed = await ensureSettings();
+    const updated = (refreshed.curriculums || []).find((c) => String(c._id) === String(id));
+    return NextResponse.json({ success: true, data: updated }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -67,30 +112,44 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+    if (!schoolYearAccess.allowed) return NextResponse.json(schoolYearAccess.response, { status: 403 });
+
     const { id } = await params;
 
+    // Prevent deletion if referenced by any GradeLevelCurriculum (DB)
+    const dbRef = await GradeLevelCurriculum.findOne({ curriculum_id: id }).lean();
+    if (dbRef) {
+      return NextResponse.json({ success: false, error: 'Curriculum is assigned to a grade level and cannot be deleted' }, { status: 409 });
+    }
+
+    // Prevent deletion if referenced in SystemSettings.gradeLevelCurriculums (embedded)
     const settings = await ensureSettings();
-    const curriculum = settings.curriculums.find((item) => String(item._id) === String(id) || String(item.curriculum_id) === String(id));
-    if (!curriculum) {
+    const embeddedRefExists = Array.isArray(settings.gradeLevelCurriculums)
+      ? settings.gradeLevelCurriculums.some((assignment) => String(assignment.curriculum_id || '') === String(id))
+      : false;
+
+    if (embeddedRefExists) {
+      return NextResponse.json({ success: false, error: 'Curriculum is assigned to a grade level and cannot be deleted' }, { status: 409 });
+    }
+
+    // Try deleting from dedicated collection
+    const deleted = await Curriculum.findByIdAndDelete(id);
+    if (deleted) {
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // Fallback: remove from SystemSettings.curriculums
+    const pullResult = await SystemSettings.collection.updateOne(
+      { key: SETTINGS_KEY },
+      { $pull: { curriculums: { _id: new mongoose.Types.ObjectId(id) } } }
+    );
+
+    if (pullResult.modifiedCount === 0) {
       return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
     }
 
-    const linkedAssignments = settings.gradeLevelCurriculums.filter(
-      (assignment) =>
-        String(assignment.curriculum_id || '').trim() === String(curriculum._id || '').trim() ||
-        String(assignment.curriculum_id || '').trim() === String(curriculum.curriculum_id || '').trim()
-    );
-    if (linkedAssignments.length > 0) {
-      return NextResponse.json({ success: false, error: 'Curriculum is linked to grade levels and cannot be deleted' }, { status: 409 });
-    }
-
-    settings.curriculums = settings.curriculums.filter((item) => String(item._id) !== String(curriculum._id));
-    await SystemSettings.collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $set: { curriculums: settings.curriculums, gradeLevelCurriculums: settings.gradeLevelCurriculums } }
-    );
-
-    return NextResponse.json({ success: true, data: curriculum }, { status: 200 });
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

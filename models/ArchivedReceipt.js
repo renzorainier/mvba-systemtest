@@ -10,6 +10,7 @@ const ArchivedReceiptSchema = new mongoose.Schema({
   fileSize: { type: Number, required: true },
   uploadedAt: { type: Date, required: true },
   paymentDate: { type: Date, required: true },
+  schoolYear: { type: String, required: [true, 'School year is required'] },
   archivedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
