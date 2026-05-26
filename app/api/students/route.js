@@ -16,6 +16,7 @@ import {
   getTuitionAmountForGrade,
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
+import { prepareCompressedUpload } from '@/lib/file-compression';
 import { getGridFSBucket } from '@/lib/gridfs';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
@@ -162,15 +163,20 @@ export async function POST(request) {
     if (formData) {
       const profilePictureFile = formData.get('profilePicture');
       if (profilePictureFile && typeof profilePictureFile === 'object' && typeof profilePictureFile.arrayBuffer === 'function') {
+        const preparedProfilePicture = await prepareCompressedUpload(profilePictureFile);
         const bucket = await getGridFSBucket();
-        const buffer = Buffer.from(await profilePictureFile.arrayBuffer());
-        const uploadStream = bucket.openUploadStream(`student-profile-${Date.now()}`, {
+        const uploadStream = bucket.openUploadStream(preparedProfilePicture.filename, {
           metadata: {
+            originalName: preparedProfilePicture.originalName,
+            mimeType: preparedProfilePicture.contentType,
+            originalSize: preparedProfilePicture.originalSize,
+            compressedSize: preparedProfilePicture.compressedSize,
+            compressed: preparedProfilePicture.compressed,
             uploadedAt: new Date(),
           },
         });
 
-        const readable = Readable.from([buffer]);
+        const readable = Readable.from([preparedProfilePicture.buffer]);
         const fileId = await new Promise((resolve, reject) => {
           readable.pipe(uploadStream)
             .on('error', reject)
@@ -187,16 +193,22 @@ export async function POST(request) {
         for (let i = 0; i < 10; i++) {
           const docFile = formData.get(`documents[${i}]`);
           const docName = body[`documentNames[${i}]`];
+          const docFieldKey = body[`documentFieldKeys[${i}]`];
 
           if (docFile && typeof docFile === 'object' && typeof docFile.arrayBuffer === 'function' && docName) {
-            const buffer = Buffer.from(await docFile.arrayBuffer());
-            const uploadStream = bucket.openUploadStream(docName, {
+            const preparedDocument = await prepareCompressedUpload(docFile);
+            const uploadStream = bucket.openUploadStream(preparedDocument.filename, {
               metadata: {
+                originalName: preparedDocument.originalName,
+                mimeType: preparedDocument.contentType,
+                originalSize: preparedDocument.originalSize,
+                compressedSize: preparedDocument.compressedSize,
+                compressed: preparedDocument.compressed,
                 uploadedAt: new Date(),
               },
             });
 
-            const readable = Readable.from([buffer]);
+            const readable = Readable.from([preparedDocument.buffer]);
             const fileId = await new Promise((resolve, reject) => {
               readable.pipe(uploadStream)
                 .on('error', reject)
@@ -207,7 +219,9 @@ export async function POST(request) {
 
             documents.push({
               fileId,
-              fileName: docName,
+              fileName: preparedDocument.filename,
+              label: docName,
+              fieldKey: docFieldKey || null,
               uploadedAt: new Date(),
             });
           }
@@ -225,6 +239,26 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'GWA must be a valid number.' }, { status: 400 });
     }
 
+    // Map uploaded documents into fixed student fields
+    const mapLabelToField = {
+      'Birth Certificate': 'birthCertificate',
+      'Report Card': 'reportCard',
+      'Form 137': 'medicalRecord',
+    };
+
+    const parsedPreuploaded = formData && formData.get('preuploadedDocuments') ? JSON.parse(String(formData.get('preuploadedDocuments'))) : [];
+
+    const docMap = {};
+    documents.forEach((d) => {
+      const field = d.fieldKey || mapLabelToField[d.label];
+      if (field) docMap[field] = d;
+    });
+
+    parsedPreuploaded.forEach((p) => {
+      const field = p.fieldKey || mapLabelToField[p.label];
+      if (field) docMap[field] = { fileId: p.fileId, fileName: p.fileName, uploadedAt: p.uploadedAt };
+    });
+
     const studentData = {
       firstName: body.firstName,
       lastName: body.lastName,
@@ -240,7 +274,9 @@ export async function POST(request) {
       parentGuardianRelationship: body.parentGuardianRelationship || '',
       parentGuardianContactNumber: body.parentGuardianContactNumber || '',
       profilePicture: profilePictureUrl,
-      documents,
+      birthCertificate: docMap.birthCertificate || null,
+      reportCard: docMap.reportCard || null,
+      medicalRecord: docMap.medicalRecord || null,
       totalEstimatedCost: defaultTotal,
       remainingBalance: defaultTotal,
     };

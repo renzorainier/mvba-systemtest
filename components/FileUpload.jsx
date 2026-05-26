@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export default function FileUpload({
   onUpload,
@@ -10,6 +10,7 @@ export default function FileUpload({
   endpoint = "/api/upload-file",
   compressEndpoint = "/api/compress",
 }) {
+  const inputId = useId();
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState(null);
@@ -99,7 +100,7 @@ export default function FileUpload({
   return (
     <div className="flex flex-col gap-2">
       <label
-        htmlFor="image-input"
+        htmlFor={inputId}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -147,7 +148,7 @@ export default function FileUpload({
         )}
       </label>
       <input
-        id="image-input"
+        id={inputId}
         type="file"
         accept=".pdf,.jpg,.jpeg,.png"
         className="sr-only"

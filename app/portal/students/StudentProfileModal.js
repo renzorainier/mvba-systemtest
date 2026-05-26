@@ -17,9 +17,9 @@ const GRADE_LEVEL_OPTIONS = [
 ];
 
 const DOCUMENT_FIELDS = [
-  'Birth Certificate',
-  'Form 137',
-  'Report Card',
+  { label: 'Birth Certificate', fieldKey: 'birthCertificate' },
+  { label: 'Form 137', fieldKey: 'medicalRecord' },
+  { label: 'Report Card', fieldKey: 'reportCard' },
 ];
 
 const createEmptyFormData = () => ({
@@ -42,9 +42,10 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
-  const [documents, setDocuments] = useState(
-    DOCUMENT_FIELDS.map((label) => ({
+  const [documentSlots, setDocumentSlots] = useState(
+    DOCUMENT_FIELDS.map(({ label, fieldKey }) => ({
       label,
+      fieldKey,
       file: null,
       fileId: null,
       fileName: '',
@@ -55,7 +56,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [documentsToRemove, setDocumentsToRemove] = useState([]);
+  const [fileIdsToRemove, setFileIdsToRemove] = useState([]);
   const fileInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
@@ -85,7 +86,18 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   // Initialize form data when student changes
   useEffect(() => {
     if (student) {
-      const existingDocuments = Array.isArray(student.documents) ? student.documents : [];
+      // Build documents list from fixed student fields
+      const existingDocuments = DOCUMENT_FIELDS.map(({ label, fieldKey }) => {
+        const doc = student[fieldKey];
+        return {
+          label,
+          fieldKey,
+          file: null,
+          fileId: doc?.fileId || null,
+          fileName: doc?.fileName || '',
+          uploadedAt: doc?.uploadedAt || '',
+        };
+      });
 
       setFormData({
         firstName: student.firstName || '',
@@ -101,26 +113,14 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         parentGuardianRelationship: student.parentGuardianRelationship || '',
         parentGuardianContactNumber: student.parentGuardianContactNumber || '',
       });
-      setDocuments(
-        DOCUMENT_FIELDS.map((label, index) => {
-          const existingDocument = existingDocuments.find((doc) => doc.fileName === label) || existingDocuments[index] || null;
-
-          return {
-            label,
-            file: null,
-            fileId: existingDocument?.fileId || null,
-            fileName: existingDocument?.fileName || '',
-            uploadedAt: existingDocument?.uploadedAt || '',
-          };
-        })
-      );
+      setDocumentSlots(existingDocuments);
       setIsEditing(false);
       setError('');
       setSuccess('');
     } else if (open) {
       setFormData(createEmptyFormData());
-      setDocuments([]);
-      setDocumentsToRemove([]);
+      setDocumentSlots([]);
+      setFileIdsToRemove([]);
       setProfilePicture(null);
       setProfilePicturePreview(null);
       setIsEditing(true);
@@ -219,12 +219,12 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const handleDocumentChange = (index, file) => {
     if (!file) return;
 
-    const existingFileId = documents[index]?.fileId;
+    const existingFileId = documentSlots[index]?.fileId;
     if (existingFileId) {
-      setDocumentsToRemove((prevIds) => [...new Set([...prevIds, existingFileId])]);
+      setFileIdsToRemove((prevIds) => [...new Set([...prevIds, existingFileId])]);
     }
 
-    setDocuments((prev) =>
+    setDocumentSlots((prev) =>
       prev.map((doc, docIndex) =>
         docIndex === index
           ? {
@@ -242,12 +242,12 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   };
 
   const removeDocument = (index) => {
-    const docToRemove = documents[index];
+    const docToRemove = documentSlots[index];
     if (docToRemove?.fileId) {
-      setDocumentsToRemove((prevIds) => [...new Set([...prevIds, docToRemove.fileId])]);
+      setFileIdsToRemove((prevIds) => [...new Set([...prevIds, docToRemove.fileId])]);
     }
 
-    setDocuments((prev) =>
+    setDocumentSlots((prev) =>
       prev.map((doc, docIndex) =>
         docIndex === index
           ? {
@@ -300,18 +300,26 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
       // Add fixed document slots: compress+upload via /api/upload-file and send references
       const preuploadedDocuments = [];
-      for (let i = 0; i < documents.length; i++) {
-        const doc = documents[i];
+      for (let i = 0; i < documentSlots.length; i++) {
+        const doc = documentSlots[i];
         if (doc.file) {
           try {
             const compressed = await compressFile(doc.file);
             const fileId = await uploadToGridFS(compressed, student._id, 'student-document');
-            preuploadedDocuments.push({ fileId, fileName: doc.fileName || doc.label, uploadedAt: new Date().toISOString() });
+            preuploadedDocuments.push({
+              slotIndex: i,
+              fieldKey: doc.fieldKey,
+              label: doc.label,
+              fileId,
+              fileName: doc.fileName || doc.label,
+              uploadedAt: new Date().toISOString(),
+            });
           } catch (err) {
             console.error('Document upload error:', err);
-            // Fallback: attach file directly so server will upload; include slot and label
+            // Fallback: attach file directly so server will upload; include slot and field key
             updateData.append(`documents[${i}]`, doc.file);
             updateData.append(`documentNames[${i}]`, doc.label);
+            updateData.append(`documentFieldKeys[${i}]`, doc.fieldKey);
           }
         }
       }
@@ -320,8 +328,8 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         updateData.append('preuploadedDocuments', JSON.stringify(preuploadedDocuments));
       }
 
-      if (documentsToRemove.length > 0) {
-        updateData.append('documentsToRemove', JSON.stringify(documentsToRemove));
+      if (fileIdsToRemove.length > 0) {
+        updateData.append('fileIdsToRemove', JSON.stringify(fileIdsToRemove));
       }
 
       const response = await fetch(isCreating ? '/api/students' : `/api/students/${student._id}`, {
@@ -335,7 +343,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         setSuccess(isCreating ? 'Student created successfully' : 'Student profile updated successfully');
         setIsEditing(false);
         setProfilePicture(null);
-        setDocumentsToRemove([]);
+        setFileIdsToRemove([]);
         if (onStudentUpdate) {
           onStudentUpdate(result.data);
         }
@@ -724,7 +732,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Documents</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {documents.map((doc, index) => (
+                  {documentSlots.map((doc, index) => (
                     <div key={doc.label} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                       <div className="mb-3">
                         <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
@@ -766,23 +774,18 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                         </div>
                       ) : (
                         <>
-                          <input
-                            id={`document-${index}`}
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleDocumentChange(index, e.target.files?.[0])}
-                            className="hidden"
-                          />
-                          <button
-                            type="button"
-                            disabled={!isEditing}
-                            onClick={() => isEditing && document.getElementById(`document-${index}`)?.click()}
-                            className="w-full rounded-lg border-2 border-dashed border-gray-300 bg-white p-4 text-center transition-colors hover:border-blue-500 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <Upload size={24} className="mx-auto mb-2 text-gray-400" />
-                            <p className="text-sm font-medium text-gray-700">Upload file</p>
-                            <p className="text-xs text-gray-500">Click to select a file</p>
-                          </button>
+                          {isEditing && !isHistorical ? (
+                            <FileUpload
+                              onUpload={(file) => handleDocumentChange(index, file)}
+                              label={`Upload ${doc.label}`}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                            />
+                          ) : (
+                            <div className="w-full rounded-lg border-2 border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-500">
+                              <Upload size={24} className="mx-auto mb-2 text-gray-400" />
+                              <p>{isEditing ? 'Upload disabled for historical records' : 'No file'}</p>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>

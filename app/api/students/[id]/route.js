@@ -9,6 +9,8 @@ import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSetting
 import { calculateTotalFromTuitionPlans, createDefaultTuitionPlans, getTuitionAmountForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import { NextResponse } from 'next/server';
 import { getGridFSBucket } from '@/lib/gridfs';
+import { prepareCompressedUpload } from '@/lib/file-compression';
+import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
@@ -132,17 +134,21 @@ export async function PUT(request, { params }) {
     const profilePictureFile = formData.get('profilePicture');
     if (profilePictureFile && typeof profilePictureFile === 'object') {
       try {
+        const preparedProfilePicture = await prepareCompressedUpload(profilePictureFile);
         const bucket = await getGridFSBucket();
-        const buffer = Buffer.from(await profilePictureFile.arrayBuffer());
-        
-        const uploadStream = bucket.openUploadStream(`student-profile-${id}`, {
+        const uploadStream = bucket.openUploadStream(preparedProfilePicture.filename, {
           metadata: {
             studentId: id,
+            originalName: preparedProfilePicture.originalName,
+            mimeType: preparedProfilePicture.contentType,
+            originalSize: preparedProfilePicture.originalSize,
+            compressedSize: preparedProfilePicture.compressedSize,
+            compressed: preparedProfilePicture.compressed,
             uploadedAt: new Date(),
           },
         });
 
-        const readable = Readable.from([buffer]);
+        const readable = Readable.from([preparedProfilePicture.buffer]);
         const fileId = await new Promise((resolve, reject) => {
           readable.pipe(uploadStream)
             .on('error', reject)
@@ -164,63 +170,92 @@ export async function PUT(request, { params }) {
       profilePictureUrl = `/api/download-file/${preuploadedProfilePictureId}`;
     }
 
-    // Handle document uploads
-    const documents = existingStudent.documents || [];
-    const documentsToRemoveStr = body['documentsToRemove'];
-    const documentsToRemove = documentsToRemoveStr ? JSON.parse(documentsToRemoveStr) : [];
-    
-    // Remove documents that were deleted
-    const updatedDocuments = documents.filter(doc => !documentsToRemove.includes(doc.fileId));
-    
-    const documentKeys = Object.keys(body).filter(key => key.startsWith('documents['));
-    
-    if (documentKeys.length > 0) {
+    // Handle document uploads and map into fixed fields
+    const mapLabelToField = {
+      'Birth Certificate': 'birthCertificate',
+      'Report Card': 'reportCard',
+      'Form 137': 'medicalRecord',
+    };
+
+    // Build initial map from existing fixed fields only
+    const docMap = {};
+    if (existingStudent.birthCertificate) docMap.birthCertificate = existingStudent.birthCertificate;
+    if (existingStudent.reportCard) docMap.reportCard = existingStudent.reportCard;
+    if (existingStudent.medicalRecord) docMap.medicalRecord = existingStudent.medicalRecord;
+
+    const fileIdsToRemoveStr = body['fileIdsToRemove'];
+    const fileIdsToRemove = fileIdsToRemoveStr ? JSON.parse(fileIdsToRemoveStr) : [];
+
+    // Remove any document entries requested for deletion (also delete from GridFS)
+    if (Array.isArray(fileIdsToRemove) && fileIdsToRemove.length > 0) {
       try {
         const bucket = await getGridFSBucket();
-        
-        for (let i = 0; i < 10; i++) {
-          const docFile = formData.get(`documents[${i}]`);
-          const docLabel = body[`documentNames[${i}]`];
-
-          if (docFile && typeof docFile === 'object' && docLabel) {
-            const buffer = Buffer.from(await docFile.arrayBuffer());
-            const filename = docLabel;
-
-            const uploadStream = bucket.openUploadStream(filename, {
-              metadata: {
-                studentId: id,
-                uploadedAt: new Date(),
-              },
-            });
-
-            const readable = Readable.from([buffer]);
-            const fileId = await new Promise((resolve, reject) => {
-              readable.pipe(uploadStream)
-                .on('error', reject)
-                .on('finish', () => {
-                  resolve(uploadStream.id.toString());
-                });
-            });
-
-            const newDocEntry = {
-              fileId,
-              fileName: filename,
-              uploadedAt: new Date(),
-            };
-
-            // If a document with the same name exists, replace it; otherwise append
-            const existingIndex = updatedDocuments.findIndex(d => d.fileName === filename);
-            if (existingIndex >= 0) {
-              updatedDocuments[existingIndex] = newDocEntry;
-            } else {
-              updatedDocuments.push(newDocEntry);
+        for (const field of Object.keys(docMap)) {
+          const entry = docMap[field];
+          if (entry && fileIdsToRemove.includes(entry.fileId)) {
+            try {
+              await bucket.delete(new mongoose.Types.ObjectId(entry.fileId));
+            } catch (e) {
+              // ignore deletion errors - file may not exist
+              console.warn('Failed to delete gridfs file', entry.fileId, e.message || e);
             }
+            docMap[field] = null;
           }
         }
-      } catch (fileError) {
-        console.error('Document upload error:', fileError);
-        return NextResponse.json({ success: false, error: 'Failed to upload documents' }, { status: 500 });
+      } catch (err) {
+        console.error('Error removing documents:', err);
+        return NextResponse.json({ success: false, error: 'Failed to remove documents' }, { status: 500 });
       }
+    }
+
+    // Handle new uploaded files in the form and assign to fields by label
+    try {
+      const bucket = await getGridFSBucket();
+      for (let i = 0; i < 10; i++) {
+        const docFile = formData.get(`documents[${i}]`);
+        const docLabel = body[`documentNames[${i}]`];
+        const docFieldKey = body[`documentFieldKeys[${i}]`];
+
+        if (docFile && typeof docFile === 'object' && docLabel) {
+          const preparedDocument = await prepareCompressedUpload(docFile);
+          const filename = preparedDocument.filename;
+
+          const uploadStream = bucket.openUploadStream(filename, {
+            metadata: {
+              studentId: id,
+              originalName: preparedDocument.originalName,
+              mimeType: preparedDocument.contentType,
+              originalSize: preparedDocument.originalSize,
+              compressedSize: preparedDocument.compressedSize,
+              compressed: preparedDocument.compressed,
+              uploadedAt: new Date(),
+            },
+          });
+
+          const readable = Readable.from([preparedDocument.buffer]);
+          const fileId = await new Promise((resolve, reject) => {
+            readable.pipe(uploadStream)
+              .on('error', reject)
+              .on('finish', () => {
+                resolve(uploadStream.id.toString());
+              });
+          });
+
+          const newDocEntry = {
+            fileId,
+            fileName: filename,
+            label: docLabel,
+            uploadedAt: new Date(),
+          };
+          const field = docFieldKey || mapLabelToField[filename];
+          if (field) {
+            docMap[field] = newDocEntry;
+          }
+        }
+      }
+    } catch (fileError) {
+      console.error('Document upload error:', fileError);
+      return NextResponse.json({ success: false, error: 'Failed to upload documents' }, { status: 500 });
     }
 
     // Support preuploaded documents (uploaded via /api/upload-file)
@@ -229,20 +264,9 @@ export async function PUT(request, { params }) {
     if (Array.isArray(preuploadedDocuments) && preuploadedDocuments.length > 0) {
       preuploadedDocuments.forEach((pd) => {
         if (pd && pd.fileId) {
-          const newEntry = {
-            fileId: pd.fileId,
-            fileName: pd.fileName || '',
-            uploadedAt: pd.uploadedAt ? new Date(pd.uploadedAt) : new Date(),
-          };
-
-          const existingByName = pd.fileName ? updatedDocuments.findIndex(d => d.fileName === pd.fileName) : -1;
-          const existingById = updatedDocuments.findIndex(d => d.fileId === pd.fileId);
-          if (existingByName >= 0) {
-            updatedDocuments[existingByName] = newEntry;
-          } else if (existingById >= 0) {
-            updatedDocuments[existingById] = newEntry;
-          } else {
-            updatedDocuments.push(newEntry);
+          const field = pd.fieldKey || mapLabelToField[pd.label];
+          if (field) {
+            docMap[field] = { fileId: pd.fileId, fileName: pd.fileName || pd.label, uploadedAt: pd.uploadedAt ? new Date(pd.uploadedAt) : new Date() };
           }
         }
       });
@@ -272,7 +296,9 @@ export async function PUT(request, { params }) {
       parentGuardianRelationship: body.parentGuardianRelationship ?? existingStudent.parentGuardianRelationship ?? '',
       parentGuardianContactNumber: body.parentGuardianContactNumber ?? existingStudent.parentGuardianContactNumber ?? '',
       profilePicture: profilePictureUrl,
-      documents: updatedDocuments,
+      birthCertificate: docMap.birthCertificate || null,
+      reportCard: docMap.reportCard || null,
+      medicalRecord: docMap.medicalRecord || null,
     };
     
     const student = await Student.findByIdAndUpdate(id, studentData, { new: true, runValidators: true });
