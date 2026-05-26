@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import Enrollment from '@/models/Enrollment';
+import { isValidKinderOneLrn, isValidKinderTwoToSixLrn } from '@/lib/student-identifiers';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 import { NextResponse } from 'next/server';
 
@@ -16,6 +17,12 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const { context } = schoolYearAccess;
     const selectedSchoolYear = context?.selectedSchoolYear || '';
+
+    const currentEnrollment = await Enrollment.findById(id).lean();
+
+    if (!currentEnrollment) {
+      return NextResponse.json({ success: false, error: 'Enrollment not found' }, { status: 404 });
+    }
     
     // Map form field names to database field names
     const enrollmentData = {
@@ -26,10 +33,28 @@ export async function PUT(request, { params }) {
       enrollmentDate: body.enrollmentDate,
       status: body.status,
     };
-    // If learnersReferenceNumber is being changed (or set), ensure no other enrollment uses it
-    if (enrollmentData.learnersReferenceNumber) {
-      const other = await Enrollment.findOne({ learnersReferenceNumber: enrollmentData.learnersReferenceNumber, schoolYear: selectedSchoolYear, _id: { $ne: id } }).lean();
-      if (other) {
+    const nextLearnersReferenceNumber = String(enrollmentData.learnersReferenceNumber || currentEnrollment.learnersReferenceNumber || '').trim();
+    const currentStudentId = String(currentEnrollment.studentId || '').trim();
+
+    // Only enforce uniqueness for concrete LRNs; placeholders like TBA are allowed.
+    if (currentStudentId) {
+      const otherByStudentId = await Enrollment.findOne({
+        studentId: currentStudentId,
+        schoolYear: selectedSchoolYear,
+        _id: { $ne: id },
+      }).lean();
+
+      if (otherByStudentId) {
+        return NextResponse.json({ success: false, error: 'Another enrollment already exists for this student' }, { status: 400 });
+      }
+    } else if (isValidKinderOneLrn(nextLearnersReferenceNumber) || isValidKinderTwoToSixLrn(nextLearnersReferenceNumber)) {
+      const otherByLrn = await Enrollment.findOne({
+        learnersReferenceNumber: nextLearnersReferenceNumber,
+        schoolYear: selectedSchoolYear,
+        _id: { $ne: id },
+      }).lean();
+
+      if (otherByLrn) {
         return NextResponse.json({ success: false, error: 'Another enrollment already exists for this student' }, { status: 400 });
       }
     }
@@ -37,8 +62,7 @@ export async function PUT(request, { params }) {
     // If sectionId is being changed, ensure target section is not full (max 15)
     if (enrollmentData.sectionId && String(enrollmentData.sectionId).trim() !== 'TBA') {
       // get current enrollment to compare
-        const current = await Enrollment.findById(id).lean();
-      const isChangingSection = current && current.sectionId !== enrollmentData.sectionId;
+      const isChangingSection = currentEnrollment && currentEnrollment.sectionId !== enrollmentData.sectionId;
       if (isChangingSection) {
         const count = await Enrollment.countDocuments({ sectionId: enrollmentData.sectionId, schoolYear: selectedSchoolYear, _id: { $ne: id } });
         if (count >= 15) {

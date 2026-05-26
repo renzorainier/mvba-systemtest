@@ -5,6 +5,7 @@ import {
   isValidKinderTwoToSixLrn,
   normalizeLearnersReferenceNumber,
 } from '@/lib/student-identifiers';
+import Enrollment from '@/models/Enrollment';
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import { calculateTotalFromTuitionPlans, createDefaultTuitionPlans, getTuitionAmountForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import { NextResponse } from 'next/server';
@@ -236,6 +237,28 @@ export async function PUT(request, { params }) {
     };
     
     const student = await Student.findByIdAndUpdate(id, studentData, { new: true, runValidators: true });
+
+    if (student && String(existingStudent.learnersReferenceNumber || '') !== String(learnersReferenceNumber || '')) {
+      const { selectedSchoolYear } = schoolYearAccess.context || {};
+
+      if (selectedSchoolYear) {
+        await Enrollment.updateMany(
+          {
+            schoolYear: selectedSchoolYear,
+            $or: [
+              { studentId: String(existingStudent._id) },
+              { learnersReferenceNumber: String(existingStudent.learnersReferenceNumber || '') },
+            ],
+          },
+          {
+            $set: {
+              learnersReferenceNumber,
+              studentId: String(student._id),
+            },
+          }
+        );
+      }
+    }
 
     return NextResponse.json({ success: true, data: student }, { status: 200 });
   } catch (error) {
