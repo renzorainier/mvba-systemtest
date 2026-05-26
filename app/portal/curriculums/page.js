@@ -54,6 +54,175 @@ export default function CurriculumsPage() {
     );
   }, [curriculums, searchTerm]);
 
+  const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—');
+
+  const formatSubjects = (curriculum) => {
+    if (Array.isArray(curriculum.subjects) && curriculum.subjects.length > 0) {
+      return curriculum.subjects
+        .map((subject, index) => {
+          if (typeof subject === 'string') {
+            return subject.trim();
+          }
+
+          const subjectName = String(subject?.subject_name || '').trim();
+          const subjectCode = String(subject?.code || '').trim();
+          return `${index + 1}. ${subjectName}${subjectCode ? ` (${subjectCode})` : ''}`.trim();
+        })
+        .filter(Boolean);
+    }
+
+    return String(curriculum.subjectsText || curriculum.subjects || '')
+      .split(',')
+      .map((subject) => subject.trim())
+      .filter(Boolean);
+  };
+
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const printCurriculum = (curriculum) => {
+    const subjects = formatSubjects(curriculum);
+    const subjectColumns = subjects.length > 6 ? 2 : 1;
+    const printWindow = window.open('', '_blank');
+
+    if (!printWindow) {
+      return;
+    }
+
+    const subjectRows = subjects.length > 0
+      ? subjects.map((subject, index) => `
+          <div class="subject-item">
+            <span class="subject-index">${index + 1}</span>
+            <span class="subject-value">${escapeHtml(subject)}</span>
+          </div>
+        `).join('')
+      : '<div class="empty">No subjects listed.</div>';
+
+    const receiptHtml = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Curriculum ${escapeHtml(curriculum.curriculum_id || curriculum.curriculum_name)}</title>
+        <style>
+          @page { size: letter portrait; margin: 8mm; }
+          html, body { height: 100%; }
+          body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #1f2937; padding: 0; margin: 0; box-sizing: border-box; background: #fff; }
+          .page { min-height: 100vh; box-sizing: border-box; padding: 0; }
+          .sheet { border: 1px solid #dbe4ee; border-radius: 16px; padding: 14px; box-sizing: border-box; background: #fff; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 12px; }
+          .brand { font-weight: 800; font-size: 24px; letter-spacing: -0.03em; }
+          .badge { background: #eff6ff; color: #1d4ed8; padding: 6px 10px; border-radius: 9999px; font-weight: 700; font-size: 12px; display: inline-block; }
+          .meta { text-align: right; font-size: 13px; color: #64748b; line-height: 1.45; }
+          .meta strong { color: #0f172a; }
+          .title { margin: 0; font-size: 21px; line-height: 1.15; color: #0f172a; }
+          .subtitle { margin: 3px 0 0; font-size: 13px; color: #475569; }
+          .panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+          .panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; }
+          .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #64748b; font-weight: 700; }
+          .value { margin-top: 4px; font-size: 14px; font-weight: 700; color: #0f172a; word-break: break-word; }
+          .section { margin-top: 11px; }
+          .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+          .section-head h2 { margin: 0; font-size: 15px; color: #0f172a; }
+          .section-head span { font-size: 11px; color: #64748b; font-weight: 600; }
+          .description { border: 1px solid #e2e8f0; border-radius: 12px; padding: 11px 12px; background: #fff; font-size: 13px; line-height: 1.52; white-space: pre-wrap; min-height: 52px; max-height: 78px; overflow: hidden; }
+          .subjects-grid { display: grid; grid-template-columns: repeat(${subjectColumns}, minmax(0, 1fr)); gap: 7px 12px; }
+          .subject-item { display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid #e5e7eb; padding: 7px 0; break-inside: avoid; }
+          .subject-index { width: 18px; flex: 0 0 18px; font-size: 13px; font-weight: 800; color: #2563eb; }
+          .subject-value { font-size: 13px; line-height: 1.42; color: #0f172a; font-weight: 600; }
+          .empty { color: #64748b; padding: 8px 0; font-size: 13px; }
+          .footer { margin-top: 12px; display: flex; justify-content: space-between; gap: 12px; align-items: flex-end; }
+          .footer-note { font-size: 12px; color: #64748b; line-height: 1.35; }
+          .printed { text-align: right; font-size: 12px; color: #94a3b8; }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="sheet">
+            <div class="header">
+              <div>
+                <div class="brand">CURRICULUM RECORD</div>
+                <div class="badge">Portrait Print View</div>
+                <h1 class="title">${escapeHtml(curriculum.curriculum_name || 'Untitled Curriculum')}</h1>
+                <p class="subtitle">All curriculum fields formatted for printing and review.</p>
+              </div>
+              <div class="meta">
+                <div><strong>Curriculum ID:</strong> ${escapeHtml(curriculum.curriculum_id || '—')}</div>
+                <div><strong>School Year:</strong> ${escapeHtml(curriculum.schoolYear || '—')}</div>
+                <div><strong>Record ID:</strong> ${escapeHtml(curriculum._id || '—')}</div>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel">
+                <div class="label">Effective Start</div>
+                <div class="value">${formatDate(curriculum.effective_start_date)}</div>
+              </div>
+              <div class="panel">
+                <div class="label">Effective End</div>
+                <div class="value">${formatDate(curriculum.effective_end_date)}</div>
+              </div>
+              <div class="panel">
+                <div class="label">Subject Count</div>
+                <div class="value">${subjects.length}</div>
+              </div>
+              <div class="panel">
+                <div class="label">School Year Status</div>
+                <div class="value">${escapeHtml(curriculum.schoolYear === selectedSchoolYear ? 'Current' : 'Historical')}</div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-head">
+                <h2>Description</h2>
+                <span>Curriculum overview and scope</span>
+              </div>
+              <div class="description">${escapeHtml(curriculum.description || 'No description provided.')}</div>
+            </div>
+
+            <div class="section">
+              <div class="section-head">
+                <h2>Subjects</h2>
+                <span>Complete subject list</span>
+              </div>
+              <div class="subjects-grid">
+                ${subjectRows}
+              </div>
+            </div>
+
+            <div class="footer">
+              <div class="footer-note">
+                Printed curriculum summary generated from the system record.
+              </div>
+              <div class="printed">
+                Printed on ${new Date().toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (printError) {
+        console.error('Print failed', printError);
+      }
+    }, 500);
+  };
+
   const startEdit = (curriculum) => {
     if (isHistorical) {
       return;
@@ -205,6 +374,10 @@ export default function CurriculumsPage() {
                           <button onClick={() => startEdit(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-900 disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300">
                             <PencilLine size={16} />
                             Edit
+                          </button>
+                          <button onClick={() => printCurriculum(curriculum)} className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-950">
+                            <BookOpen size={16} />
+                            Print
                           </button>
                           <button onClick={() => handleDelete(curriculum)} disabled={isHistorical} className="inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-900 disabled:cursor-not-allowed disabled:text-red-300 disabled:hover:text-red-300">
                             <Trash2 size={16} />
