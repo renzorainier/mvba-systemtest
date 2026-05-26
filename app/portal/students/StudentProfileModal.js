@@ -58,9 +58,17 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [success, setSuccess] = useState('');
   const [fileIdsToRemove, setFileIdsToRemove] = useState([]);
   const fileInputRef = useRef(null);
-  const documentInputRef = useRef(null);
 
-  const setProfilePictureFile = (file) => {
+  const readFilePreview = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => resolve(event.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const setProfilePictureFile = async (file) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -73,14 +81,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       return;
     }
 
-    setProfilePicture(file);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setProfilePicturePreview(e.target.result);
-    };
-    reader.readAsDataURL(file);
-    setError('');
+    try {
+      const compressedFile = await compressFile(file);
+      setProfilePicture(compressedFile);
+      setProfilePicturePreview(await readFilePreview(compressedFile));
+      setError('');
+    } catch (err) {
+      console.error('Profile picture compression error:', err);
+      setError('Failed to process profile picture');
+    }
   };
 
   // Initialize form data when student changes
@@ -164,7 +173,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files?.[0];
-    setProfilePictureFile(file);
+    void setProfilePictureFile(file);
   };
 
   const handleProfilePictureDrop = (e) => {
@@ -172,7 +181,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
     if (!isEditing) return;
 
     const file = e.dataTransfer.files?.[0];
-    setProfilePictureFile(file);
+    void setProfilePictureFile(file);
   };
 
   // Compress a file using the /api/compress endpoint and return a File
@@ -286,10 +295,8 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       });
 
       if (profilePicture) {
-        // Compress then upload profile picture to GridFS first
         try {
-          const compressedProfile = await compressFile(profilePicture);
-          const uploadedId = await uploadToGridFS(compressedProfile, student._id, 'student-profile');
+          const uploadedId = await uploadToGridFS(profilePicture, student._id, 'student-profile');
           updateData.append('preuploadedProfilePictureId', uploadedId);
         } catch (err) {
           console.error('Profile picture upload error:', err);
@@ -447,18 +454,18 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                         e.preventDefault();
                       }}
                       onDrop={handleProfilePictureDrop}
-                      onClick={() => isEditing && fileInputRef.current?.click()}
+                      onClick={() => isEditing && !isHistorical && fileInputRef.current?.click()}
                       onKeyDown={(e) => {
-                        if (!isEditing) return;
+                        if (!isEditing || isHistorical) return;
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           fileInputRef.current?.click();
                         }
                       }}
-                      tabIndex={isEditing ? 0 : -1}
-                      role={isEditing ? 'button' : undefined}
-                      aria-label={isEditing ? 'Upload profile picture' : undefined}
-                      className={`w-32 h-32 md:w-40 md:h-40 rounded-full border-2 bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm ${isEditing ? 'cursor-pointer border-dashed border-blue-300 outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' : 'border-gray-200'}`}
+                      tabIndex={isEditing && !isHistorical ? 0 : -1}
+                      role={isEditing && !isHistorical ? 'button' : undefined}
+                      aria-label={isEditing && !isHistorical ? 'Upload profile picture' : undefined}
+                      className={`w-32 h-32 md:w-40 md:h-40 rounded-full border-2 bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm ${isEditing && !isHistorical ? 'cursor-pointer border-dashed border-blue-300 outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' : 'border-gray-200'}`}
                     >
                       {profilePicturePreview ? (
                         <img
@@ -481,15 +488,16 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       className="hidden"
                     />
 
-                    <button
-                      onClick={() => isEditing && !isHistorical && fileInputRef.current?.click()}
-                      aria-disabled={!isEditing || isHistorical}
-                      disabled={!isEditing || isHistorical}
-                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors disabled:cursor-not-allowed ${isEditing && !isHistorical ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
-                      title={isHistorical ? 'Historical school years are read-only' : isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
-                    >
-                      <Upload size={16} />
-                    </button>
+                    {isEditing && !isHistorical && (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                        title="Upload profile picture"
+                        type="button"
+                      >
+                        <Upload size={16} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Student Information */}
