@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
 
+const fileSubSchema = new mongoose.Schema({
+  fileId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  fileName: { type: String, required: true },
+  uploadedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
 const StudentSchema = new mongoose.Schema({
    // Everything should match the front end
   firstName: { type: String, required: [true, "First name is required"]},
@@ -23,13 +29,23 @@ const StudentSchema = new mongoose.Schema({
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
   profilePicture: { type: String, required: false, default: null },
-  documents: [
-    {
-      fileId: mongoose.Schema.Types.ObjectId,
-      fileName: String,
-      uploadedAt: { type: Date, default: Date.now },
-    }
-  ],
+  
+  // Document fields
+  birthCertificate: {
+    type: fileSubSchema,
+    required: false,
+    default: null,
+  },
+  reportCard: {
+    type: fileSubSchema,
+    required: false,
+    default: null,
+  },
+  medicalRecord: {
+    type: fileSubSchema,
+    required: false,
+    default: null,
+  },
 }, { timestamps: true });
 
 // Enforce uniqueness for LRNs except for the placeholder value 'TBA'

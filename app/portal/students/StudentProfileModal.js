@@ -16,6 +16,12 @@ const GRADE_LEVEL_OPTIONS = [
   'Grade 6',
 ];
 
+const DOCUMENT_FIELDS = [
+  { label: 'Birth Certificate', fieldKey: 'birthCertificate' },
+  { label: 'Form 137', fieldKey: 'medicalRecord' },
+  { label: 'Report Card', fieldKey: 'reportCard' },
+];
+
 const createEmptyFormData = () => ({
   firstName: '',
   lastName: '',
@@ -36,18 +42,72 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
-  const [documents, setDocuments] = useState([]);
+  const [documentSlots, setDocumentSlots] = useState(
+    DOCUMENT_FIELDS.map(({ label, fieldKey }) => ({
+      label,
+      fieldKey,
+      file: null,
+      fileId: null,
+      fileName: '',
+      uploadedAt: '',
+    }))
+  );
   const [loading, setLoading] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [documentsToRemove, setDocumentsToRemove] = useState([]);
+  const [fileIdsToRemove, setFileIdsToRemove] = useState([]);
   const fileInputRef = useRef(null);
-  const documentInputRef = useRef(null);
+
+  const readFilePreview = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => resolve(event.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const setProfilePictureFile = async (file) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be smaller than 5MB');
+      return;
+    }
+
+    try {
+      const compressedFile = await compressFile(file);
+      setProfilePicture(compressedFile);
+      setProfilePicturePreview(await readFilePreview(compressedFile));
+      setError('');
+    } catch (err) {
+      console.error('Profile picture compression error:', err);
+      setError('Failed to process profile picture');
+    }
+  };
 
   // Initialize form data when student changes
   useEffect(() => {
     if (student) {
+      // Build documents list from fixed student fields
+      const existingDocuments = DOCUMENT_FIELDS.map(({ label, fieldKey }) => {
+        const doc = student[fieldKey];
+        return {
+          label,
+          fieldKey,
+          file: null,
+          fileId: doc?.fileId || null,
+          fileName: doc?.fileName || '',
+          uploadedAt: doc?.uploadedAt || '',
+        };
+      });
+
       setFormData({
         firstName: student.firstName || '',
         lastName: student.lastName || '',
@@ -62,17 +122,14 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         parentGuardianRelationship: student.parentGuardianRelationship || '',
         parentGuardianContactNumber: student.parentGuardianContactNumber || '',
       });
-      // Load existing documents
-      if (student.documents && Array.isArray(student.documents)) {
-        setDocuments(student.documents);
-      }
+      setDocumentSlots(existingDocuments);
       setIsEditing(false);
       setError('');
       setSuccess('');
     } else if (open) {
       setFormData(createEmptyFormData());
-      setDocuments([]);
-      setDocumentsToRemove([]);
+      setDocumentSlots([]);
+      setFileIdsToRemove([]);
       setProfilePicture(null);
       setProfilePicturePreview(null);
       setIsEditing(true);
@@ -116,45 +173,102 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
+    void setProfilePictureFile(file);
+  };
+
+  const handleProfilePictureDrop = (e) => {
+    e.preventDefault();
+    if (!isEditing) return;
+
+    const file = e.dataTransfer.files?.[0];
+    void setProfilePictureFile(file);
+  };
+
+  // Compress a file using the /api/compress endpoint and return a File
+  const compressFile = async (file) => {
+    try {
+      const form = new FormData();
+      form.append('file', file);
+
+      const res = await fetch('/api/compress', { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Compression failed');
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image must be smaller than 5MB');
-        return;
-      }
-      setProfilePicture(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfilePicturePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-      setError('');
+
+      const blob = await res.blob();
+      const contentType = res.headers.get('Content-Type') || file.type;
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      const filename = (match && match[1]) || file.name;
+
+      return new File([blob], filename, { type: contentType });
+    } catch (err) {
+      console.error('Compression error:', err);
+      // Fallback to original file if compression fails
+      return file;
     }
   };
 
-  const handleDocumentChange = (e) => {
-    const files = e.target.files;
-    if (files) {
-      const newDocuments = Array.from(files).map((file) => ({
-        file,
-        name: file.name,
-        uploadedAt: new Date().toISOString(),
-      }));
-      setDocuments((prev) => [...prev, ...newDocuments]);
-      setError('');
+  // Upload a file to /api/upload-file and return the fileId
+  const uploadToGridFS = async (file, relatedRecordId = null, relatedRecordType = null) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (relatedRecordId) form.append('relatedRecordId', relatedRecordId);
+    if (relatedRecordType) form.append('relatedRecordType', relatedRecordType);
+
+    const res = await fetch('/api/upload-file', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Upload failed');
     }
+    return data.fileId;
+  };
+
+  const handleDocumentChange = (index, file) => {
+    if (!file) return;
+
+    const existingFileId = documentSlots[index]?.fileId;
+    if (existingFileId) {
+      setFileIdsToRemove((prevIds) => [...new Set([...prevIds, existingFileId])]);
+    }
+
+    setDocumentSlots((prev) =>
+      prev.map((doc, docIndex) =>
+        docIndex === index
+          ? {
+              ...doc,
+              file,
+              fileName: file.name,
+              uploadedAt: new Date().toISOString(),
+              fileId: doc.fileId || null,
+            }
+          : doc
+      )
+    );
+
+    setError('');
   };
 
   const removeDocument = (index) => {
-    const docToRemove = documents[index];
-    // Track documents to remove (those with fileId)
-    if (docToRemove.fileId) {
-      setDocumentsToRemove((prev) => [...prev, docToRemove.fileId]);
+    const docToRemove = documentSlots[index];
+    if (docToRemove?.fileId) {
+      setFileIdsToRemove((prevIds) => [...new Set([...prevIds, docToRemove.fileId])]);
     }
-    setDocuments((prev) => prev.filter((_, i) => i !== index));
+
+    setDocumentSlots((prev) =>
+      prev.map((doc, docIndex) =>
+        docIndex === index
+          ? {
+              ...doc,
+              file: null,
+              fileId: null,
+              fileName: '',
+              uploadedAt: '',
+            }
+          : doc
+      )
+    );
   };
 
   const handleSave = async () => {
@@ -181,18 +295,48 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       });
 
       if (profilePicture) {
-        updateData.append('profilePicture', profilePicture);
+        try {
+          const uploadedId = await uploadToGridFS(profilePicture, student._id, 'student-profile');
+          updateData.append('preuploadedProfilePictureId', uploadedId);
+        } catch (err) {
+          console.error('Profile picture upload error:', err);
+          // Fallback: include the raw file so server can handle upload
+          updateData.append('profilePicture', profilePicture);
+        }
       }
 
-      documents.forEach((doc, index) => {
+      // Add fixed document slots: compress+upload via /api/upload-file and send references
+      const preuploadedDocuments = [];
+      for (let i = 0; i < documentSlots.length; i++) {
+        const doc = documentSlots[i];
         if (doc.file) {
-          updateData.append(`documents[${index}]`, doc.file);
-          updateData.append(`documentNames[${index}]`, doc.name);
+          try {
+            const compressed = await compressFile(doc.file);
+            const fileId = await uploadToGridFS(compressed, student._id, 'student-document');
+            preuploadedDocuments.push({
+              slotIndex: i,
+              fieldKey: doc.fieldKey,
+              label: doc.label,
+              fileId,
+              fileName: doc.fileName || doc.label,
+              uploadedAt: new Date().toISOString(),
+            });
+          } catch (err) {
+            console.error('Document upload error:', err);
+            // Fallback: attach file directly so server will upload; include slot and field key
+            updateData.append(`documents[${i}]`, doc.file);
+            updateData.append(`documentNames[${i}]`, doc.label);
+            updateData.append(`documentFieldKeys[${i}]`, doc.fieldKey);
+          }
         }
-      });
+      }
 
-      if (!isCreating && documentsToRemove.length > 0) {
-        updateData.append('documentsToRemove', JSON.stringify(documentsToRemove));
+      if (preuploadedDocuments.length > 0) {
+        updateData.append('preuploadedDocuments', JSON.stringify(preuploadedDocuments));
+      }
+
+      if (fileIdsToRemove.length > 0) {
+        updateData.append('fileIdsToRemove', JSON.stringify(fileIdsToRemove));
       }
 
       const response = await fetch(isCreating ? '/api/students' : `/api/students/${student._id}`, {
@@ -206,8 +350,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         setSuccess(isCreating ? 'Student created successfully' : 'Student profile updated successfully');
         setIsEditing(false);
         setProfilePicture(null);
-        setDocuments([]);
-        setDocumentsToRemove([]);
+        setFileIdsToRemove([]);
         if (onStudentUpdate) {
           onStudentUpdate(result.data);
         }
@@ -305,7 +448,25 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                 <div className="flex items-start gap-8">
                   {/* Picture Display */}
                   <div className="flex-shrink-0 relative">
-                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm">
+                    <div
+                      onDragOver={(e) => {
+                        if (!isEditing) return;
+                        e.preventDefault();
+                      }}
+                      onDrop={handleProfilePictureDrop}
+                      onClick={() => isEditing && !isHistorical && fileInputRef.current?.click()}
+                      onKeyDown={(e) => {
+                        if (!isEditing || isHistorical) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      tabIndex={isEditing && !isHistorical ? 0 : -1}
+                      role={isEditing && !isHistorical ? 'button' : undefined}
+                      aria-label={isEditing && !isHistorical ? 'Upload profile picture' : undefined}
+                      className={`w-32 h-32 md:w-40 md:h-40 rounded-full border-2 bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm ${isEditing && !isHistorical ? 'cursor-pointer border-dashed border-blue-300 outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' : 'border-gray-200'}`}
+                    >
                       {profilePicturePreview ? (
                         <img
                           src={profilePicturePreview}
@@ -327,15 +488,16 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       className="hidden"
                     />
 
-                    <button
-                      onClick={() => isEditing && !isHistorical && fileInputRef.current?.click()}
-                      aria-disabled={!isEditing || isHistorical}
-                      disabled={!isEditing || isHistorical}
-                      className={`absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors disabled:cursor-not-allowed ${isEditing && !isHistorical ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-600 opacity-80'}`}
-                      title={isHistorical ? 'Historical school years are read-only' : isEditing ? 'Upload profile picture' : 'Enable edit to upload'}
-                    >
-                      <Upload size={16} />
-                    </button>
+                    {isEditing && !isHistorical && (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 left-8 md:left-10 transform translate-y-1/2 rounded-full p-2 shadow-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                        title="Upload profile picture"
+                        type="button"
+                      >
+                        <Upload size={16} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Student Information */}
@@ -577,33 +739,39 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               {/* Student Documents Section */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Documents</h3>
-                <div className="space-y-4">
-                  {/* Documents List */}
-                  {documents.length > 0 && (
-                    <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                      {documents.map((doc, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 hover:bg-gray-50"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {documentSlots.map((doc, index) => (
+                    <div key={doc.label} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <div className="mb-3">
+                        <p className="text-sm font-semibold text-gray-900">{doc.label}</p>
+                      </div>
+
+                      {doc.fileId || doc.file ? (
+                        <div className="space-y-3">
+                          <div className="rounded-md bg-white border border-gray-200 p-3">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {doc.fileName || doc.label}
+                            </p>
                             <p className="text-xs text-gray-500">
-                              {new Date(doc.uploadedAt).toLocaleDateString()}
+                              {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Saved document'}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {doc.fileId && (
+
+                          <div className="flex items-center justify-between gap-2">
+                            {doc.fileId ? (
                               <a
                                 href={`/api/download-file/${doc.fileId}`}
-                                download={doc.fileName}
+                                download={doc.fileName || doc.label}
                                 className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                               >
                                 Download
                               </a>
+                            ) : (
+                              <span className="text-xs text-green-700 font-medium">Pending save</span>
                             )}
                             {isEditing && !isHistorical && (
                               <button
+                                type="button"
                                 onClick={() => removeDocument(index)}
                                 className="text-red-600 hover:text-red-700 font-medium transition-colors"
                               >
@@ -612,38 +780,24 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                             )}
                           </div>
                         </div>
-                      ))}
+                      ) : (
+                        <>
+                          {isEditing && !isHistorical ? (
+                            <FileUpload
+                              onUpload={(file) => handleDocumentChange(index, file)}
+                              label={`Upload ${doc.label}`}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                            />
+                          ) : (
+                            <div className="w-full rounded-lg border-2 border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-500">
+                              <Upload size={24} className="mx-auto mb-2 text-gray-400" />
+                              <p>{isEditing ? 'Upload disabled for historical records' : 'No file'}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-                  )}
-
-                  {/* Upload Documents */}
-                  {isEditing && !isHistorical && (
-                    <>
-                      <input
-                        type="file"
-                        ref={documentInputRef}
-                        multiple
-                        onChange={handleDocumentChange}
-                        className="hidden"
-                      />
-                      <button
-                        onClick={() => documentInputRef.current?.click()}
-                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                      >
-                        <Upload size={24} className="mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm font-medium text-gray-700">Upload Documents</p>
-                        <p className="text-xs text-gray-500">
-                          Drag and drop or click to select files
-                        </p>
-                      </button>
-                    </>
-                  )}
-
-                  {documents.length === 0 && !isEditing && (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      No documents uploaded yet
-                    </p>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>

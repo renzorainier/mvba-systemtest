@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export default function FileUpload({
   onUpload,
@@ -9,39 +9,78 @@ export default function FileUpload({
   label = "Upload File",
   endpoint = "/api/upload-file",
   compressEndpoint = "/api/compress",
+  compress = false,
+  maxSizeBytes = 16 * 1024 * 1024,
 }) {
+  const inputId = useId();
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState(null);
   const [isCompressing, setIsCompressing] = useState(false);
 
+  const acceptList = String(accept || '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  const acceptsAny = acceptList.length === 0 || acceptList.includes('*') || acceptList.includes('*/*');
+
+  const isFileAllowed = (file) => {
+    if (acceptsAny) {
+      return true;
+    }
+
+    const fileName = file.name.toLowerCase();
+    const mimeType = (file.type || '').toLowerCase();
+
+    return acceptList.some((rule) => {
+      if (rule === 'image/*') {
+        return mimeType.startsWith('image/');
+      }
+
+      if (rule.endsWith('/*')) {
+        return mimeType.startsWith(rule.slice(0, -1));
+      }
+
+      if (rule.startsWith('.')) {
+        return fileName.endsWith(rule);
+      }
+
+      return mimeType === rule;
+    });
+  };
+
+  const getAllowedMessage = () => {
+    if (acceptList.includes('image/*')) {
+      return 'Only image files are allowed.';
+    }
+
+    if (acceptList.length > 0) {
+      return `Allowed file types: ${acceptList.join(', ')}`;
+    }
+
+    return 'Only PDF, JPG, and PNG files are allowed.';
+  };
+
 
   function handleFileSelect(file) {
     if (!file) return;
-    const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
-    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-    const isAllowedType = allowedExtensions.includes(fileExtension) || 
-                          file.type === 'application/pdf' || 
-                          file.type === 'image/jpeg' || 
-                          file.type === 'image/png';
 
-    if (!isAllowedType) {
-      setError("Only PDF, JPG, and PNG files are allowed.");
+    if (!isFileAllowed(file)) {
+      setError(getAllowedMessage());
       return;
     }
 
-    // 16MB file limit
-    const MAX_SIZE = 16 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      setError("File size must be less than 16MB.");
+    if (file.size > maxSizeBytes) {
+      setError(`File size must be less than ${Math.ceil(maxSizeBytes / (1024 * 1024))}MB.`);
       return;
     }
 
     setSelectedFile(file);
     setError("");
     
-    // Compress file if onCompress callback is provided
-    if (onCompress) {
+    // Compress file when requested
+    if (compress || onCompress) {
       compressAndUpload(file);
     } else if (onUpload) {
       // Call onUpload callback with the File object if no compression
@@ -99,7 +138,7 @@ export default function FileUpload({
   return (
     <div className="flex flex-col gap-2">
       <label
-        htmlFor="image-input"
+        htmlFor={inputId}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -146,13 +185,7 @@ export default function FileUpload({
           </>
         )}
       </label>
-      <input
-        id="image-input"
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        className="sr-only"
-        onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-      />
+      <input id={inputId} type="file" accept={accept} className="sr-only" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} />
     </div>
   );
 }
