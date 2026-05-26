@@ -384,7 +384,7 @@ export default function AcademicsPage() {
                       const OutcomeIcon = outcome.icon;
 
                       return (
-                        <tr key={student._id} className="hover:bg-slate-50/70">
+                        <tr key={`${String(student.enrollmentId || student._id)}-${String(student.enrollmentSchoolYear || '')}-${String(student.enrollmentSectionId || '')}`} className="hover:bg-slate-50/70">
                           <td className="px-4 py-4 text-sm font-semibold text-slate-900">
                             {student.firstName} {student.lastName}
                           </td>
