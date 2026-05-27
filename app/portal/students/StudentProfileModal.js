@@ -296,7 +296,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
       if (profilePicture) {
         try {
-          const uploadedId = await uploadToGridFS(profilePicture, student._id, 'student-profile');
+          const uploadedId = await uploadToGridFS(profilePicture, student?._id, 'student-profile');
           updateData.append('preuploadedProfilePictureId', uploadedId);
         } catch (err) {
           console.error('Profile picture upload error:', err);
@@ -312,7 +312,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
         if (doc.file) {
           try {
             const compressed = await compressFile(doc.file);
-            const fileId = await uploadToGridFS(compressed, student._id, 'student-document');
+            const fileId = await uploadToGridFS(compressed, student?._id, 'student-document');
             preuploadedDocuments.push({
               slotIndex: i,
               fieldKey: doc.fieldKey,
@@ -779,6 +779,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                               </button>
                             )}
                           </div>
+
                         </div>
                       ) : (
                         <>
