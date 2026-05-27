@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { getGridFSBucket } from '@/lib/gridfs';
-import { prepareCompressedUpload } from '@/lib/file-compression';
 import { Readable } from 'stream';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
@@ -39,7 +38,6 @@ export async function POST(request) {
     const file = formData.get('file');
     const relatedRecordId = formData.get('relatedRecordId');
     const relatedRecordType = formData.get('relatedRecordType');
-    const shouldCompress = formData.get('compress') === 'true';
     
     if (!file) {
       return NextResponse.json(
@@ -48,37 +46,39 @@ export async function POST(request) {
       );
     }
 
-    let uploadBuffer = Buffer.from(await file.arrayBuffer());
-    let uploadFilename = file.name;
-    let uploadMimeType = file.type;
-    let originalSize = uploadBuffer.length;
-    let compressedSize = uploadBuffer.length;
-    let wasCompressed = false;
-
-    if (shouldCompress) {
-      try {
-        const prepared = await prepareCompressedUpload(file);
-        uploadBuffer = prepared.buffer;
-        uploadFilename = prepared.filename;
-        uploadMimeType = prepared.contentType;
-        originalSize = prepared.originalSize;
-        compressedSize = prepared.compressedSize;
-        wasCompressed = prepared.compressed;
-      } catch (compressionError) {
-        console.warn('Compression failed, using original file:', compressionError.message);
+    // Validate user role for specific record types
+    if (relatedRecordType) {
+      const recordType = String(relatedRecordType).toLowerCase();
+      const allowedRoles = ROLE_RULES[recordType];
+      
+      if (allowedRoles) {
+        if (!allowedRoles.includes(user.role)) {
+          return NextResponse.json(
+            { success: false, error: `User role '${user.role}' cannot upload files for type '${relatedRecordType}'` },
+            { status: 403 }
+          );
+        }
       }
     }
 
     const bucket = await getGridFSBucket();
+    const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Validate and normalize MIME type
+    const mimeType = file.type || 'application/octet-stream';
+    if (mimeType && !/^[\w\-]+\/[\w\-\+\.]+$/.test(mimeType)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid MIME type' },
+        { status: 400 }
+      );
+    }
     
     // Create upload stream
-    const uploadStream = bucket.openUploadStream(uploadFilename, {
+    const uploadStream = bucket.openUploadStream(file.name, {
       metadata: {
         originalName: file.name,
-        mimeType: uploadMimeType,
-        originalSize,
-        compressedSize,
-        compressed: wasCompressed,
+        mimeType: mimeType,
+        size: file.size,
         uploadedAt: new Date(),
         uploadedByName: user.name || null,
         uploadedByRole: user.role || null,
@@ -88,7 +88,7 @@ export async function POST(request) {
     });
 
     // Convert buffer to stream and pipe to GridFS
-    const readable = Readable.from([uploadBuffer]);
+    const readable = Readable.from([buffer]);
     
     return new Promise((resolve) => {
       readable.pipe(uploadStream)
@@ -107,11 +107,9 @@ export async function POST(request) {
               {
                 success: true,
                 fileId: uploadStream.id.toString(),
-                fileName: uploadFilename,
-                fileType: uploadMimeType,
-                fileSize: compressedSize,
-                originalSize,
-                compressed: wasCompressed,
+                fileName: file.name,
+                fileType: mimeType,
+                fileSize: file.size,
               },
               { status: 201 }
             )

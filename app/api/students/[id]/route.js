@@ -10,7 +10,9 @@ import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSetting
 import { calculateTotalFromTuitionPlans, createDefaultTuitionPlans, getTuitionAmountForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import { NextResponse } from 'next/server';
 import { getGridFSBucket } from '@/lib/gridfs';
+import { prepareCompressedUpload } from '@/lib/file-compression';
 import mongoose from 'mongoose';
+import { Readable } from 'stream';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
@@ -128,29 +130,35 @@ export async function PUT(request, { params }) {
 
     const defaultTotal = await getDefaultTotalForGrade(gradeLevel);
     
-    // Handle profile picture upload via centralized endpoint
+    // Handle profile picture upload
     let profilePictureUrl = existingStudent.profilePicture;
     const profilePictureFile = formData.get('profilePicture');
     if (profilePictureFile && typeof profilePictureFile === 'object') {
       try {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', profilePictureFile);
-        uploadFormData.append('compress', 'true');
-        uploadFormData.append('relatedRecordId', id);
-        uploadFormData.append('relatedRecordType', 'student-profile');
-
-        const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/upload-file`, {
-          method: 'POST',
-          body: uploadFormData,
-          headers: request.headers,
+        const preparedProfilePicture = await prepareCompressedUpload(profilePictureFile);
+        const bucket = await getGridFSBucket();
+        const uploadStream = bucket.openUploadStream(preparedProfilePicture.filename, {
+          metadata: {
+            studentId: id,
+            originalName: preparedProfilePicture.originalName,
+            mimeType: preparedProfilePicture.contentType,
+            originalSize: preparedProfilePicture.originalSize,
+            compressedSize: preparedProfilePicture.compressedSize,
+            compressed: preparedProfilePicture.compressed,
+            uploadedAt: new Date(),
+          },
         });
 
-        const uploadData = await uploadResponse.json();
-        if (!uploadResponse.ok) {
-          throw new Error(uploadData.error || 'Upload failed');
-        }
+        const readable = Readable.from([preparedProfilePicture.buffer]);
+        const fileId = await new Promise((resolve, reject) => {
+          readable.pipe(uploadStream)
+            .on('error', reject)
+            .on('finish', () => {
+              resolve(uploadStream.id.toString());
+            });
+        });
 
-        profilePictureUrl = `/api/download-file/${uploadData.fileId}`;
+        profilePictureUrl = `/api/download-file/${fileId}`;
       } catch (fileError) {
         console.error('Profile picture upload error:', fileError);
         return NextResponse.json({ success: false, error: 'Failed to upload profile picture' }, { status: 500 });
@@ -201,38 +209,46 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Handle new uploaded files via centralized endpoint
+    // Handle new uploaded files in the form and assign to fields by label
     try {
+      const bucket = await getGridFSBucket();
       for (let i = 0; i < 10; i++) {
         const docFile = formData.get(`documents[${i}]`);
         const docLabel = body[`documentNames[${i}]`];
         const docFieldKey = body[`documentFieldKeys[${i}]`];
 
         if (docFile && typeof docFile === 'object' && docLabel) {
-          const uploadFormData = new FormData();
-          uploadFormData.append('file', docFile);
-          uploadFormData.append('compress', 'true');
-          uploadFormData.append('relatedRecordId', id);
-          uploadFormData.append('relatedRecordType', 'student-document');
+          const preparedDocument = await prepareCompressedUpload(docFile);
+          const filename = preparedDocument.filename;
 
-          const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/upload-file`, {
-            method: 'POST',
-            body: uploadFormData,
-            headers: request.headers,
+          const uploadStream = bucket.openUploadStream(filename, {
+            metadata: {
+              studentId: id,
+              originalName: preparedDocument.originalName,
+              mimeType: preparedDocument.contentType,
+              originalSize: preparedDocument.originalSize,
+              compressedSize: preparedDocument.compressedSize,
+              compressed: preparedDocument.compressed,
+              uploadedAt: new Date(),
+            },
           });
 
-          const uploadData = await uploadResponse.json();
-          if (!uploadResponse.ok) {
-            throw new Error(uploadData.error || `Document upload failed at slot ${i}`);
-          }
+          const readable = Readable.from([preparedDocument.buffer]);
+          const fileId = await new Promise((resolve, reject) => {
+            readable.pipe(uploadStream)
+              .on('error', reject)
+              .on('finish', () => {
+                resolve(uploadStream.id.toString());
+              });
+          });
 
           const newDocEntry = {
-            fileId: uploadData.fileId,
-            fileName: uploadData.fileName,
+            fileId,
+            fileName: filename,
             label: docLabel,
             uploadedAt: new Date(),
           };
-          const field = docFieldKey || mapLabelToField[docLabel];
+          const field = docFieldKey || mapLabelToField[filename];
           if (field) {
             docMap[field] = newDocEntry;
           }

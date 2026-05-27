@@ -16,9 +16,11 @@ import {
   getTuitionAmountForGrade,
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
+import { prepareCompressedUpload } from '@/lib/file-compression';
 import { getGridFSBucket } from '@/lib/gridfs';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
+import { Readable } from 'stream';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -161,56 +163,63 @@ export async function POST(request) {
     if (formData) {
       const profilePictureFile = formData.get('profilePicture');
       if (profilePictureFile && typeof profilePictureFile === 'object' && typeof profilePictureFile.arrayBuffer === 'function') {
-        try {
-          const uploadFormData = new FormData();
-          uploadFormData.append('file', profilePictureFile);
-          uploadFormData.append('compress', 'true');
-          uploadFormData.append('relatedRecordType', 'student-profile');
+        const preparedProfilePicture = await prepareCompressedUpload(profilePictureFile);
+        const bucket = await getGridFSBucket();
+        const uploadStream = bucket.openUploadStream(preparedProfilePicture.filename, {
+          metadata: {
+            originalName: preparedProfilePicture.originalName,
+            mimeType: preparedProfilePicture.contentType,
+            originalSize: preparedProfilePicture.originalSize,
+            compressedSize: preparedProfilePicture.compressedSize,
+            compressed: preparedProfilePicture.compressed,
+            uploadedAt: new Date(),
+          },
+        });
 
-          const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/upload-file`, {
-            method: 'POST',
-            body: uploadFormData,
-            headers: request.headers,
-          });
+        const readable = Readable.from([preparedProfilePicture.buffer]);
+        const fileId = await new Promise((resolve, reject) => {
+          readable.pipe(uploadStream)
+            .on('error', reject)
+            .on('finish', () => {
+              resolve(uploadStream.id.toString());
+            });
+        });
 
-          const uploadData = await uploadResponse.json();
-          if (!uploadResponse.ok) {
-            throw new Error(uploadData.error || 'Profile picture upload failed');
-          }
-
-          profilePictureUrl = `/api/download-file/${uploadData.fileId}`;
-        } catch (fileError) {
-          console.error('Profile picture upload error:', fileError);
-          return NextResponse.json({ success: false, error: 'Failed to upload profile picture' }, { status: 500 });
-        }
+        profilePictureUrl = `/api/download-file/${fileId}`;
       }
 
       try {
+        const bucket = await getGridFSBucket();
         for (let i = 0; i < 10; i++) {
           const docFile = formData.get(`documents[${i}]`);
           const docName = body[`documentNames[${i}]`];
           const docFieldKey = body[`documentFieldKeys[${i}]`];
 
           if (docFile && typeof docFile === 'object' && typeof docFile.arrayBuffer === 'function' && docName) {
-            const uploadFormData = new FormData();
-            uploadFormData.append('file', docFile);
-            uploadFormData.append('compress', 'true');
-            uploadFormData.append('relatedRecordType', 'student-document');
-
-            const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/upload-file`, {
-              method: 'POST',
-              body: uploadFormData,
-              headers: request.headers,
+            const preparedDocument = await prepareCompressedUpload(docFile);
+            const uploadStream = bucket.openUploadStream(preparedDocument.filename, {
+              metadata: {
+                originalName: preparedDocument.originalName,
+                mimeType: preparedDocument.contentType,
+                originalSize: preparedDocument.originalSize,
+                compressedSize: preparedDocument.compressedSize,
+                compressed: preparedDocument.compressed,
+                uploadedAt: new Date(),
+              },
             });
 
-            const uploadData = await uploadResponse.json();
-            if (!uploadResponse.ok) {
-              throw new Error(uploadData.error || `Document upload failed at slot ${i}`);
-            }
+            const readable = Readable.from([preparedDocument.buffer]);
+            const fileId = await new Promise((resolve, reject) => {
+              readable.pipe(uploadStream)
+                .on('error', reject)
+                .on('finish', () => {
+                  resolve(uploadStream.id.toString());
+                });
+            });
 
             documents.push({
-              fileId: uploadData.fileId,
-              fileName: uploadData.fileName,
+              fileId,
+              fileName: preparedDocument.filename,
               label: docName,
               fieldKey: docFieldKey || null,
               uploadedAt: new Date(),
