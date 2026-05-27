@@ -4,6 +4,7 @@ import { getGridFSBucket } from '@/lib/gridfs';
 import { Readable } from 'stream';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
+import { checkFileOverwrite, logFileAudit } from '@/lib/file-audit';
 
 // Define role-based access rules for uploads (must match download-file route)
 const ROLE_RULES = {
@@ -73,6 +74,15 @@ export async function POST(request) {
       );
     }
     
+    // Check if this is an update (file with same relatedRecordId already exists)
+    let action = 'upload';
+    if (relatedRecordId && relatedRecordType) {
+      const existingFile = await checkFileOverwrite(relatedRecordId, relatedRecordType);
+      if (existingFile) {
+        action = 'update';
+      }
+    }
+    
     // Create upload stream
     const uploadStream = bucket.openUploadStream(file.name, {
       metadata: {
@@ -101,7 +111,26 @@ export async function POST(request) {
             )
           );
         })
-        .on('finish', () => {
+        .on('finish', async () => {
+          try {
+            // Log the file operation to audit trail
+            await logFileAudit({
+              userId: user.id || null,
+              userName: user.name || 'Unknown',
+              userRole: user.role || 'Unknown',
+              action,
+              fileName: uploadFilename,
+              originalFileName: file.name,
+              relatedRecordId: relatedRecordId || null,
+              relatedRecordType: relatedRecordType ? String(relatedRecordType).toLowerCase() : null,
+              fileSize: compressedSize,
+              gridfsId: uploadStream.id,
+            });
+          } catch (auditError) {
+            console.error('Failed to log file audit:', auditError);
+            // Don't fail the upload if audit logging fails
+          }
+
           resolve(
             NextResponse.json(
               {
