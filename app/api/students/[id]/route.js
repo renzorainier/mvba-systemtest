@@ -14,6 +14,7 @@ import { prepareCompressedUpload } from '@/lib/file-compression';
 import mongoose from 'mongoose';
 import { Readable } from 'stream';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -73,6 +74,7 @@ export async function PATCH(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
+    const user = getAuthenticatedUser(request) || {};
     const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
 
     if (!schoolYearAccess.allowed) {
@@ -146,6 +148,7 @@ export async function PUT(request, { params }) {
             compressedSize: preparedProfilePicture.compressedSize,
             compressed: preparedProfilePicture.compressed,
             uploadedAt: new Date(),
+            uploadedByName: user.name || null,
           },
         });
 
@@ -230,6 +233,7 @@ export async function PUT(request, { params }) {
               compressedSize: preparedDocument.compressedSize,
               compressed: preparedDocument.compressed,
               uploadedAt: new Date(),
+              uploadedByName: user.name || null,
             },
           });
 
@@ -247,10 +251,15 @@ export async function PUT(request, { params }) {
             fileName: filename,
             label: docLabel,
             uploadedAt: new Date(),
+            uploadedBy: user.name || '',
           };
           const field = docFieldKey || mapLabelToField[filename];
           if (field) {
-            docMap[field] = newDocEntry;
+            docMap[field] = {
+              ...(docMap[field] || {}),
+              ...newDocEntry,
+              uploadedBy: user.name || docMap[field]?.uploadedBy || '',
+            };
           }
         }
       }
@@ -267,7 +276,12 @@ export async function PUT(request, { params }) {
         if (pd && pd.fileId) {
           const field = pd.fieldKey || mapLabelToField[pd.label];
           if (field) {
-            docMap[field] = { fileId: pd.fileId, fileName: pd.fileName || pd.label, uploadedAt: pd.uploadedAt ? new Date(pd.uploadedAt) : new Date() };
+            docMap[field] = {
+              fileId: pd.fileId,
+              fileName: pd.fileName || pd.label,
+              uploadedAt: pd.uploadedAt ? new Date(pd.uploadedAt) : new Date(),
+              uploadedBy: user.name || pd.uploadedBy || '',
+            };
           }
         }
       });

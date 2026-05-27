@@ -4,6 +4,7 @@ const fileSubSchema = new mongoose.Schema({
   fileId: { type: mongoose.Schema.Types.ObjectId, required: true },
   fileName: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
+  uploadedBy: { type: String, default: '' },
 }, { _id: false });
 
 const StudentSchema = new mongoose.Schema({

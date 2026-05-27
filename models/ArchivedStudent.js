@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
 
+const fileSubSchema = new mongoose.Schema({
+  fileId: mongoose.Schema.Types.ObjectId,
+  fileName: String,
+  uploadedAt: { type: Date, default: Date.now },
+  uploadedBy: { type: String, default: '' },
+}, { _id: false });
+
 const ArchivedStudentSchema = new mongoose.Schema({
   firstName: { type: String, required: [true, 'First name is required'] },
   lastName: { type: String, required: [true, 'Last name is required'] },
@@ -24,6 +31,9 @@ const ArchivedStudentSchema = new mongoose.Schema({
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
   profilePicture: { type: String, required: false, default: null },
+  birthCertificate: { type: fileSubSchema, required: false, default: null },
+  reportCard: { type: fileSubSchema, required: false, default: null },
+  medicalRecord: { type: fileSubSchema, required: false, default: null },
   archiveType: {
     type: String,
     enum: ['manual', 'rollover'],
@@ -31,9 +41,12 @@ const ArchivedStudentSchema = new mongoose.Schema({
   },
   documents: [
     {
+      label: String,
+      fieldKey: String,
       fileId: mongoose.Schema.Types.ObjectId,
       fileName: String,
       uploadedAt: { type: Date, default: Date.now },
+      uploadedBy: { type: String, default: '' },
     },
   ],
   archivedAt: { type: Date, default: Date.now },

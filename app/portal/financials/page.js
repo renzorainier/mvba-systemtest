@@ -338,6 +338,9 @@ export default function Financials() {
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                       Proof of Payment
                     </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Transaction Receipt
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -391,7 +394,10 @@ export default function Financials() {
                             ) : (
                               <span className="text-gray-400">—</span>
                             )}
-
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-3">
                             <button
                               onClick={() => printReceipt(record)}
                               className="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1 rounded text-sm font-medium text-slate-700"
@@ -404,13 +410,13 @@ export default function Financials() {
                     ))
                   ) : loading ? (
                     <tr>
-                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
                         Loading payment records...
                       </td>
                     </tr>
                   ) : (
                     <tr>
-                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
                         No payment records found.
                       </td>
                     </tr>

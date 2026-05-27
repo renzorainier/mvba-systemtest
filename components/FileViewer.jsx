@@ -7,6 +7,8 @@ export default function FileViewer({ fileId }) {
   const [fileData, setFileData] = useState(null);
   const [fileType, setFileType] = useState(null);
   const [fileName, setFileName] = useState("");
+  const [uploadedBy, setUploadedBy] = useState("");
+  const [uploadedAt, setUploadedAt] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scale, setScale] = useState(100);
@@ -24,7 +26,6 @@ export default function FileViewer({ fileId }) {
         setLoading(true);
         setError("");
 
-        console.log("Fetching file with ID:", fileId);
         const response = await fetch(`/api/download-file/${fileId}?inline=true`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -36,6 +37,8 @@ export default function FileViewer({ fileId }) {
         const dispositionHeader = response.headers.get("Content-Disposition") || "";
         const nameMatch = dispositionHeader.match(/filename="?([^";]+)"?/i);
         const name = nameMatch?.[1] || "file";
+        const uploadedByHeader = response.headers.get("X-Uploaded-By") || "";
+        const uploadedAtHeader = response.headers.get("X-Uploaded-At") || "";
 
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
@@ -43,6 +46,8 @@ export default function FileViewer({ fileId }) {
         setFileData(url);
         setFileType(contentType);
         setFileName(name);
+        setUploadedBy(uploadedByHeader);
+        setUploadedAt(uploadedAtHeader);
       } catch (err) {
         console.error("FileViewer error:", err);
         setError(err.message || "Failed to load file");
@@ -81,13 +86,23 @@ export default function FileViewer({ fileId }) {
 
   const isImage = fileType?.startsWith("image/");
   const isPdf = fileType === "application/pdf";
+  const uploadedAtLabel = uploadedAt
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(uploadedAt))
+    : "Unknown";
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-zinc-700 truncate">{fileName}</p>
-          <p className="text-xs text-zinc-500">{fileType}</p>
+          <p className="text-s text-zinc-500 mt-1">
+            Uploaded by {uploadedBy || 'Unknown'}
+          </p>
+          <p className="text-s text-zinc-500 mt-1">
+            Uploaded on {uploadedAtLabel}
+          </p>
         </div>
       </div>
 

@@ -116,6 +116,8 @@ export async function GET(request, { params }) {
           const buffer = Buffer.concat(chunks);
           const fileName = fileDoc.metadata?.originalName || fileDoc.filename;
           const mimeType = fileDoc.metadata?.mimeType || 'application/octet-stream';
+          const uploadedBy = fileDoc.metadata?.uploadedByName || fileDoc.metadata?.uploadedBy || '';
+          const uploadedAt = fileDoc.metadata?.uploadedAt ? new Date(fileDoc.metadata.uploadedAt).toISOString() : '';
           
           resolve(
             new NextResponse(buffer, {
@@ -123,6 +125,8 @@ export async function GET(request, { params }) {
                 'Content-Type': mimeType,
                 'Content-Disposition': `attachment; filename="${fileName}"`,
                 'Content-Length': buffer.length,
+                'X-Uploaded-By': uploadedBy,
+                'X-Uploaded-At': uploadedAt,
               },
             })
           );

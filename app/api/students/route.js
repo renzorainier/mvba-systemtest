@@ -21,6 +21,39 @@ import { getGridFSBucket } from '@/lib/gridfs';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 import { Readable } from 'stream';
+import { getAuthenticatedUser } from '@/lib/auth';
+import mongoose from 'mongoose';
+
+const DOCUMENT_FIELDS = ['birthCertificate', 'reportCard', 'medicalRecord'];
+
+async function backfillUploadedByFromGridFS(student) {
+  const plainStudent = student?.toObject ? student.toObject() : student;
+
+  if (!plainStudent) {
+    return plainStudent;
+  }
+
+  const bucket = await getGridFSBucket();
+
+  await Promise.all(
+    DOCUMENT_FIELDS.map(async (field) => {
+      const doc = plainStudent[field];
+      if (!doc?.fileId || doc.uploadedBy) {
+        return;
+      }
+
+      try {
+        const files = await bucket.find({ _id: new mongoose.Types.ObjectId(doc.fileId) }).toArray();
+        const metadata = files[0]?.metadata || {};
+        doc.uploadedBy = metadata.uploadedByName || metadata.uploadedBy || '';
+      } catch {
+        doc.uploadedBy = '';
+      }
+    })
+  );
+
+  return plainStudent;
+}
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -91,18 +124,19 @@ export async function GET(request) {
       await Student.bulkWrite(updates);
     }
 
-    const hydratedStudents = students.map((student) => {
-      if (student.totalEstimatedCost === undefined || student.remainingBalance === undefined) {
-        const gradeTotal = getTuitionAmountForGrade(tuitionPlans, student.gradeLevel, defaultTotal);
-        return {
-          ...student.toObject(),
-          totalEstimatedCost: gradeTotal,
-          remainingBalance: gradeTotal,
-        };
-      }
+    const hydratedStudents = await Promise.all(
+      students.map(async (student) => {
+        const baseStudent = student.totalEstimatedCost === undefined || student.remainingBalance === undefined
+          ? {
+              ...student.toObject(),
+              totalEstimatedCost: getTuitionAmountForGrade(tuitionPlans, student.gradeLevel, defaultTotal),
+              remainingBalance: getTuitionAmountForGrade(tuitionPlans, student.gradeLevel, defaultTotal),
+            }
+          : student;
 
-      return student;
-    });
+        return backfillUploadedByFromGridFS(baseStudent);
+      })
+    );
 
     return NextResponse.json({ success: true, data: hydratedStudents }, { status: 200 });
   } catch (error) {
@@ -113,6 +147,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await dbConnect();
+    const user = getAuthenticatedUser(request) || {};
     const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
 
     if (!schoolYearAccess.allowed) {
@@ -173,6 +208,7 @@ export async function POST(request) {
             compressedSize: preparedProfilePicture.compressedSize,
             compressed: preparedProfilePicture.compressed,
             uploadedAt: new Date(),
+            uploadedByName: user.name || null,
           },
         });
 
@@ -205,6 +241,7 @@ export async function POST(request) {
                 compressedSize: preparedDocument.compressedSize,
                 compressed: preparedDocument.compressed,
                 uploadedAt: new Date(),
+                uploadedByName: user.name || null,
               },
             });
 
@@ -223,6 +260,7 @@ export async function POST(request) {
               label: docName,
               fieldKey: docFieldKey || null,
               uploadedAt: new Date(),
+              uploadedBy: user.name || '',
             });
           }
         }
@@ -257,6 +295,12 @@ export async function POST(request) {
     parsedPreuploaded.forEach((p) => {
       const field = p.fieldKey || mapLabelToField[p.label];
       if (field) docMap[field] = { fileId: p.fileId, fileName: p.fileName, uploadedAt: p.uploadedAt };
+    });
+
+    Object.keys(docMap).forEach((field) => {
+      if (docMap[field] && !docMap[field].uploadedBy) {
+        docMap[field].uploadedBy = user.name || '';
+      }
     });
 
     const studentData = {

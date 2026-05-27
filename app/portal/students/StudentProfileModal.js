@@ -37,6 +37,26 @@ const createEmptyFormData = () => ({
   parentGuardianContactNumber: '',
 });
 
+const formatUploadDateTime = (value) => {
+  if (!value) {
+    return 'Saved document';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+};
+
+const getStudentDocument = (studentRecord, fieldKey) => {
+  const directDocument = studentRecord?.[fieldKey];
+  if (directDocument) {
+    return directDocument;
+  }
+
+  return studentRecord?.documents?.find((document) => document?.fieldKey === fieldKey || document?.label === DOCUMENT_FIELDS.find((entry) => entry.fieldKey === fieldKey)?.label) || null;
+};
+
 export default function StudentProfileModal({ open, onClose, student, onStudentUpdate, onArchived, isHistorical = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(createEmptyFormData());
@@ -97,7 +117,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
     if (student) {
       // Build documents list from fixed student fields
       const existingDocuments = DOCUMENT_FIELDS.map(({ label, fieldKey }) => {
-        const doc = student[fieldKey];
+        const doc = getStudentDocument(student, fieldKey);
         return {
           label,
           fieldKey,
@@ -105,6 +125,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
           fileId: doc?.fileId || null,
           fileName: doc?.fileName || '',
           uploadedAt: doc?.uploadedAt || '',
+          uploadedBy: doc?.uploadedBy || '',
         };
       });
 
@@ -242,6 +263,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               fileName: file.name,
               uploadedAt: new Date().toISOString(),
               fileId: doc.fileId || null,
+              uploadedBy: doc.uploadedBy || '',
             }
           : doc
       )
@@ -265,6 +287,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               fileId: null,
               fileName: '',
               uploadedAt: '',
+              uploadedBy: '',
             }
           : doc
       )
@@ -320,6 +343,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               fileId,
               fileName: doc.fileName || doc.label,
               uploadedAt: new Date().toISOString(),
+              uploadedBy: doc.uploadedBy || '',
             });
           } catch (err) {
             console.error('Document upload error:', err);
@@ -752,8 +776,11 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                             <p className="text-sm font-medium text-gray-900 truncate">
                               {doc.fileName || doc.label}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Saved document'}
+                            <p className="text-xs text-gray-500 mt-1">
+                              Uploaded on {formatUploadDateTime(doc.uploadedAt)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Uploaded by {doc.uploadedBy || doc.uploadedByName || 'Unknown'}
                             </p>
                           </div>
 
