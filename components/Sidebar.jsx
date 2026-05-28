@@ -171,9 +171,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
   return (
     <aside className="w-72 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 shadow-sm z-50">
       <div className="h-16 bg-blue-900 flex items-center px-6 gap-4">
-        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-sm">
-            MVBA
-        </div>
+        <img src="/logo.png" alt="MVBA Logo" className="w-10 h-10 rounded-full object-cover border-2 border-white" />
         <h1 className="text-white font-bold text-xl tracking-wide">
           {userRole} Portal
         </h1>
