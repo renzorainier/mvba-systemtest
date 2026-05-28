@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
+import { Search, Plus, X } from 'lucide-react';
 import AddSectionsModal from './addSectionModal';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
@@ -13,6 +14,11 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [sectionStudents, setSectionStudents] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState('');
 
   const openModal = () => {
     if (isHistorical) {
@@ -31,6 +37,45 @@ export default function Dashboard() {
     }
     setEditingSection(section);
     setIsModalOpen(true);
+  };
+
+  const closeRosterModal = () => {
+    setIsRosterModalOpen(false);
+    setSelectedSection(null);
+    setSectionStudents([]);
+    setRosterError('');
+  };
+
+  const openRosterModal = async (section) => {
+    setSelectedSection(section);
+    setIsRosterModalOpen(true);
+    setRosterLoading(true);
+    setRosterError('');
+    setSectionStudents([]);
+
+    try {
+      const response = await fetch('/api/enrollments');
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load section students');
+      }
+
+      const students = (data.data || [])
+        .filter((enrollment) => enrollment.sectionId === section.sectionId)
+        .sort((a, b) => {
+          const aName = `${a.studentName || ''}`.trim().toLowerCase();
+          const bName = `${b.studentName || ''}`.trim().toLowerCase();
+          return aName.localeCompare(bName);
+        });
+
+      setSectionStudents(students);
+    } catch (error) {
+      console.error('Failed to load section students:', error);
+      setRosterError(error.message || 'Failed to load section students');
+    } finally {
+      setRosterLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -189,9 +234,13 @@ export default function Dashboard() {
                           {section.roomNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="text-sm text-gray-700 font-medium">
+                          <button
+                            type="button"
+                            onClick={() => openRosterModal(section)}
+                            className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 hover:text-blue-900 hover:shadow-md cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+                          >
                             {`${section._studentCount ?? 0}/15`}
-                          </div>
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
@@ -250,6 +299,81 @@ export default function Dashboard() {
         </div>
         {/* Add Sections Modal */}
         <AddSectionsModal isOpen={isModalOpen} onClose={closeModal} editingSection={editingSection} isHistorical={isHistorical} />
+
+        <Dialog open={isRosterModalOpen} onClose={closeRosterModal} className="relative z-50">
+          <DialogBackdrop className="fixed inset-0 bg-slate-900/50" />
+
+          <div className="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
+            <div className="flex min-h-full items-center justify-center">
+              <DialogPanel className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+                  <div>
+                    <DialogTitle as="h2" className="text-xl font-bold text-slate-900">
+                      Section Students
+                    </DialogTitle>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selectedSection ? `${selectedSection.sectionName} • ${selectedSection.sectionId}` : 'Selected section roster'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeRosterModal}
+                    className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+                  {rosterLoading ? (
+                    <div className="py-10 text-center text-sm text-slate-500">
+                      Loading section students...
+                    </div>
+                  ) : rosterError ? (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {rosterError}
+                    </div>
+                  ) : sectionStudents.length > 0 ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200">
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Student</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">LRN</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Grade Level</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {sectionStudents.map((enrollment) => (
+                            <tr key={enrollment._id} className="hover:bg-slate-50/70">
+                              <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                                {enrollment.studentName || 'Unnamed student'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {enrollment.learnersReferenceNumber || '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {enrollment.studentGradeLevel || '—'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {enrollment.status || '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                      No students are enrolled in this section.
+                    </div>
+                  )}
+                </div>
+              </DialogPanel>
+            </div>
+          </div>
+        </Dialog>
       </div>
     );
   }

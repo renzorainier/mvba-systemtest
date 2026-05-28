@@ -26,6 +26,8 @@ export default function Sidebar({ userRole = 'Admin' }) {
   const idleLogoutTimerRef = useRef(null);
   const idleWarningTimerRef = useRef(null);
   const isAdmin = userRole === 'Admin';
+  const IDLE_WARNING_DELAY_MS = 15 * 60 * 1000;
+  const IDLE_LOGOUT_GRACE_MS = 60 * 1000;
 
   const clearIdleTimers = useCallback(() => {
     if (idleWarningTimerRef.current) {
@@ -57,9 +59,9 @@ export default function Sidebar({ userRole = 'Admin' }) {
       setShowIdleWarning(true);
       idleLogoutTimerRef.current = setTimeout(() => {
         handleLogout();
-      }, 10000);
-    }, 60000);
-  }, [clearIdleTimers, handleLogout, isAdmin]);
+      }, IDLE_LOGOUT_GRACE_MS);
+    }, IDLE_WARNING_DELAY_MS);
+  }, [clearIdleTimers, handleLogout, isAdmin, IDLE_LOGOUT_GRACE_MS, IDLE_WARNING_DELAY_MS]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -261,7 +263,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-slate-900">Session inactive</h2>
             <p className="mt-2 text-sm text-slate-600">
-              No activity was detected for 1 minute. You will be logged out automatically shortly.
+              No activity was detected for 15 minutes. You will be logged out automatically in 1 minute unless you stay signed in.
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
