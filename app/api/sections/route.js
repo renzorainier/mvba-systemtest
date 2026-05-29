@@ -1,7 +1,9 @@
 import dbConnect from "@/lib/mongodb";
 import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from "@/models/SystemSettings";
 import GradeLevelCurriculum from "@/models/GradeLevelCurriculum";
+import ArchivedGradeLevelCurriculum from "@/models/ArchivedGradeLevelCurriculum";
 import Curriculum from "@/models/Curriculum";
+import ArchivedCurriculum from "@/models/ArchivedCurriculum";
 import Section from "@/models/Section";
 import ArchivedSection from "@/models/ArchivedSection";
 import { NextResponse } from "next/server";
@@ -26,6 +28,75 @@ const ensureSettings = async () => {
     return settings;
 };
 
+const findCurriculumForSchoolYear = async (schoolYear, curriculumId) => {
+    const normalizedSchoolYear = String(schoolYear || '').trim();
+    const normalizedCurriculumId = String(curriculumId || '').trim();
+
+    if (!normalizedCurriculumId) {
+        return null;
+    }
+
+    const currentMatch = await Curriculum.findOne({
+        schoolYear: normalizedSchoolYear,
+        $or: [{ _id: normalizedCurriculumId }, { curriculum_id: normalizedCurriculumId }],
+    }).lean();
+
+    if (currentMatch) {
+        return currentMatch;
+    }
+
+    const archivedMatch = await ArchivedCurriculum.findOne({
+        schoolYear: normalizedSchoolYear,
+        $or: [{ _id: normalizedCurriculumId }, { curriculum_id: normalizedCurriculumId }],
+    }).lean();
+
+    if (archivedMatch) {
+        return archivedMatch;
+    }
+
+    return Curriculum.findOne({
+        schoolYear: { $exists: false },
+        $or: [{ _id: normalizedCurriculumId }, { curriculum_id: normalizedCurriculumId }],
+    }).lean();
+};
+
+const findGradeLevelCurriculumForSection = async (sectionAssignmentId, schoolYear, settings) => {
+    const normalizedAssignmentId = String(sectionAssignmentId || '').trim();
+    const normalizedSchoolYear = String(schoolYear || '').trim();
+
+    if (!normalizedAssignmentId) {
+        return null;
+    }
+
+    const activeMatch = await GradeLevelCurriculum.findById(normalizedAssignmentId).lean();
+    if (activeMatch) {
+        return activeMatch;
+    }
+
+    const archivedMatch = await ArchivedGradeLevelCurriculum.findById(normalizedAssignmentId).lean();
+    if (archivedMatch) {
+        return archivedMatch;
+    }
+
+    const yearMatch = await GradeLevelCurriculum.findOne({
+        school_year_id: normalizedSchoolYear,
+        $or: [{ _id: normalizedAssignmentId }, { gl_curriculum_id: normalizedAssignmentId }],
+    }).lean();
+    if (yearMatch) {
+        return yearMatch;
+    }
+
+    const archivedYearMatch = await ArchivedGradeLevelCurriculum.findOne({
+        school_year_id: normalizedSchoolYear,
+        $or: [{ _id: normalizedAssignmentId }, { gl_curriculum_id: normalizedAssignmentId }],
+    }).lean();
+    if (archivedYearMatch) {
+        return archivedYearMatch;
+    }
+
+    return (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === normalizedAssignmentId || String(item.gl_curriculum_id || '') === normalizedAssignmentId) || null;
+};
+
     const serializeCurriculum = (curriculum) => {
         if (!curriculum) {
             return null;
@@ -45,32 +116,17 @@ const ensureSettings = async () => {
         const sectionData = section?.toObject ? section.toObject() : section;
         const sectionAssignmentId = String(sectionData.glCurriculumId || '').trim();
 
-        let assignment = null;
-        if (sectionAssignmentId) {
-            try {
-                assignment = await GradeLevelCurriculum.findById(sectionAssignmentId).lean();
-            } catch (error) {
-                assignment = null;
-            }
-        }
-
-        if (!assignment) {
-            assignment = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionAssignmentId || String(item.gl_curriculum_id || '') === sectionAssignmentId) || null;
-        }
+            const assignment = await findGradeLevelCurriculumForSection(sectionAssignmentId, sectionData.schoolYear, settings);
 
         let curriculum = null;
         const assignmentCurriculumId = assignment ? String(assignment.curriculum_id || '').trim() : '';
 
         if (assignmentCurriculumId) {
-            try {
-                curriculum = await Curriculum.findById(assignmentCurriculumId).lean();
-            } catch (error) {
-                curriculum = null;
-            }
-        }
+                curriculum = await findCurriculumForSchoolYear(sectionData.schoolYear, assignmentCurriculumId);
 
-        if (!curriculum && assignmentCurriculumId) {
-            curriculum = (settings.curriculums || []).find((item) => String(item._id) === assignmentCurriculumId || String(item.curriculum_id || '') === assignmentCurriculumId) || null;
+                if (!curriculum) {
+                    curriculum = (settings.curriculums || []).find((item) => String(item._id) === assignmentCurriculumId || String(item.curriculum_id || '') === assignmentCurriculumId) || null;
+                }
         }
 
         const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
@@ -95,7 +151,7 @@ export async function GET(request) {
                 const sections = isHistorical
                     ? await ArchivedSection.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 })
                     : await Section.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
-                return NextResponse.json({ success: true, data: isHistorical ? sections : await Promise.all(sections.map((section) => buildSectionPayload(section, settings))) }, { status: 200 });
+                return NextResponse.json({ success: true, data: await Promise.all(sections.map((section) => buildSectionPayload(section, settings))) }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

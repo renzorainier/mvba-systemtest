@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/mongodb';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import Curriculum from '@/models/Curriculum';
+import ArchivedCurriculum from '@/models/ArchivedCurriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
@@ -8,6 +9,11 @@ const findCurriculumsForSchoolYear = async (schoolYear) => {
   const yearScoped = await Curriculum.find({ schoolYear }).lean();
   if (Array.isArray(yearScoped) && yearScoped.length > 0) {
     return yearScoped;
+  }
+
+  const archived = await ArchivedCurriculum.find({ schoolYear }).lean();
+  if (Array.isArray(archived) && archived.length > 0) {
+    return archived;
   }
 
   const legacy = await Curriculum.find({ schoolYear: { $exists: false } }).lean();

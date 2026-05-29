@@ -2,6 +2,7 @@ import dbConnect from '@/lib/mongodb';
 import ArchivedGradeLevelCurriculum from '@/models/ArchivedGradeLevelCurriculum';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import Curriculum from '@/models/Curriculum';
+import ArchivedCurriculum from '@/models/ArchivedCurriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
 
@@ -9,6 +10,11 @@ const findCurriculumsForSchoolYear = async (schoolYear) => {
   const yearScoped = await Curriculum.find({ schoolYear }).lean();
   if (Array.isArray(yearScoped) && yearScoped.length > 0) {
     return yearScoped;
+  }
+
+  const archived = await ArchivedCurriculum.find({ schoolYear }).lean();
+  if (Array.isArray(archived) && archived.length > 0) {
+    return archived;
   }
 
   const legacy = await Curriculum.find({ schoolYear: { $exists: false } }).lean();
@@ -36,6 +42,37 @@ const buildAssignmentPayload = (assignment, curriculums = []) => {
         }
       : null,
   };
+};
+
+const findCurriculumForAssignment = async (selectedSchoolYear, curriculumId) => {
+  const normalizedCurriculumId = String(curriculumId || '').trim();
+
+  if (!normalizedCurriculumId) {
+    return null;
+  }
+
+  const currentMatch = await Curriculum.findOne({
+    schoolYear: selectedSchoolYear,
+    $or: [{ _id: normalizedCurriculumId }, { curriculum_id: normalizedCurriculumId }],
+  }).lean();
+
+  if (currentMatch) {
+    return currentMatch;
+  }
+
+  const archivedMatch = await ArchivedCurriculum.findOne({
+    schoolYear: selectedSchoolYear,
+    $or: [{ _id: normalizedCurriculumId }, { curriculum_id: normalizedCurriculumId }],
+  }).lean();
+
+  if (archivedMatch) {
+    return archivedMatch;
+  }
+
+  return Curriculum.findOne({
+    schoolYear: { $exists: false },
+    $or: [{ _id: normalizedCurriculumId }, { curriculum_id: normalizedCurriculumId }],
+  }).lean();
 };
 
 export async function GET(request) {
