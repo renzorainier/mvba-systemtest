@@ -68,6 +68,34 @@ describe('school-year helpers', () => {
     });
   });
 
+  it('falls back to default current school year when settings are missing', async () => {
+    await dbConnect();
+
+    await expect(getSchoolYearContext(makeRequest())).resolves.toMatchObject({
+      currentSchoolYear: '2025-2026',
+      selectedSchoolYear: '2025-2026',
+      isHistorical: false,
+    });
+  });
+
+  it('ignores invalid selected school year cookies', async () => {
+    await dbConnect();
+    await SystemSettings.create({
+      key: 'tuition-breakdown',
+      currentSchoolYear: '2026-2027',
+      title: 'Test Tuition',
+      currency: 'PHP',
+      tuitionPlans: [],
+      breakdown: [],
+    });
+
+    await expect(getSchoolYearContext(makeRequest('invalid'))).resolves.toMatchObject({
+      currentSchoolYear: '2026-2027',
+      selectedSchoolYear: '2026-2027',
+      isHistorical: false,
+    });
+  });
+
   it('blocks writes for historical school years', async () => {
     await dbConnect();
 

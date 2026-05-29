@@ -17,8 +17,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./test/setup/mongodb.js', './test/setup/vitest.js'],
     include: ['**/*.{test,spec}.{js,jsx,mjs,cjs}'],
-    exclude: ['node_modules', '.next', 'coverage'],
+    exclude: ['node_modules', '.next', 'coverage', 'e2e'],
     fileParallelism: false,
     maxWorkers: 1,
+    // Enable this to see more detailed output
+    // reporters: ['verbose'],
   },
 });

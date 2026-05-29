@@ -1,12 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import Student from '@/models/Student';
 import {
   generateRandomDigits,
+  generateUniqueKinderOneLrn,
   isValidKinderOneLrn,
   isValidKinderTwoToSixLrn,
   normalizeLearnersReferenceNumber,
 } from '@/lib/student-identifiers';
 
 describe('student identifiers', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('normalizes learner reference numbers by trimming whitespace', () => {
     expect(normalizeLearnersReferenceNumber('  123456789012  ')).toBe('123456789012');
     expect(normalizeLearnersReferenceNumber(null)).toBe('');
@@ -30,5 +36,21 @@ describe('student identifiers', () => {
 
     expect(digits).toHaveLength(8);
     expect(digits).toMatch(/^\d{8}$/);
+  });
+
+  it('generates a unique Kinder 1 LRN when the first candidate is unused', async () => {
+    vi.spyOn(Student, 'exists').mockResolvedValue(null);
+
+    const lrn = await generateUniqueKinderOneLrn();
+
+    expect(lrn).toMatch(/^\d{6}$/);
+    expect(Student.exists).toHaveBeenCalledWith({ learnersReferenceNumber: lrn });
+  });
+
+  it('throws after exhausting Kinder 1 LRN generation attempts', async () => {
+    vi.spyOn(Student, 'exists').mockResolvedValue({ _id: 'existing' });
+
+    await expect(generateUniqueKinderOneLrn()).rejects.toThrow('Unable to generate a unique Kinder 1 LRN');
+    expect(Student.exists).toHaveBeenCalledTimes(20);
   });
 });

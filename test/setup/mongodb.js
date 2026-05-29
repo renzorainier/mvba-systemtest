@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 import { setup, teardown } from 'vitest-mongodb';
 
 beforeAll(async () => {
-  await setup();
+  await setup({ type: 'replSet' });
   process.env.MONGODB_URI = globalThis.__MONGO_URI__;
 });
 
