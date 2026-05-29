@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 import {
   Dialog,
@@ -47,6 +47,8 @@ export default function AddEnrollmentsModal({
   const [sections, setSections] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
   const [isDuplicate, setIsDuplicate] = useState(false);
+  const [studentQuery, setStudentQuery] = useState('');
+  const [showStudentSuggestions, setShowStudentSuggestions] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -64,6 +66,33 @@ export default function AddEnrollmentsModal({
   const visibleSections = sectionGradeLevel
     ? sections.filter((section) => section.gradeLevel === sectionGradeLevel)
     : sections;
+
+  const filteredStudents = useMemo(() => {
+    const query = studentQuery.trim().toLowerCase();
+
+    if (!query) {
+      return students.slice(0, 8);
+    }
+
+    return students
+      .filter((student) => {
+        const studentNumber = String(student.learnersReferenceNumber || '').toLowerCase();
+        const fullName = `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase();
+        return studentNumber.includes(query) || fullName.includes(query);
+      })
+      .slice(0, 8);
+  }, [students, studentQuery]);
+
+  const selectStudent = (student) => {
+    setFormData((prev) => ({
+      ...prev,
+      studentId: String(student._id),
+      learnersReferenceNumber: String(student.learnersReferenceNumber || ''),
+      sectionId: 'TBA',
+    }));
+    setStudentQuery(`${student.learnersReferenceNumber || 'TBA'} - ${student.firstName || ''} ${student.lastName || ''}`.trim());
+    setShowStudentSuggestions(false);
+  };
 
   // Populate form when editing
   useEffect(() => {
@@ -87,7 +116,22 @@ export default function AddEnrollmentsModal({
         status: "",
       });
     }
+    setShowStudentSuggestions(false);
   }, [editingEnrollment, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setStudentQuery('');
+      setShowStudentSuggestions(false);
+      return;
+    }
+
+    if (selectedStudent) {
+      setStudentQuery(`${selectedStudent.learnersReferenceNumber || 'TBA'} - ${selectedStudent.firstName || ''} ${selectedStudent.lastName || ''}`.trim());
+    } else {
+      setStudentQuery('');
+    }
+  }, [open, selectedStudent]);
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, schoolYear: selectedSchoolYear || prev.schoolYear }));
@@ -306,36 +350,58 @@ export default function AddEnrollmentsModal({
                   <div className="mt-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       {/* Student Dropdown */}
-                      <div>
+                      <div className="relative">
                         <label className="block text-sm font-medium text-gray-700">
                           Student *
                         </label>
-                        <select
+                        <input
+                          type="text"
+                          placeholder="Search student by name or LRN"
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={formData.studentId}
+                          value={studentQuery}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const found = students.find((s) => String(s._id) === String(val));
+                            setStudentQuery(e.target.value);
                             setFormData((prev) => ({
                               ...prev,
-                              studentId: val,
-                              learnersReferenceNumber: found ? String(found.learnersReferenceNumber || '') : '',
-                              sectionId: "TBA",
-                            }))
+                              studentId: '',
+                              learnersReferenceNumber: '',
+                              sectionId: 'TBA',
+                            }));
+                            setShowStudentSuggestions(true);
                           }}
+                          onFocus={() => setShowStudentSuggestions(true)}
                           disabled={loading || students.length === 0}
-                        >
-                          <option value="">Select a student</option>
-                          {students.map((student) => (
-                            <option
-                              key={student._id}
-                              value={String(student._id)}
-                            >
-                              {student.firstName} {student.lastName} (
-                              {student.learnersReferenceNumber})
-                            </option>
-                          ))}
-                        </select>
+                        />
+                        {showStudentSuggestions && filteredStudents.length > 0 && (
+                          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                            {filteredStudents.map((student) => (
+                              <button
+                                type="button"
+                                key={student._id}
+                                onClick={() => selectStudent(student)}
+                                className="block w-full px-3 py-2 text-left hover:bg-blue-50"
+                                disabled={loading}
+                              >
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {student.firstName} {student.lastName}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {student.learnersReferenceNumber || 'TBA'} • {student.gradeLevel || 'No grade level'}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {showStudentSuggestions && filteredStudents.length === 0 && studentQuery.trim() && (
+                          <div className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg">
+                            No matching student found.
+                          </div>
+                        )}
+                        {!!formData.studentId && selectedStudent && (
+                          <p className="mt-2 text-xs text-gray-500">
+                            Selected: {selectedStudent.firstName} {selectedStudent.lastName} ({selectedStudent.learnersReferenceNumber || 'TBA'})
+                          </p>
+                        )}
                       </div>
 
                       {/* Section Dropdown */}
