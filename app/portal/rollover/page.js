@@ -33,7 +33,7 @@ const getOutcome = (student) => {
   const nextGradeLevel = getNextGradeLevel(student?.gradeLevel);
 
   if (!Number.isFinite(gwa)) {
-    return { label: 'Archive', tone: 'bg-slate-100 text-slate-600', icon: Archive, note: 'No GWA entered' };
+    return { label: 'Failed', tone: 'bg-slate-100 text-slate-600', icon: Archive, note: 'No GWA entered' };
   }
 
   if (gwa >= PASSING_GWA && nextGradeLevel) {
@@ -44,7 +44,7 @@ const getOutcome = (student) => {
     return { label: 'Graduate', tone: 'bg-amber-50 text-amber-700', icon: Archive, note: `Passing at ${gwa.toFixed(2)}` };
   }
 
-  return { label: 'Archive', tone: 'bg-rose-50 text-rose-700', icon: Archive, note: `Failed at ${gwa.toFixed(2)}` };
+  return { label: 'Failed', tone: 'bg-rose-50 text-rose-700', icon: Archive, note: `Failed at ${gwa.toFixed(2)}` };
 };
 
 export default function SchoolYearRolloverPage() {
@@ -146,7 +146,7 @@ export default function SchoolYearRolloverPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">Admin Tool</p>
           <h1 className="text-3xl font-black tracking-tight md:text-4xl">School Year Rollover</h1>
           <p className="max-w-3xl text-sm text-slate-600">
-            Promotion is now driven by each student&apos;s GWA: &gt;= 75 promotes to the next grade, below 75 is archived.
+            Promotion is now driven by each student&apos;s GWA: &gt;= 75 promotes to the next grade, below 75 is marked Failed.
           </p>
         </div>
 
@@ -186,7 +186,7 @@ export default function SchoolYearRolloverPage() {
                   Auto Summary
                 </div>
                 <p className="mt-2 font-semibold text-slate-900">{promotedStudents.length} promoted</p>
-                <p>{archivedStudents.length} archived</p>
+                <p>{archivedStudents.length} failed</p>
               </div>
             </div>
 
@@ -255,7 +255,7 @@ export default function SchoolYearRolloverPage() {
                   <p className="mt-2 text-3xl font-black text-emerald-700">{promotedStudents.length}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"><Archive size={14} />Archived</div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"><Archive size={14} />Failed</div>
                   <p className="mt-2 text-3xl font-black text-amber-700">{archivedStudents.length}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -274,7 +274,7 @@ export default function SchoolYearRolloverPage() {
                 Execute Rollover
               </button>
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                This will archive current-year students, enrollments, sections, schedules, class assignments, grade-level curricula, payments, and receipts before creating next-year promotion records.
+                This will process current-year students, enrollments, sections, schedules, class assignments, grade-level curricula, payments, and receipts before creating next-year records.
               </p>
             </div>
 
@@ -282,7 +282,7 @@ export default function SchoolYearRolloverPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Rollover Notes</p>
               <ul className="mt-4 space-y-3 text-sm text-cyan-950/90">
                 <li>Students with GWA &gt;= 75 are promoted to the next grade level.</li>
-                <li>Students below 75, or students without a next grade level, are archived.</li>
+                <li>Students below 75, or students without a next grade level, are marked Failed.</li>
                 <li>The next school year starts with fresh enrollments and curriculum assignments.</li>
               </ul>
             </div>

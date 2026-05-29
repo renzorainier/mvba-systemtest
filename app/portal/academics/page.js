@@ -28,7 +28,7 @@ const getOutcome = (gwa) => {
   }
 
   return {
-    label: 'Archive',
+    label: 'Failed',
     tone: 'bg-rose-50 text-rose-700',
     icon: Archive,
     note: `Below ${PASSING_GWA}`,

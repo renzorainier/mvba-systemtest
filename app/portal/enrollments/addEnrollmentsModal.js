@@ -22,7 +22,8 @@ export default function AddEnrollmentsModal({
         return 'border-green-200 bg-green-50 text-green-700 focus:border-green-500 focus:ring-green-500';
       case 'Dropped':
         return 'border-red-200 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-500';
-      case 'Pending':
+      case 'Failed':
+        return 'border-red-200 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-500';
       case 'For payment':
         return 'border-yellow-200 bg-yellow-50 text-yellow-700 focus:border-yellow-500 focus:ring-yellow-500';
       case 'Interview':
@@ -104,7 +105,7 @@ export default function AddEnrollmentsModal({
         sectionId: editingEnrollment.sectionId || "TBA",
         schoolYear: editingEnrollment.schoolYear || selectedSchoolYear || "",
         enrollmentDate: editingEnrollment.enrollmentDate?.split("T")[0] || "",
-        status: editingEnrollment.status || "",
+        status: editingEnrollment.status === 'Pending' ? 'Failed' : (editingEnrollment.status || ""),
       });
     } else {
       setFormData({
@@ -495,7 +496,7 @@ export default function AddEnrollmentsModal({
                         <option value="For payment">For payment</option>
                         <option value="Enrolled">Enrolled</option>
                         <option value="Dropped">Dropped</option>
-                        <option value="Pending">Pending</option>
+                        <option value="Failed">Failed</option>
                       </select>
                     </div>
                   </div>

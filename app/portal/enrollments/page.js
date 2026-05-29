@@ -107,7 +107,8 @@ export default function App() {
         return 'border-green-200 bg-green-50 text-green-700 focus:border-green-500 focus:ring-green-500';
       case 'Dropped':
         return 'border-red-200 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-500';
-      case 'Pending':
+      case 'Failed':
+        return 'border-red-200 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-500';
       case 'For payment':
         return 'border-yellow-200 bg-yellow-50 text-yellow-700 focus:border-yellow-500 focus:ring-yellow-500';
       case 'Interview':
@@ -123,8 +124,10 @@ export default function App() {
     'For payment',
     'Enrolled',
     'Dropped',
-    'Pending',
+    'Failed',
   ];
+
+  const getDisplayStatus = (status) => (status === 'Pending' ? 'Failed' : status);
 
   const updateEnrollmentStatus = async (enrollment, newStatus) => {
     try {
@@ -321,7 +324,7 @@ export default function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center gap-2">
                           <select
-                            value={enrollment.status}
+                            value={getDisplayStatus(enrollment.status)}
                             onChange={(e) => updateEnrollmentStatus(enrollment, e.target.value)}
                             disabled={statusUpdating === enrollment._id}
                             className={`rounded-md border px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 disabled:opacity-60 ${getStatusColor(enrollment.status)}`}
