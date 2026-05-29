@@ -23,11 +23,38 @@ export default function Sidebar({ userRole = 'Admin' }) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState({});
   const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const [serverClock, setServerClock] = useState('');
   const idleLogoutTimerRef = useRef(null);
   const idleWarningTimerRef = useRef(null);
   const isAdmin = userRole === 'Admin';
   const IDLE_WARNING_DELAY_MS = 15 * 60 * 1000;
   const IDLE_LOGOUT_GRACE_MS = 60 * 1000;
+
+  useEffect(() => {
+    const formatServerClock = () => {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+
+      return formatter.format(now);
+    };
+
+    setServerClock(formatServerClock());
+    const intervalId = setInterval(() => {
+      setServerClock(formatServerClock());
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const clearIdleTimers = useCallback(() => {
     if (idleWarningTimerRef.current) {
@@ -172,11 +199,17 @@ export default function Sidebar({ userRole = 'Admin' }) {
 
   return (
     <aside className="w-72 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 shadow-sm z-50">
-      <div className="h-16 bg-blue-900 flex items-center px-6 gap-4">
+      <div className="bg-blue-900 px-6 py-3 flex flex-col gap-1">
         <img src="/logo.png" alt="MVBA Logo" className="w-10 h-10 rounded-full object-cover border-2 border-white" />
-        <h1 className="text-white font-bold text-xl tracking-wide">
+        <h1 className="text-white font-bold text-lg tracking-wide leading-tight">
           {userRole} Portal
         </h1>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+          Philippine Standard Time
+        </p>
+        <p className="text-xs font-medium text-white/90 leading-tight">
+          {serverClock}
+        </p>
       </div>
 
       <nav className="flex-1 p-2 space-y-3 overflow-y-auto">
