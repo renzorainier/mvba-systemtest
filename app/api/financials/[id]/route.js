@@ -43,6 +43,13 @@ export async function PATCH(request, { params }) {
         const currentBalance = Number(student.remainingBalance || 0);
 
         if (previousStatus !== 'completed' && normalizedNextStatus === 'completed') {
+          if (amountPaid > currentBalance) {
+            return NextResponse.json(
+              { success: false, error: `Payment amount cannot exceed the student's remaining balance of ${currentBalance}` },
+              { status: 400 }
+            );
+          }
+
           student.remainingBalance = Math.max(0, currentBalance - amountPaid);
           await student.save();
         }

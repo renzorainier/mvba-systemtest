@@ -83,6 +83,16 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
       .slice(0, 8)
   }, [students, studentQuery])
 
+  const selectedStudent = useMemo(() => {
+    if (!formData.studentId) {
+      return null
+    }
+
+    return students.find((student) => String(student._id) === String(formData.studentId)) || null
+  }, [students, formData.studentId])
+
+  const selectedStudentBalance = Number(selectedStudent?.remainingBalance || 0)
+
   const selectStudent = (student) => {
     setFormData((prev) => ({
       ...prev,
@@ -105,6 +115,19 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
       // Validate required fields
       if (!formData.studentId || !formData.amountPaid || !formData.dateOfPayment || !formData.paymentMethod || !formData.referenceNumber || !formData.status || !formData.receivedBy) {
         setError('Please fill in all required fields')
+        setLoading(false)
+        return
+      }
+
+      const amountPaid = Number(formData.amountPaid)
+      if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
+        setError('Please enter a valid payment amount')
+        setLoading(false)
+        return
+      }
+
+      if (amountPaid > selectedStudentBalance) {
+        setError(`Payment amount cannot exceed the student's remaining balance of ${selectedStudentBalance}`)
         setLoading(false)
         return
       }
@@ -145,7 +168,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
         },
         body: JSON.stringify({
           ...formData,
-          amountPaid: parseFloat(formData.amountPaid),
+          amountPaid,
           proofOfPayment: proofOfPaymentData,
         }),
       })
@@ -262,7 +285,13 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                           disabled={loading}
                           step="0.01"
                           min="0"
+                          max={selectedStudentBalance > 0 ? selectedStudentBalance : undefined}
                         />
+                        {selectedStudent && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Remaining balance: ₱{selectedStudentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Date of Payment *</label>

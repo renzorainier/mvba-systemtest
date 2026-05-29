@@ -90,11 +90,24 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'studentId does not match any student' }, { status: 400 });
     }
 
+    const amountPaid = Number(body.amountPaid);
+    if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
+      return NextResponse.json({ success: false, error: 'amountPaid must be a positive number' }, { status: 400 });
+    }
+
+    const remainingBalance = Number(resolvedStudent.remainingBalance || 0);
+    if (amountPaid > remainingBalance) {
+      return NextResponse.json(
+        { success: false, error: `Payment amount cannot exceed the student's remaining balance of ${remainingBalance}` },
+        { status: 400 }
+      );
+    }
+
     const financialData = {
       paymentId: body.paymentId || `P-${Date.now()}`,
       // store canonical DB id string
       studentId: String(resolvedStudent._id),
-      amountPaid: body.amountPaid,
+      amountPaid,
       dateOfPayment: body.dateOfPayment,
       paymentMethod: body.paymentMethod,
       referenceNumber: body.referenceNumber,
@@ -122,7 +135,7 @@ export async function POST(request) {
 
       if (student) {
         const currentBalance = Number(student.remainingBalance || 0);
-        student.remainingBalance = Math.max(0, currentBalance - Number(financialData.amountPaid));
+        student.remainingBalance = Math.max(0, currentBalance - amountPaid);
         await student.save();
       }
     }

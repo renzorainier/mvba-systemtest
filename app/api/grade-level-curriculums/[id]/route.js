@@ -1,28 +1,8 @@
 import dbConnect from '@/lib/mongodb';
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import Curriculum from '@/models/Curriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-  const collection = SystemSettings.collection;
-  let settings = await collection.findOne({ key: SETTINGS_KEY });
-  if (!settings) {
-    await collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
-      { upsert: true }
-    );
-    settings = await collection.findOne({ key: SETTINGS_KEY });
-  }
-
-  settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
-  settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
-  return settings;
-};
 
 const findCurriculumsForSchoolYear = async (schoolYear) => {
   const yearScoped = await Curriculum.find({ schoolYear }).lean();
@@ -71,13 +51,12 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Assignment code is required' }, { status: 400 });
     }
 
-    // prefer DB collection
     const dbExisting = await GradeLevelCurriculum.findById(id).lean();
-    const settings = await ensureSettings();
 
     if (dbExisting) {
       if (nextGlCurriculumId !== String(dbExisting.gl_curriculum_id || '').trim()) {
         const duplicateCode = await GradeLevelCurriculum.findOne({
+          school_year_id: String(dbExisting.school_year_id || selectedSchoolYear || '').trim(),
           gl_curriculum_id: nextGlCurriculumId,
           _id: { $ne: id },
         }).lean();
@@ -117,45 +96,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: true, data: buildAssignmentPayload(updated, allCurriculums) }, { status: 200 });
     }
 
-    // fallback to settings array
-    const existing = settings.gradeLevelCurriculums.find((item) => String(item._id) === String(id) || String(item.gl_curriculum_id) === String(id));
-
-    if (!existing) {
-      return NextResponse.json({ success: false, error: 'Grade level curriculum not found' }, { status: 404 });
-    }
-
-    const curriculumId = body.curriculum_id || existing.curriculum_id?.toString();
-    const curriculum = (await findCurriculumsForSchoolYear(selectedSchoolYear)).find(
-      (item) =>
-        (String(item._id) === String(curriculumId) || String(item.curriculum_id) === String(curriculumId)) &&
-        (!item.schoolYear || String(item.schoolYear || '').trim() === String(selectedSchoolYear || '').trim())
-    );
-    if (!curriculum) {
-      return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
-    }
-
-    if (nextGlCurriculumId !== String(existing.gl_curriculum_id || '').trim()) {
-      const duplicateCode = settings.gradeLevelCurriculums.find(
-        (item) => String(item.gl_curriculum_id || '').trim() === nextGlCurriculumId && String(item._id) !== String(existing._id)
-      );
-
-      if (duplicateCode) {
-        return NextResponse.json({ success: false, error: 'Assignment code already exists' }, { status: 409 });
-      }
-    }
-
-    existing.gl_curriculum_id = nextGlCurriculumId;
-    existing.school_year_id = selectedSchoolYear || existing.school_year_id;
-    existing.grade_level = body.grade_level || existing.grade_level;
-    existing.curriculum_id = String(curriculum._id);
-    existing.is_default = typeof body.is_default === 'boolean' ? body.is_default : existing.is_default;
-
-    await SystemSettings.collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $set: { curriculums: settings.curriculums, gradeLevelCurriculums: settings.gradeLevelCurriculums } }
-    );
-
-    return NextResponse.json({ success: true, data: buildAssignmentPayload(existing, settings.curriculums || []) }, { status: 200 });
+    return NextResponse.json({ success: false, error: 'Grade level curriculum not found' }, { status: 404 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -172,7 +113,6 @@ export async function DELETE(request, { params }) {
 
     const { id } = await params;
 
-    // prefer DB collection
     const dbExisting = await GradeLevelCurriculum.findById(id).lean();
     if (dbExisting) {
       const linkedSections = (await import('@/models/Section')).default;
@@ -185,26 +125,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: true, data: dbExisting }, { status: 200 });
     }
 
-    // fallback to settings
-    const settings = await ensureSettings();
-    const existing = settings.gradeLevelCurriculums.find((item) => String(item._id) === String(id) || String(item.gl_curriculum_id) === String(id));
-    if (!existing) {
-      return NextResponse.json({ success: false, error: 'Grade level curriculum not found' }, { status: 404 });
-    }
-
-    const linkedSections = (await import('@/models/Section')).default;
-    const sectionCount = await linkedSections.countDocuments({ glCurriculumId: existing._id.toString() });
-    if (sectionCount > 0) {
-      return NextResponse.json({ success: false, error: 'Grade level curriculum is used by sections and cannot be deleted' }, { status: 409 });
-    }
-
-    settings.gradeLevelCurriculums = settings.gradeLevelCurriculums.filter((item) => String(item._id) !== String(existing._id));
-    await SystemSettings.collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $set: { curriculums: settings.curriculums, gradeLevelCurriculums: settings.gradeLevelCurriculums } }
-    );
-
-    return NextResponse.json({ success: true, data: buildAssignmentPayload(existing, await findCurriculumsForSchoolYear(selectedSchoolYear)) }, { status: 200 });
+    return NextResponse.json({ success: false, error: 'Grade level curriculum not found' }, { status: 404 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

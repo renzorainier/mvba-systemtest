@@ -94,17 +94,30 @@ const allocateFromBuckets = (targetAmount, buckets = []) => {
   };
 };
 
+const toCents = (value) => Math.round(Number(value || 0) * 100);
+
+const fromCents = (valueInCents) => Number((Number(valueInCents || 0) / 100).toFixed(2));
+
 const buildMonthlyEntries = (plan, schoolYearStart) => {
   const entries = [];
   const monthlyCount = Math.max(0, Number(plan?.monthlyPaymentCount || 0));
-  const monthlyAmount = Math.max(0, Number(plan?.monthlyPaymentAmount || 0));
+  const configuredMonthlyAmount = Math.max(0, Number(plan?.monthlyPaymentAmount || 0));
+  const configuredRemainingBalanceDue = Math.max(0, Number(plan?.remainingBalanceDue || 0));
   const startMonthName = String(plan?.monthlyPaymentMonths || '').split('until')[0];
   const startMonthIdx = parseStartMonth(startMonthName) ?? 6;
+  const scheduledTotal = configuredRemainingBalanceDue > 0
+    ? configuredRemainingBalanceDue
+    : configuredMonthlyAmount * monthlyCount;
+
+  const totalInCents = Math.round(scheduledTotal * 100);
+  const baseAmountInCents = monthlyCount > 0 ? Math.floor(totalInCents / monthlyCount) : 0;
+  const remainderInCents = monthlyCount > 0 ? totalInCents % monthlyCount : 0;
 
   for (let index = 0; index < monthlyCount; index += 1) {
     const monthIndex = (startMonthIdx + index) % 12;
     const yearOffset = Math.floor((startMonthIdx + index) / 12);
     const year = schoolYearStart + yearOffset;
+    const expectedAmount = fromCents(baseAmountInCents + (index < remainderInCents ? 1 : 0));
 
     entries.push({
       key: `month-${index}`,
@@ -112,7 +125,7 @@ const buildMonthlyEntries = (plan, schoolYearStart) => {
       label: `${MONTH_NAMES[monthIndex]} ${year}`,
       monthIndex,
       year,
-      expectedAmount: monthlyAmount,
+      expectedAmount,
     });
   }
 
@@ -207,13 +220,13 @@ export async function GET(request, { params }) {
       }
 
       const allocation = allocateFromBuckets(Math.min(item.expectedAmount, remainingToAllocate), paymentBuckets);
-      item.paidAmount = allocation.appliedAmount;
+      item.paidAmount = fromCents(toCents(allocation.appliedAmount));
       item.allocations = allocation.allocations;
       remainingToAllocate -= allocation.appliedAmount;
 
       if (item.expectedAmount <= 0) {
         item.status = item.paidAmount > 0 ? 'paid' : 'no-plan';
-      } else if (item.paidAmount >= item.expectedAmount) {
+      } else if (toCents(item.paidAmount) >= toCents(item.expectedAmount)) {
         item.status = 'paid';
       } else if (item.paidAmount > 0) {
         item.status = 'partial';
