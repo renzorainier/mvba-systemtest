@@ -186,6 +186,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'learnersReferenceNumber' && formData.gradeLevel !== 'Kinder 1') {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value.replace(/\D/g, '').slice(0, 12),
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -663,7 +672,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     rows="2"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -683,12 +692,15 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.learnersReferenceNumber}
                       onChange={handleInputChange}
                       disabled={!isEditing || formData.gradeLevel === 'Kinder 1'}
+                      inputMode={formData.gradeLevel === 'Kinder 1' ? undefined : 'numeric'}
+                      maxLength={formData.gradeLevel === 'Kinder 1' ? undefined : 12}
+                      pattern={formData.gradeLevel === 'Kinder 1' ? undefined : '\\d{0,12}'}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {formData.gradeLevel === 'Kinder 1'
                         ? 'This field cannot be changed for Kinder 1.'
-                        : 'Editable while this profile is in edit mode.'}
+                        : 'Editable while this profile is in edit mode. Maximum of 12 digits.'}
                     </p>
                   </div>
 

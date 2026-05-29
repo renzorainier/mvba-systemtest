@@ -172,8 +172,8 @@ export async function POST(request) {
         return NextResponse.json({ success: false, error: 'Kinder 1 LRN must be a 6-digit number' }, { status: 400 });
       }
     } else {
-      // For Kinder 2 and above, allow an explicit 12-digit LRN or use placeholder 'TBA' when not provided
-      if (!normalizedLrn) {
+      // For Kinder 2 and above, allow an explicit 12-digit LRN or the placeholder 'TBA'
+      if (!normalizedLrn || normalizedLrn === 'TBA') {
         learnersReferenceNumber = 'TBA';
       } else if (isValidKinderTwoToSixLrn(normalizedLrn)) {
         learnersReferenceNumber = normalizedLrn;

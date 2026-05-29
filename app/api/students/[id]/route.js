@@ -107,8 +107,8 @@ export async function PUT(request, { params }) {
       }
       learnersReferenceNumber = normalizedLrn;
     } else {
-      // For Kinder 2 and above, allow placeholder 'TBA' when not provided
-      if (!normalizedLrn) {
+      // For Kinder 2 and above, allow the placeholder 'TBA' when not provided
+      if (!normalizedLrn || normalizedLrn === 'TBA') {
         learnersReferenceNumber = 'TBA';
       } else if (!isValidKinderTwoToSixLrn(normalizedLrn)) {
         return NextResponse.json({ success: false, error: 'Kinder 2 and Grade 1 to Grade 6 LRN must be a 12-digit number' }, { status: 400 });
