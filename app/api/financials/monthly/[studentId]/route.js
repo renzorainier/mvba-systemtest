@@ -7,6 +7,7 @@ import SystemSettings from '@/models/SystemSettings';
 import { getTuitionPlanForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
+import { getSchoolYearContext } from '@/lib/school-year';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June','July','August','September','October','November','December'
@@ -121,6 +122,7 @@ const buildMonthlyEntries = (plan, schoolYearStart) => {
 export async function GET(request, { params }) {
   try {
     await dbConnect();
+    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
 
     const { studentId } = await params;
 
@@ -179,17 +181,10 @@ export async function GET(request, { params }) {
 
     const paymentQuery = { $or: paymentIds.map((value) => ({ studentId: value })) };
 
-    const [activePayments, archivedPayments] = await Promise.all([
-      Financial.find(paymentQuery).sort({ dateOfPayment: 1 }).lean(),
-      ArchivedPayment.find(paymentQuery).sort({ dateOfPayment: 1 }).lean(),
-    ]);
-
-    const paymentsById = new Map();
-    for (const payment of [...activePayments, ...archivedPayments]) {
-      paymentsById.set(String(payment._id), payment);
-    }
-
-    const payments = [...paymentsById.values()].sort(
+    const payments = (isHistorical
+      ? await ArchivedPayment.find({ ...paymentQuery, schoolYear: selectedSchoolYear }).sort({ dateOfPayment: 1 }).lean()
+      : await Financial.find(paymentQuery).sort({ dateOfPayment: 1 }).lean()
+    ).sort(
       (left, right) => new Date(left.dateOfPayment || 0) - new Date(right.dateOfPayment || 0)
     );
 
