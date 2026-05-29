@@ -229,7 +229,7 @@ export async function POST(request) {
       .populate('teacher')
       .populate('schedule');
 
-    return NextResponse.json({ success: true, data: enrichAssignment(populatedAssignment, settings) }, { status: 201 });
+    return NextResponse.json({ success: true, data: await enrichAssignment(populatedAssignment, settings, selectedSchoolYear) }, { status: 201 });
   } catch (error) {
     if (error?.code === 11000) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });

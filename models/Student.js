@@ -54,8 +54,9 @@ StudentSchema.index(
   { learnersReferenceNumber: 1 },
   {
     unique: true,
+    name: 'learnersReferenceNumber_partial_unique',
     partialFilterExpression: {
-      learnersReferenceNumber: { $exists: true, $ne: 'TBA' },
+      learnersReferenceNumber: { $type: 'string', $lt: 'A' },
     },
   }
 );
@@ -81,7 +82,7 @@ const ensureStudentIndexes = async () => {
       { learnersReferenceNumber: 1 },
       {
         unique: true,
-        partialFilterExpression: { learnersReferenceNumber: { $exists: true, $ne: 'TBA' } },
+        partialFilterExpression: { learnersReferenceNumber: { $type: 'string', $lt: 'A' } },
         name: 'learnersReferenceNumber_partial_unique',
       }
     ).catch(() => {});

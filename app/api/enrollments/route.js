@@ -113,6 +113,10 @@ export async function POST(request) {
         // auto-resolve and set studentId to that student.
         if (body.learnersReferenceNumber) {
             const matchingStudents = await Student.find({ learnersReferenceNumber: body.learnersReferenceNumber }, { _id: 1 }).lean();
+            if (resolvedStudent && String(resolvedStudent.learnersReferenceNumber || '') !== String(body.learnersReferenceNumber || '')) {
+                return NextResponse.json({ success: false, error: 'Provided studentId does not match the selected learner reference' }, { status: 400 });
+            }
+
             if (matchingStudents.length > 1) {
                 // ambiguous LRN — client must provide studentId
                 if (!resolvedStudent) {

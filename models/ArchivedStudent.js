@@ -56,9 +56,10 @@ ArchivedStudentSchema.index(
   { sourceStudentId: 1, schoolYear: 1 },
   {
     unique: true,
+    name: 'sourceStudentId_1_schoolYear_1',
     partialFilterExpression: {
-      sourceStudentId: { $exists: true, $ne: null },
-      schoolYear: { $exists: true, $ne: null },
+      sourceStudentId: { $type: 'objectId' },
+      schoolYear: { $type: 'string' },
     },
   }
 );
