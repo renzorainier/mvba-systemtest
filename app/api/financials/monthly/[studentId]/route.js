@@ -7,7 +7,7 @@ import SystemSettings from '@/models/SystemSettings';
 import { getTuitionPlanForGrade, normalizeTuitionPlans } from '@/lib/tuition-settings';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
-import { getSchoolYearContext } from '@/lib/school-year';
+import { getSchoolYearContext, buildLiveYearFilter } from '@/lib/school-year';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June','July','August','September','October','November','December'
@@ -135,7 +135,8 @@ const buildMonthlyEntries = (plan, schoolYearStart) => {
 export async function GET(request, { params }) {
   try {
     await dbConnect();
-    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const context = await getSchoolYearContext(request);
+    const { selectedSchoolYear, isHistorical } = context;
 
     const { studentId } = await params;
 
@@ -196,7 +197,7 @@ export async function GET(request, { params }) {
 
     const payments = (isHistorical
       ? await ArchivedPayment.find({ ...paymentQuery, schoolYear: selectedSchoolYear }).sort({ dateOfPayment: 1 }).lean()
-      : await Financial.find(paymentQuery).sort({ dateOfPayment: 1 }).lean()
+      : await Financial.find({ $and: [paymentQuery, buildLiveYearFilter(context)] }).sort({ dateOfPayment: 1 }).lean()
     ).sort(
       (left, right) => new Date(left.dateOfPayment || 0) - new Date(right.dateOfPayment || 0)
     );

@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [schoolYearState, setSchoolYearState] = useState({
     loading: true,
     currentSchoolYear: '',
+    draftSchoolYear: null,
     selectedSchoolYear: '',
     availableYears: [],
   });
@@ -39,6 +40,7 @@ export default function LoginPage() {
         setSchoolYearState({
           loading: false,
           currentSchoolYear: data.data.currentSchoolYear || '',
+          draftSchoolYear: data.data.draftSchoolYear || null,
           selectedSchoolYear: data.data.selectedSchoolYear || data.data.currentSchoolYear || '',
           availableYears: Array.isArray(data.data.availableYears) ? data.data.availableYears : [],
         });
@@ -55,6 +57,16 @@ export default function LoginPage() {
       isMounted = false;
     };
   }, []);
+
+  const labelForYear = (year) => {
+    if (year === schoolYearState.currentSchoolYear) {
+      return `${year} (Active)`;
+    }
+    if (schoolYearState.draftSchoolYear && year === schoolYearState.draftSchoolYear) {
+      return `${year} (Draft)`;
+    }
+    return `${year} (Archived)`;
+  };
 
   const handleSchoolYearChange = (event) => {
     const nextYear = event.target.value;
@@ -131,7 +143,7 @@ export default function LoginPage() {
               className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-900 shadow-sm outline-none transition focus:border-blue-500 disabled:cursor-wait disabled:bg-slate-100"
             >
               {schoolYearOptions.map((year) => (
-                <option key={year} value={year}>{year}</option>
+                <option key={year} value={year}>{labelForYear(year)}</option>
               ))}
             </select>
           </div>

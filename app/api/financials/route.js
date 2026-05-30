@@ -5,15 +5,16 @@ import ArchivedPayment from '@/models/ArchivedPayment';
 import ArchivedStudent from '@/models/ArchivedStudent';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
-import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext, buildLiveYearFilter, getStampYear } from '@/lib/school-year';
 
 export async function GET(request) {
   try {
     await dbConnect();
-    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const context = await getSchoolYearContext(request);
+    const { selectedSchoolYear, isHistorical } = context;
     const financials = isHistorical
       ? await ArchivedPayment.find({ schoolYear: selectedSchoolYear }).lean()
-      : await Financial.find({}).lean();
+      : await Financial.find(buildLiveYearFilter(context)).lean();
 
     const studentIds = [...new Set(financials.map((item) => item.studentId).filter(Boolean))];
     const objectIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
@@ -114,6 +115,7 @@ export async function POST(request) {
       status: body.status,
       remarks: body.remarks || '',
       receivedBy: body.receivedBy,
+      schoolYear: getStampYear(schoolYearAccess.context),
       documents: [],
     };
     

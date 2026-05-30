@@ -25,7 +25,7 @@ const ensureSettings = async () => {
 export async function GET(request) {
   try {
     await dbConnect();
-    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const { selectedSchoolYear, currentSchoolYear, isHistorical } = await getSchoolYearContext(request);
 
     if (isHistorical) {
       const archivedCurriculums = await ArchivedCurriculum.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 }).lean();
@@ -37,6 +37,12 @@ export async function GET(request) {
     const fromCollection = await Curriculum.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 }).lean();
     if (Array.isArray(fromCollection) && fromCollection.length > 0) {
       return NextResponse.json({ success: true, data: fromCollection }, { status: 200 });
+    }
+
+    // Legacy (untagged) curriculums represent active-year data only. They must not leak into a
+    // draft or historical view, otherwise the draft would not be a true empty slate.
+    if (selectedSchoolYear !== currentSchoolYear) {
+      return NextResponse.json({ success: true, data: [] }, { status: 200 });
     }
 
     const legacyCollection = await Curriculum.find({ schoolYear: { $exists: false } }).sort({ createdAt: -1 }).lean();

@@ -19,7 +19,7 @@ import {
 import { prepareCompressedUpload } from '@/lib/file-compression';
 import { getGridFSBucket } from '@/lib/gridfs';
 import { NextResponse } from 'next/server';
-import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext, buildLiveYearFilter, getStampYear } from '@/lib/school-year';
 import { Readable } from 'stream';
 import { getAuthenticatedUser } from '@/lib/auth';
 import mongoose from 'mongoose';
@@ -87,7 +87,8 @@ const getDefaultTotalForGrade = async (gradeLevel) => {
 export async function GET(request) {
   try {
     await dbConnect();
-    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const context = await getSchoolYearContext(request);
+    const { selectedSchoolYear, isHistorical } = context;
 
     if (isHistorical) {
       const archivedStudents = await ArchivedStudent.find({
@@ -101,7 +102,7 @@ export async function GET(request) {
     const tuitionPlans = normalizeTuitionPlans(settings?.tuitionPlans?.length ? settings.tuitionPlans : DEFAULT_SETTINGS_PAYLOAD.tuitionPlans || createDefaultTuitionPlans());
     const defaultTotal = calculateTotalFromTuitionPlans(tuitionPlans);
 
-    const students = await Student.find({});
+    const students = await Student.find(buildLiveYearFilter(context));
     const updates = students
       .filter((student) => student.totalEstimatedCost === undefined || student.remainingBalance === undefined)
       .map((student) => {
@@ -323,8 +324,9 @@ export async function POST(request) {
       medicalRecord: docMap.medicalRecord || null,
       totalEstimatedCost: defaultTotal,
       remainingBalance: defaultTotal,
+      schoolYear: getStampYear(schoolYearAccess.context),
     };
-    
+
     const student = await Student.create(studentData);
     return NextResponse.json({ success: true, data: student }, { status: 201 });
   } catch (error) {

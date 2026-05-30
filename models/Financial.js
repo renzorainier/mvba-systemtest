@@ -8,8 +8,9 @@ const FinancialSchema = new mongoose.Schema({
     status: { type: String, required: [true, "Payment status is required"] },
     remarks: { type: String, required: false },
     receivedBy: { type: String, required: [true, "Receiver's name is required"] },
-    paymentId: { type: String, required: [true, "Payment ID is required"] },    
+    paymentId: { type: String, required: [true, "Payment ID is required"] },
     studentId: { type: String, required: [true, "Student ID is required"] },
+    schoolYear: { type: String, default: null, index: true },
     // GridFS file references
     documents: {
         type: [{

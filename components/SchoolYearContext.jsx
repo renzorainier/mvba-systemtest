@@ -4,7 +4,9 @@ import { createContext, useContext } from 'react';
 
 const SchoolYearContext = createContext({
   currentSchoolYear: '',
+  draftSchoolYear: null,
   selectedSchoolYear: '',
+  isDraft: false,
   isHistorical: false,
 });
 

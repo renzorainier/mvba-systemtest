@@ -27,6 +27,7 @@ const StudentSchema = new mongoose.Schema({
   parentGuardianRelationship: { type: String, required: false, default: '' },
   parentGuardianContactNumber: { type: String, required: false, default: '' },
   sectionId: { type: String, required: false, default: null },
+  schoolYear: { type: String, default: null, index: true },
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
   profilePicture: { type: String, required: false, default: null },

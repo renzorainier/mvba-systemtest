@@ -3,7 +3,6 @@ import dbConnect from '@/lib/mongodb';
 import Student from '@/models/Student';
 import ArchivedStudent from '@/models/ArchivedStudent';
 import SystemSettings from '@/models/SystemSettings';
-import { rolloverSchoolYear } from '@/lib/rollover-school-year';
 import { getSchoolYearContext, getNextSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
@@ -62,14 +61,17 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Admin access required.' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const currentYearId = String(body.currentYearId || '').trim();
-    const nextYearId = String(body.nextYearId || '').trim();
-    const promotedStudentIds = Array.isArray(body.promotedStudentIds) ? body.promotedStudentIds : [];
-
-    const result = await rolloverSchoolYear(currentYearId, nextYearId, promotedStudentIds);
-
-    return NextResponse.json({ success: true, data: result }, { status: 200 });
+    // The one-step rollover is retired. School-year advancement now goes through the draft
+    // flow (create draft -> edit -> execute roll over). Running the immediate rollover here
+    // would leave stale per-year stamps on live records, so it is disabled until the draft
+    // activation (execute roll over) feature is implemented.
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'The one-step rollover has been replaced by the draft school year flow. Create and prepare a draft school year instead.',
+      },
+      { status: 410 }
+    );
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode || 500 });
   }

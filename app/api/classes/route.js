@@ -8,7 +8,7 @@ import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import ArchivedClassAssignment from '@/models/ArchivedClassAssignment';
 import Curriculum from '@/models/Curriculum';
 import { NextResponse } from 'next/server';
-import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
+import { ensureWriteAllowedForSchoolYear, getSchoolYearContext, buildLiveYearFilter, getStampYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -106,8 +106,8 @@ const enrichAssignment = async (assignment, settings, selectedSchoolYear) => {
   };
 };
 
-const buildAssignmentQuery = () => (
-  ClassAssignment.find({})
+const buildAssignmentQuery = (filter = {}) => (
+  ClassAssignment.find(filter)
     .populate('section')
     .populate('teacher')
     .populate('schedule')
@@ -117,14 +117,15 @@ const buildAssignmentQuery = () => (
 export async function GET(request) {
   try {
     await dbConnect();
-    const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
+    const context = await getSchoolYearContext(request);
+    const { selectedSchoolYear, isHistorical } = context;
     const settings = await ensureSettings();
     if (isHistorical) {
       const assignments = await ArchivedClassAssignment.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
       return NextResponse.json({ success: true, data: assignments }, { status: 200 });
     }
 
-    const assignments = await buildAssignmentQuery();
+    const assignments = await buildAssignmentQuery(buildLiveYearFilter(context));
     const enriched = await Promise.all(assignments.map((assignment) => enrichAssignment(assignment, settings, selectedSchoolYear)));
     return NextResponse.json({ success: true, data: enriched }, { status: 200 });
   } catch (error) {
@@ -207,9 +208,12 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });
     }
 
-    const existingTeacherAssignment = await ClassAssignment.findOne({ teacher: teacherId });
+    const existingTeacherAssignment = await ClassAssignment.findOne({
+      teacher: teacherId,
+      ...buildLiveYearFilter(schoolYearAccess.context),
+    });
     if (existingTeacherAssignment) {
-      return NextResponse.json({ success: false, error: 'This teacher already has a class assignment' }, { status: 409 });
+      return NextResponse.json({ success: false, error: 'This teacher already has a class assignment for this school year' }, { status: 409 });
     }
 
     const existingScheduleAssignment = await ClassAssignment.findOne({ schedule: scheduleId });
@@ -222,6 +226,7 @@ export async function POST(request) {
       section: sectionId,
       teacher: teacherId,
       schedule: scheduleId,
+      schoolYear: getStampYear(schoolYearAccess.context),
     });
 
     const populatedAssignment = await ClassAssignment.findById(assignment._id)

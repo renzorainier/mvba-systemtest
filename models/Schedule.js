@@ -16,6 +16,7 @@ const ScheduleSchema = new mongoose.Schema({
   gradeLevel: { type: String, required: [true, "Grade level is required"] },
   totalSubjects: { type: Number, default: 0 },
   items: [ScheduleItemSchema], // Array of the time slots
+  schoolYear: { type: String, default: null, index: true },
   createdAt: { type: Date, default: Date.now }
 });
 
