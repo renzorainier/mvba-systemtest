@@ -47,6 +47,14 @@ export async function PATCH(request, { params }) {
   try {
     await dbConnect();
 
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+    if (schoolYearAccess.context.isDraft) {
+      return NextResponse.json({ success: false, error: 'Grade encoding is not allowed in a draft school year.' }, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const gwa = parseGwa(body.gwa, null);
@@ -287,8 +295,10 @@ export async function PUT(request, { params }) {
       });
     }
 
-    // Map form field names to database field names
-    const gwa = parseGwa(body.gwa, existingStudent.gwa ?? null);
+    // GWA encoding is not permitted in draft school years; preserve the existing value.
+    const gwa = schoolYearAccess.context.isDraft
+      ? (existingStudent.gwa ?? null)
+      : parseGwa(body.gwa, existingStudent.gwa ?? null);
 
     if (Number.isNaN(gwa)) {
       return NextResponse.json({ success: false, error: 'GWA must be a valid number.' }, { status: 400 });

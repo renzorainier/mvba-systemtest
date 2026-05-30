@@ -55,7 +55,7 @@ const enrollmentMatchesSection = (enrollment, section) => {
 };
 
 export default function AcademicsPage() {
-  const { isHistorical } = useSchoolYearContext();
+  const { isHistorical, isDraft } = useSchoolYearContext();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -230,7 +230,7 @@ export default function AcademicsPage() {
   };
 
   const handleSaveSection = async () => {
-    if (isHistorical || sectionStudents.length === 0) {
+    if (isHistorical || isDraft || sectionStudents.length === 0) {
       return;
     }
 
@@ -351,10 +351,15 @@ export default function AcademicsPage() {
               </div>
             </div>
 
+            {isDraft && (
+              <p className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+                Grade encoding is disabled for draft school years. Activate the school year first.
+              </p>
+            )}
             <button
               type="button"
               onClick={handleSaveSection}
-              disabled={loading || saving || isHistorical || sectionStudents.length === 0}
+              disabled={loading || saving || isHistorical || isDraft || sectionStudents.length === 0}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-cyan-700/25 transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
               <Save size={16} />
@@ -410,7 +415,7 @@ export default function AcademicsPage() {
                               step="0.01"
                               value={currentValue}
                               onChange={(event) => handleGwaChange(student._id, event.target.value)}
-                              disabled={isHistorical}
+                              disabled={isHistorical || isDraft}
                               placeholder="0.00"
                               className="w-28 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"
                             />
