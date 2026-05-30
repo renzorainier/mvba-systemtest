@@ -6,6 +6,7 @@ import ArchivedStudent from '@/models/ArchivedStudent';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext, buildLiveYearFilter, getStampYear } from '@/lib/school-year';
+import { isResolvableLrn, normalizeLearnersReferenceNumber } from '@/lib/student-identifiers';
 
 export async function GET(request) {
   try {
@@ -18,11 +19,13 @@ export async function GET(request) {
 
     const studentIds = [...new Set(financials.map((item) => item.studentId).filter(Boolean))];
     const objectIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+    // Legacy financials may have stored an LRN as studentId; only match real LRNs (never 'TBA').
+    const lrnCandidates = studentIds.filter(isResolvableLrn);
 
     const students = await (isHistorical ? ArchivedStudent : Student).find(
       {
         $or: [
-          { learnersReferenceNumber: { $in: studentIds } },
+          { learnersReferenceNumber: { $in: lrnCandidates } },
           { _id: { $in: objectIds } },
           ...(isHistorical ? [{ sourceStudentId: { $in: objectIds } }] : []),
         ],
@@ -31,10 +34,12 @@ export async function GET(request) {
     ).lean();
 
     const studentByLrn = new Map(
-      students.map((student) => [
-        student.learnersReferenceNumber,
-        `${student.firstName || ''} ${student.lastName || ''}`.trim(),
-      ])
+      students
+        .filter((student) => isResolvableLrn(student.learnersReferenceNumber))
+        .map((student) => [
+          normalizeLearnersReferenceNumber(student.learnersReferenceNumber),
+          `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        ])
     );
 
     const studentById = new Map(
@@ -55,8 +60,13 @@ export async function GET(request) {
 
     const enrichedFinancials = financials.map((record) => {
       const key = String(record.studentId || '');
-      // Prefer lookup by DB id first, then by LRN fallback
-      const studentName = record.studentName || studentById.get(key) || studentBySourceId.get(key) || studentByLrn.get(key) || record.studentId;
+      // Prefer lookup by DB id (authoritative). Only fall back to LRN when it is resolvable —
+      // never resolve a 'TBA' key, since many students share it.
+      const studentName = record.studentName
+        || studentById.get(key)
+        || studentBySourceId.get(key)
+        || (isResolvableLrn(key) ? studentByLrn.get(normalizeLearnersReferenceNumber(key)) : undefined)
+        || record.studentId;
 
       return {
         ...record,

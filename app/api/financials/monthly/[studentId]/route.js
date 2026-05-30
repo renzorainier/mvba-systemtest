@@ -8,16 +8,25 @@ import { getTuitionPlanForGrade, normalizeTuitionPlans } from '@/lib/tuition-set
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 import { getSchoolYearContext, buildLiveYearFilter } from '@/lib/school-year';
+import { isResolvableLrn } from '@/lib/student-identifiers';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June','July','August','September','October','November','December'
 ];
 
 const findStudentByIdentifier = async (studentId) => {
-  const studentSearchFilters = [{ learnersReferenceNumber: studentId }];
+  const studentSearchFilters = [];
+
+  if (isResolvableLrn(studentId)) {
+    studentSearchFilters.push({ learnersReferenceNumber: studentId });
+  }
 
   if (mongoose.Types.ObjectId.isValid(studentId)) {
     studentSearchFilters.push({ _id: studentId });
+  }
+
+  if (studentSearchFilters.length === 0) {
+    return null;
   }
 
   const activeStudent = await Student.findOne({ $or: studentSearchFilters });
@@ -184,8 +193,9 @@ export async function GET(request, { params }) {
       });
     }
 
-    // fetch payments for this student (completed payments are the only ones applied)
-    const paymentIds = [String(student.learnersReferenceNumber || '')].filter(Boolean);
+    // fetch payments for this student (completed payments are the only ones applied).
+    // Match by the student's id; only include the LRN when it's resolvable (never the shared 'TBA').
+    const paymentIds = [String(student.learnersReferenceNumber || '')].filter(isResolvableLrn);
 
     if (isArchived) {
       paymentIds.push(String(student.sourceStudentId || student._id));

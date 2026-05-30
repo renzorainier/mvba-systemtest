@@ -3,12 +3,21 @@ import Financial from '@/models/Financial';
 import Student from '@/models/Student';
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
+import { isResolvableLrn } from '@/lib/student-identifiers';
 
 const findStudentByIdentifier = async (studentId) => {
-  const studentSearchFilters = [{ learnersReferenceNumber: studentId }];
+  const studentSearchFilters = [];
+
+  if (isResolvableLrn(studentId)) {
+    studentSearchFilters.push({ learnersReferenceNumber: studentId });
+  }
 
   if (mongoose.Types.ObjectId.isValid(studentId)) {
     studentSearchFilters.push({ _id: studentId });
+  }
+
+  if (studentSearchFilters.length === 0) {
+    return null;
   }
 
   return Student.findOne({ $or: studentSearchFilters });

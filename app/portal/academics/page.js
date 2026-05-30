@@ -114,13 +114,23 @@ export default function AcademicsPage() {
       return [];
     }
 
+    // 'TBA' is a shared placeholder LRN, so it can't identify a single student — match by id.
+    const isResolvableLrn = (lrn) => {
+      const value = String(lrn || '').trim();
+      return Boolean(value) && value !== 'TBA';
+    };
+
     const studentById = new Map(students.map((student) => [String(student._id), student]));
-    const studentByLrn = new Map(students.map((student) => [String(student.learnersReferenceNumber || ''), student]));
+    const studentByLrn = new Map(
+      students
+        .filter((student) => isResolvableLrn(student.learnersReferenceNumber))
+        .map((student) => [String(student.learnersReferenceNumber).trim(), student])
+    );
 
     return sectionEnrollments
       .map((enrollment) => {
         const resolvedStudent = (enrollment.studentId && studentById.get(String(enrollment.studentId)))
-          || studentByLrn.get(String(enrollment.learnersReferenceNumber || ''))
+          || (isResolvableLrn(enrollment.learnersReferenceNumber) && studentByLrn.get(String(enrollment.learnersReferenceNumber).trim()))
           || null;
 
         if (!resolvedStudent) {

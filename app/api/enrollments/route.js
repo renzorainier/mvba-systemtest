@@ -6,6 +6,7 @@ import ArchivedEnrollment from "@/models/ArchivedEnrollment";
 import ArchivedStudent from "@/models/ArchivedStudent";
 import ArchivedSection from "@/models/ArchivedSection";
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from "@/lib/school-year";
+import { isResolvableLrn, normalizeLearnersReferenceNumber } from "@/lib/student-identifiers";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -16,15 +17,18 @@ export async function GET(request) {
             ? await ArchivedEnrollment.find({ schoolYear: selectedSchoolYear }).lean()
             : await Enrollment.find({ schoolYear: selectedSchoolYear }).lean();
 
-        const learnerRefs = [...new Set(enrollments.map((item) => item.learnersReferenceNumber).filter(Boolean))];
+        // Only resolvable LRNs (not the shared 'TBA' placeholder) are useful as lookup keys.
+        const learnerRefs = [...new Set(enrollments.map((item) => item.learnersReferenceNumber).filter(isResolvableLrn))];
         const studentIds = [...new Set(enrollments.map((item) => item.studentId).filter(Boolean))];
         const sectionIds = [...new Set(enrollments.map((item) => item.sectionId).filter(Boolean))];
 
         const [students, sections] = await Promise.all([
                         isHistorical
                                 ? ArchivedStudent.find(
-                                        { $or: [ { learnersReferenceNumber: { $in: learnerRefs } }, { _id: { $in: studentIds } } ], schoolYear: selectedSchoolYear },
-                                        { firstName: 1, lastName: 1, learnersReferenceNumber: 1, gradeLevel: 1 }
+                                        // Archived enrollments reference the original student id, which is stored as
+                                        // sourceStudentId on the archived copy (its own _id is different).
+                                        { $or: [ { learnersReferenceNumber: { $in: learnerRefs } }, { _id: { $in: studentIds } }, { sourceStudentId: { $in: studentIds } } ], schoolYear: selectedSchoolYear },
+                                        { firstName: 1, lastName: 1, learnersReferenceNumber: 1, gradeLevel: 1, sourceStudentId: 1 }
                                     ).lean()
                                 : Student.find(
                                         { $or: [ { learnersReferenceNumber: { $in: learnerRefs } }, { _id: { $in: studentIds } } ] },
@@ -35,44 +39,54 @@ export async function GET(request) {
                 : Section.find({ sectionId: { $in: sectionIds } }, { sectionId: 1, sectionName: 1 }).lean(),
         ]);
 
-        const studentNameByLrn = new Map(
-            students.map((student) => [
-                student.learnersReferenceNumber,
-                `${student.firstName || ""} ${student.lastName || ""}`.trim(),
-            ])
-        );
+        // Identify students by ObjectId first (authoritative, unambiguous). The original student
+        // id is the archived copy's sourceStudentId, so register both. LRN is only added as a key
+        // when it is resolvable (not the shared 'TBA' placeholder).
+        const studentNameById = new Map();
+        const studentGradeById = new Map();
+        const studentNameByLrn = new Map();
+        const studentGradeByLrn = new Map();
 
-        const studentNameById = new Map(
-            students.map((student) => [
-                String(student._id),
-                `${student.firstName || ""} ${student.lastName || ""}`.trim(),
-            ])
-        );
-
-        const studentGradeByLrn = new Map(
-            students.map((student) => [
-                student.learnersReferenceNumber,
-                student.gradeLevel || '',
-            ])
-        );
-
-        const studentGradeById = new Map(
-            students.map((student) => [
-                String(student._id),
-                student.gradeLevel || '',
-            ])
-        );
+        for (const student of students) {
+            const name = `${student.firstName || ""} ${student.lastName || ""}`.trim();
+            const grade = student.gradeLevel || '';
+            const idKeys = [String(student._id)];
+            if (student.sourceStudentId) {
+                idKeys.push(String(student.sourceStudentId));
+            }
+            for (const key of idKeys) {
+                studentNameById.set(key, name);
+                studentGradeById.set(key, grade);
+            }
+            if (isResolvableLrn(student.learnersReferenceNumber)) {
+                const lrnKey = normalizeLearnersReferenceNumber(student.learnersReferenceNumber);
+                studentNameByLrn.set(lrnKey, name);
+                studentGradeByLrn.set(lrnKey, grade);
+            }
+        }
 
         const sectionNameById = new Map(
             sections.map((section) => [section.sectionId, section.sectionName])
         );
 
-        const enrichedEnrollments = enrollments.map((enrollment) => ({
-            ...enrollment,
-            studentName: (enrollment.studentId && studentNameById.get(String(enrollment.studentId))) || studentNameByLrn.get(enrollment.learnersReferenceNumber) || enrollment.learnersReferenceNumber,
-            sectionName: sectionNameById.get(enrollment.sectionId) || enrollment.sectionId,
-            studentGradeLevel: (enrollment.studentId && studentGradeById.get(String(enrollment.studentId))) || studentGradeByLrn.get(enrollment.learnersReferenceNumber) || '',
-        }));
+        const resolveByLrn = (lrn, map) => (isResolvableLrn(lrn) ? map.get(normalizeLearnersReferenceNumber(lrn)) : undefined);
+
+        const enrichedEnrollments = enrollments.map((enrollment) => {
+            const idKey = enrollment.studentId ? String(enrollment.studentId) : '';
+            const resolvedName = (idKey && studentNameById.get(idKey)) || resolveByLrn(enrollment.learnersReferenceNumber, studentNameByLrn);
+            // Never fall back to the LRN as a name — for 'TBA' it is ambiguous. Show the student's
+            // id when the name can't be resolved so two TBA students stay distinguishable.
+            const fallbackName = isResolvableLrn(enrollment.learnersReferenceNumber)
+                ? enrollment.learnersReferenceNumber
+                : (idKey || 'Unassigned');
+
+            return {
+                ...enrollment,
+                studentName: resolvedName || fallbackName,
+                sectionName: sectionNameById.get(enrollment.sectionId) || enrollment.sectionId,
+                studentGradeLevel: (idKey && studentGradeById.get(idKey)) || resolveByLrn(enrollment.learnersReferenceNumber, studentGradeByLrn) || '',
+            };
+        });
 
         return NextResponse.json({ success: true, data: enrichedEnrollments }, { status: 200 });
     } catch (error) {
