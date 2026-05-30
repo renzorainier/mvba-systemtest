@@ -162,6 +162,8 @@ export async function GET(request, { params }) {
 
     const plan = getTuitionPlanForGrade(tuitionPlans, student.gradeLevel || '') || null;
     const planTotal = Number(plan?.totalBaseCost || 0);
+    const studentTotal = Number(student.totalEstimatedCost || 0);
+    const discountRatio = planTotal > 0 && studentTotal < planTotal ? studentTotal / planTotal : 1;
 
     const schoolYear = settings?.currentSchoolYear || '';
     let schoolYearStart = new Date().getFullYear();
@@ -193,6 +195,12 @@ export async function GET(request, { params }) {
       });
     }
 
+    if (discountRatio < 1) {
+      for (const item of planBreakdown) {
+        item.expectedAmount = fromCents(Math.round(toCents(item.expectedAmount) * discountRatio));
+      }
+    }
+
     // fetch payments for this student (completed payments are the only ones applied).
     // Match by the student's id; only include the LRN when it's resolvable (never the shared 'TBA').
     const paymentIds = [String(student.learnersReferenceNumber || '')].filter(isResolvableLrn);
@@ -214,7 +222,8 @@ export async function GET(request, { params }) {
 
     const paymentBuckets = createPaymentBuckets(payments);
     const completedPaymentsTotal = paymentBuckets.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    const allocatableTotal = Math.min(planTotal, completedPaymentsTotal);
+    const effectivePlanTotal = discountRatio < 1 ? fromCents(Math.round(toCents(planTotal) * discountRatio)) : planTotal;
+    const allocatableTotal = Math.min(effectivePlanTotal, completedPaymentsTotal);
 
     let remainingToAllocate = allocatableTotal;
 

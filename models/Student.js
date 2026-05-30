@@ -30,6 +30,7 @@ const StudentSchema = new mongoose.Schema({
   schoolYear: { type: String, default: null, index: true },
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
+  discountApplied: { type: Boolean, default: false },
   profilePicture: { type: String, required: false, default: null },
   
   // Document fields

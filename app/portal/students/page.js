@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Users } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Users, Tag } from 'lucide-react';
 import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
@@ -52,6 +52,36 @@ export default function App() {
   const closeProfileModal = () => {
     setSelectedStudent(null);
     setProfileModalOpen(false);
+  };
+
+  const [discountingId, setDiscountingId] = useState(null);
+  const discountGuard = useRef(new Set());
+
+  const applyDiscount = async (student) => {
+    if (discountGuard.current.has(student._id) || student.discountApplied) return;
+    discountGuard.current.add(student._id);
+
+    if (!window.confirm(`Apply a 5% discount to ${student.firstName} ${student.lastName}'s tuition fee?`)) {
+      discountGuard.current.delete(student._id);
+      return;
+    }
+
+    setDiscountingId(student._id);
+    try {
+      const response = await fetch(`/api/students/${student._id}/discount`, { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        handleStudentUpdate(data.data);
+      } else {
+        discountGuard.current.delete(student._id);
+        alert(data.error || 'Failed to apply discount.');
+      }
+    } catch {
+      discountGuard.current.delete(student._id);
+      alert('Failed to apply discount.');
+    } finally {
+      setDiscountingId(null);
+    }
   };
 
   const handleStudentUpdate = (updatedStudent) => {
@@ -161,6 +191,9 @@ export default function App() {
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Remaining Balance
                   </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -195,17 +228,28 @@ export default function App() {
                           {formatPhp(student.remainingBalance)}
                         </button>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => applyDiscount(student)}
+                          disabled={isHistorical || discountingId === student._id || student.discountApplied}
+                          title={student.discountApplied ? 'Discount already applied' : 'Apply 5% discount to tuition fee'}
+                          className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-green-300 hover:bg-green-100 hover:text-green-900 hover:shadow-md cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Tag size={13} />
+                          {discountingId === student._id ? 'Applying...' : student.discountApplied ? 'Discounted' : '5% Discount'}
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : loading ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       Loading students...
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                       No students found matching your search.
                     </td>
                   </tr>
