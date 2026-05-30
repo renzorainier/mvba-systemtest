@@ -105,7 +105,7 @@ export default function AddEnrollmentsModal({
         sectionId: editingEnrollment.sectionId || "TBA",
         schoolYear: editingEnrollment.schoolYear || selectedSchoolYear || "",
         enrollmentDate: editingEnrollment.enrollmentDate?.split("T")[0] || "",
-        status: editingEnrollment.status === 'Pending' ? 'Failed' : (editingEnrollment.status || ""),
+        status: editingEnrollment.status === 'Pending' ? 'For payment' : (editingEnrollment.status || ""),
       });
     } else {
       setFormData({

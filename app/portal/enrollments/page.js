@@ -127,7 +127,7 @@ export default function App() {
     'Failed',
   ];
 
-  const getDisplayStatus = (status) => (status === 'Pending' ? 'Failed' : status);
+  const getDisplayStatus = (status) => (status === 'Pending' ? 'For payment' : status);
 
   const updateEnrollmentStatus = async (enrollment, newStatus) => {
     try {
