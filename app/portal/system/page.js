@@ -587,9 +587,6 @@ export default function SystemSettingsPage() {
       <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.1)] backdrop-blur lg:p-10">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="space-y-4">
-            <div className="inline-flex items-center rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-800">
-              Finance Setup
-            </div>
             <div>
               <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl">System Settings</h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">

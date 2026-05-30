@@ -391,7 +391,6 @@ export default function App() {
     <div className="min-h-screen bg-white font-sans text-slate-800">
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">Admin Portal</p>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">Dashboard</h1>

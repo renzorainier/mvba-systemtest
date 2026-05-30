@@ -93,10 +93,6 @@ export default function ArchivedStudentsPage() {
               <ArrowLeft size={16} />
               Back to Students
             </Link>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-              <Archive size={14} />
-              Student Archive
-            </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950">Archived Students</h1>
             <p className="mt-1 text-sm text-slate-600">Restore archived student records and their related enrollments and payments.</p>
           </div>

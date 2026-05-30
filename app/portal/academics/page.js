@@ -280,10 +280,6 @@ export default function AcademicsPage() {
     <div className="min-h-screen bg-white px-4 py-6 text-slate-900 lg:px-10">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700 w-fit">
-            <School size={14} />
-            Academics
-          </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Student GWA Registry</h1>
           <p className="max-w-3xl text-sm text-slate-600">
             Enter each student&apos;s GWA by grade level and section. The rollover process uses the saved values to decide promotion or archiving.

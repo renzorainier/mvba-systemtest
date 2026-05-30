@@ -219,10 +219,6 @@ export default function App() {
     <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
       <div className="max-w-7xl mx-auto mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-            <ClipboardList size={14} />
-            Enrollment Records
-          </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-950">Enrollment Management</h1>
           <p className="mt-1 text-sm text-slate-600">Track and manage student enrollments across sections and school years.</p>
         </div>

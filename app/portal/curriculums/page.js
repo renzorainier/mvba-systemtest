@@ -334,10 +334,6 @@ export default function CurriculumsPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-              <BookOpen size={14} />
-              Curriculum Catalog
-            </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950">Curriculum Management</h1>
             <p className="mt-1 text-sm text-slate-600">Define curriculum versions and keep them tied to grade-level assignments.</p>
           </div>
