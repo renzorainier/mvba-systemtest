@@ -451,11 +451,11 @@ export default function App() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Student Breakdown</p>
               <h2 className="mt-1 text-lg font-bold text-slate-900">Students by Grade Level</h2>
-              <p className="mt-1 text-sm text-slate-500">Showing students who have not completed a payment in the selected month.</p>
+              <p className="mt-1 text-sm text-slate-500">Showing all enrolled students by grade level.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left sm:text-right">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Students unpaid in {selectedMonthLabel}</p>
-              <p className="text-2xl font-black text-slate-900">{studentCount === null ? '...' : totalUnpaidStudents}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Total Students Enrolled</p>
+              <p className="text-2xl font-black text-slate-900">{studentCount === null ? '...' : studentCount}</p>
             </div>
           </div>
 
@@ -469,8 +469,8 @@ export default function App() {
                 <GradeCard
                   key={gradeLevel}
                   title={`${gradeLevel}`}
-                  value={studentCount === null ? '...' : String(unpaidGradeStudents.length)}
-                  subtitle={`Unpaid in ${selectedMonthLabel} • ${gradeStudents.length} enrolled`}
+                  value={studentCount === null ? '...' : String(gradeStudents.length)}
+                  subtitle={`${gradeStudents.length} student${gradeStudents.length !== 1 ? 's' : ''} enrolled`}
                   borderColor={style.borderColor}
                   valueColor={style.valueColor}
                   accentBg={style.accentBg}
