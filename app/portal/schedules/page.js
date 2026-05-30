@@ -23,6 +23,7 @@ export default function ScheduleManagement() {
   const [scheduleCurriculumMap, setScheduleCurriculumMap] = useState({});
   const [editingScheduleId, setEditingScheduleId] = useState(null);
   const [currentScheduleCode, setCurrentScheduleCode] = useState('');
+  const [deletingScheduleId, setDeletingScheduleId] = useState(null);
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
@@ -99,6 +100,38 @@ export default function ScheduleManagement() {
     setEditingScheduleId(schedule._id);
     setError('');
     setViewMode('editor');
+  };
+
+  const handleDeleteSchedule = async (schedule) => {
+    const confirmed = window.confirm(`Delete schedule ${schedule.name}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingScheduleId(schedule._id);
+      setError('');
+      const response = await fetch(`/api/schedules/${schedule._id}`, { method: 'DELETE' });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete schedule');
+      }
+
+      if (editingScheduleId === schedule._id) {
+        setViewMode('list');
+        setScheduleItems([]);
+        setCurrentScheduleName('');
+        setCurrentScheduleCode('');
+        setEditingScheduleId(null);
+      }
+
+      await fetchSchedules();
+    } catch (deleteError) {
+      setError(deleteError.message || 'Failed to delete schedule');
+    } finally {
+      setDeletingScheduleId(null);
+    }
   };
 
   const handleAddClass = () => {
@@ -356,6 +389,8 @@ export default function ScheduleManagement() {
               </button>
             </div>
 
+            {error && <div className="mb-4 rounded-md bg-red-100 p-3 text-sm text-red-700" role="alert">{error}</div>}
+
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-4 border-b border-gray-100">
                 <div className="relative">
@@ -395,13 +430,23 @@ export default function ScheduleManagement() {
                           <td className="px-6 py-4 text-sm text-gray-500">{sch.totalSubjects} Classes</td>
                           <td className="px-6 py-4 text-sm text-gray-500">{new Date(sch.createdAt).toLocaleDateString()}</td>
                           <td className="px-6 py-4 text-right">
-                            <button 
-                              onClick={() => handleViewSchedule(sch)}
-                              className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
-                              title="View/Edit Schedule"
-                            >
-                              <MoreVertical size={16} />
-                            </button>
+                            <div className="inline-flex items-center gap-2">
+                              <button 
+                                onClick={() => handleViewSchedule(sch)}
+                                className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
+                                title="View/Edit Schedule"
+                              >
+                                <MoreVertical size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSchedule(sch)}
+                                disabled={deletingScheduleId === sch._id}
+                                className="inline-flex items-center gap-1 rounded-full p-1 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                title="Delete Schedule"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -483,7 +528,7 @@ export default function ScheduleManagement() {
               </div>
             </div>
 
-            {error && <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>}
+            {error && viewMode === 'editor' && <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm" role="alert">{error}</div>}
 
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="col-span-1 md:col-span-2">

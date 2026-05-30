@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/mongodb';
 import Schedule from '@/models/Schedule';
+import ClassAssignment from '@/models/ClassAssignment';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
@@ -62,6 +63,34 @@ export async function PUT(request, { params }) {
     );
 
     return NextResponse.json({ success: true, data: updatedSchedule }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
+    const { id } = await params;
+    const existingSchedule = await Schedule.findById(id).lean();
+
+    if (!existingSchedule) {
+      return NextResponse.json({ success: false, error: 'Schedule not found' }, { status: 404 });
+    }
+
+    const classAssignmentCount = await ClassAssignment.countDocuments({ schedule: id });
+    if (classAssignmentCount > 0) {
+      return NextResponse.json({ success: false, error: 'Schedule is used by a class assignment and cannot be deleted' }, { status: 409 });
+    }
+
+    await Schedule.findByIdAndDelete(id);
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

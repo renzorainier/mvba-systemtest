@@ -190,6 +190,8 @@ export default function CurriculumAssignmentsPage() {
           </button>
         </div>
 
+        {error && !isFormOpen && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</div>}
+
         <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 p-4">
             <div className="relative">

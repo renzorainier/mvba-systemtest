@@ -3,6 +3,8 @@ import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSetting
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import Curriculum from '@/models/Curriculum';
 import Section from '@/models/Section';
+import Enrollment from '@/models/Enrollment';
+import ClassAssignment from '@/models/ClassAssignment';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
 
@@ -147,6 +149,42 @@ export async function PUT(request, { params }) {
     }
     
     return NextResponse.json({ success: true, data: await buildSectionPayload(section, settings) }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    await dbConnect();
+    const schoolYearAccess = await ensureWriteAllowedForSchoolYear(request);
+
+    if (!schoolYearAccess.allowed) {
+      return NextResponse.json(schoolYearAccess.response, { status: 403 });
+    }
+
+    const { id } = await params;
+    const section = await Section.findById(id).lean();
+
+    if (!section) {
+      return NextResponse.json({ success: false, error: 'Section not found' }, { status: 404 });
+    }
+
+    const [enrollmentCount, classAssignmentCount] = await Promise.all([
+      Enrollment.countDocuments({ sectionId: section.sectionId }),
+      ClassAssignment.countDocuments({ section: id }),
+    ]);
+
+    if (enrollmentCount > 0) {
+      return NextResponse.json({ success: false, error: 'Section has enrolled students and cannot be deleted' }, { status: 409 });
+    }
+
+    if (classAssignmentCount > 0) {
+      return NextResponse.json({ success: false, error: 'Section is used by a class assignment and cannot be deleted' }, { status: 409 });
+    }
+
+    await Section.findByIdAndDelete(id);
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

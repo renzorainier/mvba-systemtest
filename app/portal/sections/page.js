@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
-import { Search, Plus, X } from 'lucide-react';
+import { Search, Plus, Trash2, X } from 'lucide-react';
 import AddSectionsModal from './addSectionModal';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [sectionStudents, setSectionStudents] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [rosterError, setRosterError] = useState('');
+  const [pageError, setPageError] = useState('');
 
   const openModal = () => {
     if (isHistorical) {
@@ -37,6 +38,31 @@ export default function Dashboard() {
     }
     setEditingSection(section);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteSection = async (section) => {
+    if (isHistorical) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete section ${section.sectionName}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setPageError('');
+      const response = await fetch(`/api/sections/${section._id}`, { method: 'DELETE' });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete section');
+      }
+
+      await fetchSections();
+    } catch (error) {
+      setPageError(error.message || 'Failed to delete section');
+    }
   };
 
   const closeRosterModal = () => {
@@ -158,6 +184,8 @@ export default function Dashboard() {
           </button>
         </div>
 
+        {pageError && <div className="max-w-7xl mx-auto mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{pageError}</div>}
+
         {/* Search Bar */}
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6">
@@ -243,13 +271,23 @@ export default function Dashboard() {
                           </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => openEditModal(section)}
-                            disabled={isHistorical}
-                            className="text-blue-600 hover:text-blue-900 font-medium transition-colors disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300"
-                          >
-                            Edit
-                          </button>
+                          <div className="inline-flex items-center gap-3">
+                            <button
+                              onClick={() => openEditModal(section)}
+                              disabled={isHistorical}
+                              className="text-blue-600 hover:text-blue-900 font-medium transition-colors disabled:cursor-not-allowed disabled:text-blue-300 disabled:hover:text-blue-300"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSection(section)}
+                              disabled={isHistorical}
+                              className="inline-flex items-center gap-1 font-medium text-red-600 transition-colors hover:text-red-900 disabled:cursor-not-allowed disabled:text-red-300 disabled:hover:text-red-300"
+                            >
+                              <Trash2 size={16} />
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
