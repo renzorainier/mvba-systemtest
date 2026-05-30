@@ -78,9 +78,10 @@ export function middleware(request) {
       }
 
     } catch (error) {
-      // If the cookie is corrupted, force them to log in again
-      request.cookies.delete('auth_token');
-      return NextResponse.redirect(new URL('/', request.url));
+      // If the cookie is corrupted, clear it from the browser and force re-login.
+      const response = NextResponse.redirect(new URL('/', request.url));
+      response.cookies.delete('auth_token');
+      return response;
     }
   }
 

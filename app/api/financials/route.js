@@ -146,9 +146,15 @@ export async function POST(request) {
       const student = await Student.findById(String(financialData.studentId));
 
       if (student) {
-        const currentBalance = Number(student.remainingBalance || 0);
-        student.remainingBalance = Math.max(0, currentBalance - amountPaid);
-        await student.save();
+        try {
+          const currentBalance = Number(student.remainingBalance || 0);
+          student.remainingBalance = Math.max(0, currentBalance - amountPaid);
+          await student.save();
+        } catch (balanceError) {
+          // Roll back the payment record so the DB stays consistent.
+          await Financial.findByIdAndDelete(financial._id);
+          throw balanceError;
+        }
       }
     }
 

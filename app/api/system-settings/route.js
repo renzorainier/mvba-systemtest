@@ -9,39 +9,10 @@ import {
   normalizeTuitionPlans,
 } from '@/lib/tuition-settings';
 import { hashPassword, verifyPassword } from '@/lib/passwords';
-import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
+import { ensureWriteAllowedForSchoolYear, normalizeSchoolYear, isValidSchoolYear } from '@/lib/school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 const DEFAULT_CURRENT_SCHOOL_YEAR = '2025-2026';
-
-const normalizeSchoolYear = (value) => {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  const match = trimmed.match(/^(\d{4})\s*-\s*(\d{4})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  return `${match[1]}-${match[2]}`;
-};
-
-const isValidSchoolYear = (value) => {
-  const normalized = normalizeSchoolYear(value);
-
-  if (!normalized) {
-    return false;
-  }
-
-  const [startYearText, endYearText] = normalized.split('-');
-  const startYear = Number(startYearText);
-  const endYear = Number(endYearText);
-
-  return Number.isInteger(startYear) && Number.isInteger(endYear) && endYear === startYear + 1;
-};
 
 const ensureWritableSchoolYear = async (request) => {
   const token = request?.cookies?.get('auth_token')?.value;
@@ -146,6 +117,8 @@ export async function GET() {
           title: settings.title,
           currency: settings.currency,
           currentSchoolYear: normalizeSchoolYear(settings.currentSchoolYear) || DEFAULT_CURRENT_SCHOOL_YEAR,
+          schoolName: settings.schoolName || '',
+          schoolAddress: settings.schoolAddress || '',
           tuitionPlans,
           breakdown,
           totalEstimatedCost,

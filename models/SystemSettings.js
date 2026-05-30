@@ -71,6 +71,8 @@ const SystemSettingsSchema = new mongoose.Schema(
     title: { type: String, required: true, default: 'Sample Tuition Fee Breakdown (Kindergarten to Grade 6)' },
     currency: { type: String, required: true, default: 'PHP' },
     currentSchoolYear: { type: String, required: true, default: '2025-2026' },
+    schoolName: { type: String, default: 'Standard Academy Institute' },
+    schoolAddress: { type: String, default: '123 Education Blvd, Metro Manila' },
     draftSchoolYear: { type: String, default: null },
       tuitionPlans: { type: [TuitionPlanSchema], default: createDefaultTuitionPlans },
       breakdown: { type: [BreakdownItemSchema], default: [] },

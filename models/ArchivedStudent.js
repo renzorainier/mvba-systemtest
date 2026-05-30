@@ -30,6 +30,7 @@ const ArchivedStudentSchema = new mongoose.Schema({
   sourceStudentId: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
   totalEstimatedCost: { type: Number, default: 15000, min: 0 },
   remainingBalance: { type: Number, default: 15000, min: 0 },
+  discountApplied: { type: Boolean, default: false },
   profilePicture: { type: String, required: false, default: null },
   birthCertificate: { type: fileSubSchema, required: false, default: null },
   reportCard: { type: fileSubSchema, required: false, default: null },

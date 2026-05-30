@@ -342,7 +342,7 @@ export default function AddEnrollmentsModal({
                       {error}
                     </div>
                   )}
-                  {isDuplicate && (
+                  {isDuplicate && !loading && (
                     <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
                       Student already has an enrollment
                     </div>
@@ -488,7 +488,7 @@ export default function AddEnrollmentsModal({
                         onChange={(e) =>
                           setFormData({ ...formData, status: e.target.value })
                         }
-                        disabled={loading}
+                        disabled={loading || isHistorical}
                       >
                         <option value="">Select status</option>
                         <option value="Interview">Interview</option>

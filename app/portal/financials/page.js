@@ -13,9 +13,17 @@ export default function Financials() {
   const [financials, setFinancials] = useState([]);
   const [updatingId, setUpdatingId] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState(null);
+  const [schoolName, setSchoolName] = useState('');
+  const [schoolAddress, setSchoolAddress] = useState('');
 
   const statusOptions = ['Pending', 'Completed', 'Failed', 'Cancelled'];
 
@@ -43,6 +51,15 @@ export default function Financials() {
 
   useEffect(() => {
     fetchFinancials();
+    fetch('/api/system-settings')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data) {
+          setSchoolName(d.data.schoolName || '');
+          setSchoolAddress(d.data.schoolAddress || '');
+        }
+      })
+      .catch(() => {});
 
     // Listen for payment recorded event
     window.addEventListener("paymentRecorded", fetchFinancials);
@@ -124,6 +141,8 @@ export default function Financials() {
   }
 
   const printReceipt = (record) => {
+    const institutionName = schoolName || 'School';
+    const institutionAddress = schoolAddress || '';
     const receiptHtml = `
       <!doctype html>
       <html>
@@ -159,7 +178,7 @@ export default function Financials() {
             <div class="header">
               <div>
                 <div class="brand">OFFICIAL RECEIPT</div>
-                <div style="color:#6b7280;">Standard Academy Institute<br/>123 Education Blvd, Metro Manila</div>
+                <div style="color:#6b7280;">${institutionName}<br/>${institutionAddress}</div>
               </div>
               <div style="text-align:right">
                 <div class="badge">${record.status || 'Completed'}</div>
@@ -212,7 +231,7 @@ export default function Financials() {
             <div class="header">
               <div>
                 <div class="brand">OFFICIAL RECEIPT</div>
-                <div style="color:#6b7280;">Standard Academy Institute<br/>123 Education Blvd, Metro Manila</div>
+                <div style="color:#6b7280;">${institutionName}<br/>${institutionAddress}</div>
               </div>
               <div style="text-align:right">
                 <div class="badge">${record.status || 'Completed'}</div>

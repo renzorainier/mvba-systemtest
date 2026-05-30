@@ -8,6 +8,7 @@ import Section from "@/models/Section";
 import ArchivedSection from "@/models/ArchivedSection";
 import { NextResponse } from "next/server";
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from "@/lib/school-year";
+import { randomUUID } from "crypto";
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -177,7 +178,7 @@ export async function POST(request) {
             schoolYear: selectedSchoolYear,
             glCurriculumId: body.glCurriculumId || body.gl_curriculum_id,
             roomNumber: body.roomNumber,
-            sectionId: body.sectionId || `S-${Date.now()}`, // Auto-generate if not provided
+            sectionId: body.sectionId || `S-${randomUUID()}`,
         };
 
         const settings = await ensureSettings();

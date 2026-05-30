@@ -64,8 +64,10 @@ export async function PATCH(request, { params }) {
         }
 
         if (previousStatus === 'completed' && normalizedNextStatus !== 'completed') {
-          const maxBalance = Number(student.totalEstimatedCost || currentBalance + amountPaid);
-          student.remainingBalance = Math.min(maxBalance, currentBalance + amountPaid);
+          student.remainingBalance = Math.min(
+            Number(student.totalEstimatedCost),
+            currentBalance + amountPaid
+          );
           await student.save();
         }
       }
