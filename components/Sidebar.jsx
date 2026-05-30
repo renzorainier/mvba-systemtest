@@ -2,20 +2,21 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  GraduationCap, 
-  Wallet, 
-  School, 
-  Settings, 
-  HelpCircle, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  Wallet,
+  School,
+  Settings,
+  HelpCircle,
+  LogOut,
   Calendar,
   Layers3,
   Archive,
   BookOpen,
-  LibraryBig
+  LibraryBig,
+  UserCog,
 } from 'lucide-react';
 
 export default function Sidebar({ userRole = 'Admin' }) {
@@ -176,6 +177,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
     {
       title: 'Administration & Support',
       children: [
+        { name: 'Account Management', href: '/portal/accounts', icon: UserCog, allowedRoles: ['Admin'] },
         { name: 'System Settings', href: '/portal/system', icon: Settings, allowedRoles: ['Admin'] },
         { name: 'Help & Manual', href: '/portal/help', icon: HelpCircle, allowedRoles: ['Admin', 'Registrar', 'Cashier'] },
       ],

@@ -73,6 +73,10 @@ export function middleware(request) {
         return NextResponse.redirect(new URL('/portal/dashboard', request.url));
       }
 
+      if (path.startsWith('/portal/accounts') && role !== 'Admin') {
+        return NextResponse.redirect(new URL('/portal/dashboard', request.url));
+      }
+
     } catch (error) {
       // If the cookie is corrupted, force them to log in again
       request.cookies.delete('auth_token');

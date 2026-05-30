@@ -18,7 +18,11 @@ const AccountSchema = new mongoose.Schema({
   },
 
   isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+
+  recoveryCodeHash: { type: String, default: null },
+  recoveryCodeCreatedAt: { type: Date, default: null },
+  recoveryCodeUsedAt: { type: Date, default: null },
 });
 
 export default mongoose.models.Account || mongoose.model('Account', AccountSchema);
