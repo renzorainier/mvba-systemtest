@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Plus, MoreHorizontal, Download, X } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Download, X, Wallet } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import AddNewRecord from "../financials/newRecordModal";
 import FileViewer from "@/components/FileViewer";
@@ -292,9 +292,16 @@ export default function Financials() {
     <>
       <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
         {/* Header Section */}
-        <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Financial Management</h1>
-          <button onClick={openModal} disabled={isHistorical} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-green-300">
+        <div className="max-w-7xl mx-auto mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              <Wallet size={14} />
+              Payment Records
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Financial Management</h1>
+            <p className="mt-1 text-sm text-slate-600">Record and monitor student payments, balances, and financial transactions.</p>
+          </div>
+          <button onClick={openModal} disabled={isHistorical} className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300">
             <Plus size={18} />
             Record New Payment
           </button>

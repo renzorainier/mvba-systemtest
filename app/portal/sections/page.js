@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
-import { Search, Plus, Trash2, X } from 'lucide-react';
+import { Search, Plus, Trash2, X, LayoutGrid } from 'lucide-react';
 import AddSectionsModal from './addSectionModal';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
@@ -176,9 +176,16 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
         {/* Header Section */}
-        <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Section Management</h1>
-          <button onClick={openModal} disabled={isHistorical} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-blue-300">
+        <div className="max-w-7xl mx-auto mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+              <LayoutGrid size={14} />
+              Class Sections
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Section Management</h1>
+            <p className="mt-1 text-sm text-slate-600">Organize students into sections and link them to schedules and teachers.</p>
+          </div>
+          <button onClick={openModal} disabled={isHistorical} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
             <Plus size={18} />
             Add New Section
           </button>

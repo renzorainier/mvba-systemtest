@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RotateCcw, Search } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Search, Archive } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function ArchivedStudentsPage() {
@@ -87,16 +87,18 @@ export default function ArchivedStudentsPage() {
   return (
     <div className="min-h-screen bg-white p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Link href="/portal/students" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
-                <ArrowLeft size={16} />
-                Back to Students
-              </Link>
+            <Link href="/portal/students" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-3">
+              <ArrowLeft size={16} />
+              Back to Students
+            </Link>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+              <Archive size={14} />
+              Student Archive
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Archived Students</h1>
-            <p className="text-sm text-slate-500 mt-1">Restore archived student records and their related enrollments and payments.</p>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Archived Students</h1>
+            <p className="mt-1 text-sm text-slate-600">Restore archived student records and their related enrollments and payments.</p>
           </div>
         </div>
 

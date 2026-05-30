@@ -5,6 +5,7 @@ import {
   Search,
   Plus, 
   Clock,
+  CalendarDays,
   ChevronLeft,
   MoreVertical,
   Trash2,
@@ -378,13 +379,20 @@ export default function ScheduleManagement() {
         {/* VIEW 1: SCHEDULE LIST */}
         {viewMode === 'list' && (
           <div className="animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-              <h1 className="text-2xl font-bold text-gray-800">Schedule Management</h1>
-              <button 
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+              <div>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+                  <CalendarDays size={14} />
+                  Timetable Builder
+                </div>
+                <h1 className="text-3xl font-black tracking-tight text-slate-950">Schedule Management</h1>
+                <p className="mt-1 text-sm text-slate-600">Build and manage class schedules and time slot assignments.</p>
+              </div>
+              <button
                 onClick={handleCreateNew}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center shadow-sm transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus size={18} />
                 Create New Schedule
               </button>
             </div>
