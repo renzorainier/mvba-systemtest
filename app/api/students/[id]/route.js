@@ -88,9 +88,12 @@ export async function PUT(request, { params }) {
     if (!schoolYearAccess.allowed) {
       return NextResponse.json(schoolYearAccess.response, { status: 403 });
     }
+    if (schoolYearAccess.context.isDraft) {
+      return NextResponse.json({ success: false, error: 'Student edits are not allowed in a draft school year.' }, { status: 403 });
+    }
 
     const { id } = await params;
-    
+
     const formData = await request.formData();
     const body = Object.fromEntries(formData);
     
@@ -295,10 +298,7 @@ export async function PUT(request, { params }) {
       });
     }
 
-    // GWA encoding is not permitted in draft school years; preserve the existing value.
-    const gwa = schoolYearAccess.context.isDraft
-      ? (existingStudent.gwa ?? null)
-      : parseGwa(body.gwa, existingStudent.gwa ?? null);
+    const gwa = parseGwa(body.gwa, existingStudent.gwa ?? null);
 
     if (Number.isNaN(gwa)) {
       return NextResponse.json({ success: false, error: 'GWA must be a valid number.' }, { status: 400 });

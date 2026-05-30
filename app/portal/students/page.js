@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Users, Tag } from 'lucide-react';
 import StudentProfileModal from '../students/StudentProfileModal';
 import MonthlyBalanceModal from '@/components/MonthlyBalanceModal';
@@ -55,14 +55,11 @@ export default function App() {
   };
 
   const [discountingId, setDiscountingId] = useState(null);
-  const discountGuard = useRef(new Set());
 
   const applyDiscount = async (student) => {
-    if (discountGuard.current.has(student._id) || student.discountApplied) return;
-    discountGuard.current.add(student._id);
+    if (discountingId === student._id || student.discountApplied) return;
 
     if (!window.confirm(`Apply a 5% discount to ${student.firstName} ${student.lastName}'s tuition fee?`)) {
-      discountGuard.current.delete(student._id);
       return;
     }
 
@@ -73,11 +70,9 @@ export default function App() {
       if (data.success) {
         handleStudentUpdate(data.data);
       } else {
-        discountGuard.current.delete(student._id);
         alert(data.error || 'Failed to apply discount.');
       }
     } catch {
-      discountGuard.current.delete(student._id);
       alert('Failed to apply discount.');
     } finally {
       setDiscountingId(null);

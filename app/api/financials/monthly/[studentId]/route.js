@@ -162,8 +162,7 @@ export async function GET(request, { params }) {
 
     const plan = getTuitionPlanForGrade(tuitionPlans, student.gradeLevel || '') || null;
     const planTotal = Number(plan?.totalBaseCost || 0);
-    const studentTotal = Number(student.totalEstimatedCost || 0);
-    const discountRatio = planTotal > 0 && studentTotal < planTotal ? studentTotal / planTotal : 1;
+    const discountRatio = student.discountApplied ? 0.95 : 1;
 
     const schoolYear = settings?.currentSchoolYear || '';
     let schoolYearStart = new Date().getFullYear();
