@@ -48,7 +48,12 @@ export default function SchoolYearTransitionPage() {
         throw new Error(payload.error || 'Failed to create draft school year');
       }
 
-      setSuccess(`Draft school year ${payload.data.draftSchoolYear} created. Switch into it to start adding students, curriculum, and schedules.`);
+      const c = payload.data.carriedOver || {};
+      setSuccess(
+        `Draft school year ${payload.data.draftSchoolYear} created. ` +
+        `Carried over ${c.curriculumCount || 0} curriculum(s), ${c.gradeLevelCurriculumCount || 0} grade-level curriculum(s), ${c.sectionCount || 0} section(s), and ${c.scheduleCount || 0} schedule(s) for editing. ` +
+        `Switch into it to enroll students and adjust the carried-over setup.`
+      );
       await loadStatus();
       router.refresh();
     } catch (createError) {
@@ -171,8 +176,8 @@ export default function SchoolYearTransitionPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-700">Admin Tool</p>
           <h1 className="text-3xl font-black tracking-tight md:text-4xl">School Year Transition</h1>
           <p className="max-w-3xl text-sm text-slate-600">
-            Prepare next year ahead of time with a <span className="font-semibold">draft school year</span> — an empty workspace you can switch
-            into and edit (students, curriculum, sections, schedules, enrollments) without touching the active year.
+            Prepare next year ahead of time with a <span className="font-semibold">draft school year</span> — a workspace pre-filled with
+            this year&apos;s curriculum, sections, and schedules (ready to tweak), with a fresh student roster, all without touching the active year.
           </p>
         </div>
 
@@ -231,7 +236,7 @@ export default function SchoolYearTransitionPage() {
             ) : (
               <>
                 <p className="mt-2 text-sm text-slate-600">
-                  No draft exists yet. Create an empty draft for <span className="font-semibold">{status.nextSchoolYear || 'next year'}</span> to begin early preparation.
+                  No draft exists yet. Create a draft for <span className="font-semibold">{status.nextSchoolYear || 'next year'}</span> — it carries over this year&apos;s curriculum, sections, and schedules so you can tweak them, with a fresh student roster.
                 </p>
                 <button
                   type="button"

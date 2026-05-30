@@ -11,6 +11,7 @@ import Enrollment from '@/models/Enrollment';
 import Curriculum from '@/models/Curriculum';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import { SCHOOL_YEAR_COOKIE, getNextSchoolYear, isValidSchoolYear, normalizeSchoolYear, resolveDraftSchoolYear } from '@/lib/school-year';
+import { seedDraftFromActiveYear } from '@/lib/rollover-school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -90,12 +91,25 @@ export async function POST(request) {
       );
     }
 
-    // A draft is an empty slate — no data is copied from the active or archived years.
-    settings.draftSchoolYear = draftSchoolYear;
-    await settings.save();
+    // The academic structure (curricula, grade-level curricula, sections, schedules) is carried
+    // forward from the active year so it can be tweaked rather than rebuilt. Student-level data
+    // (students, enrollments, financials) starts fresh. Done in one transaction so a partial
+    // copy can never leave a half-seeded draft.
+    let seeded = { curriculumCount: 0, gradeLevelCurriculumCount: 0, sectionCount: 0, scheduleCount: 0 };
+    const session = await mongoose.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        seeded = await seedDraftFromActiveYear(currentSchoolYear, draftSchoolYear, session);
+        settings.draftSchoolYear = draftSchoolYear;
+        await settings.save({ session });
+      });
+    } finally {
+      session.endSession();
+    }
 
     return NextResponse.json(
-      { success: true, data: { draftSchoolYear, currentSchoolYear } },
+      { success: true, data: { draftSchoolYear, currentSchoolYear, carriedOver: seeded } },
       { status: 201 }
     );
   } catch (error) {
