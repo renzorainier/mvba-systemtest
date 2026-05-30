@@ -11,7 +11,7 @@ export async function POST(request, { params }) {
     }
 
     const { id } = await params;
-    const result = await archiveStudent(id);
+    const result = await archiveStudent(id, schoolYearAccess.context.selectedSchoolYear);
 
     return NextResponse.json({ success: true, data: result }, { status: 200 });
   } catch (error) {
