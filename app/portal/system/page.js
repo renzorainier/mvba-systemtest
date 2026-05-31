@@ -593,10 +593,6 @@ export default function SystemSettingsPage() {
                 Manage the tuition plan cards used by the system. Each block can be edited, expanded, or duplicated later if the school updates the fee structure.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-500">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Editable tuition blocks</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Password-protected saves</span>
-            </div>
           </div>
 
           <div className="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-slate-50 to-white px-5 py-4 text-right shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
