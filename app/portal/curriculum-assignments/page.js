@@ -177,10 +177,6 @@ export default function CurriculumAssignmentsPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-              <LibraryBig size={14} />
-              Grade-Level Curriculum Matrix
-            </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950">Grade-Level Curriculum Assignment</h1>
             <p className="mt-1 text-sm text-slate-600">Assign a curriculum to each grade level and school year, then reuse it when creating sections.</p>
           </div>
