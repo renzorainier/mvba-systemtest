@@ -22,6 +22,17 @@ const DOCUMENT_FIELDS = [
   { label: 'Report Card', fieldKey: 'reportCard' },
 ];
 
+const createEmptyDocumentSlots = () =>
+  DOCUMENT_FIELDS.map(({ label, fieldKey }) => ({
+    label,
+    fieldKey,
+    file: null,
+    fileId: null,
+    fileName: '',
+    uploadedAt: '',
+    uploadedBy: '',
+  }));
+
 const createEmptyFormData = () => ({
   firstName: '',
   lastName: '',
@@ -62,16 +73,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [formData, setFormData] = useState(createEmptyFormData());
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
-  const [documentSlots, setDocumentSlots] = useState(
-    DOCUMENT_FIELDS.map(({ label, fieldKey }) => ({
-      label,
-      fieldKey,
-      file: null,
-      fileId: null,
-      fileName: '',
-      uploadedAt: '',
-    }))
-  );
+  const [documentSlots, setDocumentSlots] = useState(createEmptyDocumentSlots());
   const [loading, setLoading] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
@@ -149,7 +151,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       setSuccess('');
     } else if (open) {
       setFormData(createEmptyFormData());
-      setDocumentSlots([]);
+      setDocumentSlots(createEmptyDocumentSlots());
       setFileIdsToRemove([]);
       setProfilePicture(null);
       setProfilePicturePreview(null);
