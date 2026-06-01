@@ -126,6 +126,7 @@ export default function HelpManualBrowser({ sections, isAdmin }) {
                   </div>
                 </details>
               ))}
+              <p className="mt-3 text-xs text-slate-500">Quick Tip: If an image looks small, click it to view a larger version.</p>
             </nav>
 
             {!isAdmin && (
