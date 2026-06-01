@@ -27,6 +27,26 @@ export default function InlineImageRenderer({ item }) {
 
   const images = item.images || [];
   const captions = item.captions || [];
+  const imageSizes = item.imageSizes || [];
+
+  const getInlineImageStyle = (imageIndex) => {
+    const size = imageSizes[imageIndex];
+
+    if (!size) {
+      return { width: "90%" };
+    }
+
+    if (typeof size === "string") {
+      return { width: size };
+    }
+
+    return {
+      width: size.width || "90%",
+      maxWidth: size.maxWidth,
+      maxHeight: size.maxHeight,
+      height: size.height,
+    };
+  };
 
   return (
     <div>
@@ -55,7 +75,8 @@ export default function InlineImageRenderer({ item }) {
               <img
                 src={src}
                 alt={item.title || `image-${part.idx + 1}`}
-                className="mx-auto h-auto max-h-[840px] w-[90%] rounded border border-slate-200 object-contain"
+                style={getInlineImageStyle(part.idx)}
+                className="mx-auto h-auto rounded border border-slate-200 object-contain"
               />
             </button>
 
