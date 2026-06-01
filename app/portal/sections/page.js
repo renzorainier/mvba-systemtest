@@ -178,10 +178,6 @@ export default function Dashboard() {
         {/* Header Section */}
         <div className="max-w-7xl mx-auto mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-              <LayoutGrid size={14} />
-              Class Sections
-            </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950">Section Management</h1>
             <p className="mt-1 text-sm text-slate-600">Organize students into sections and link them to schedules and teachers.</p>
           </div>
