@@ -16,6 +16,7 @@ import {
 
 const ROLE_COLORS = {
   Admin: 'bg-purple-100 text-purple-800',
+  'Sub-Admin': 'bg-orange-100 text-orange-800',
   Registrar: 'bg-blue-100 text-blue-800',
   Cashier: 'bg-green-100 text-green-800',
 };
@@ -154,6 +155,7 @@ function CreateAccountModal({ onClose, onCreated }) {
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
             >
               <option value="Admin">Admin</option>
+              <option value="Sub-Admin">Sub-Admin</option>
               <option value="Registrar">Registrar</option>
               <option value="Cashier">Cashier</option>
             </select>

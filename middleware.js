@@ -55,24 +55,25 @@ export function middleware(request) {
     try {
       // Parse the cookie to get the role (saved during login)
       const user = JSON.parse(tokenStr);
-      const role = user.role; // Expected: 'Admin', 'Registrar', 'Cashier'
+      const role = user.role; // Expected: 'Admin', 'Sub-Admin', 'Registrar', 'Cashier'
 
       // 1. Cashier Restrictions (Cannot access Students, Teachers, Classes, or System)
       const isAcademicRoute = path.startsWith('/portal/students') || path.startsWith('/portal/teachers') || path.startsWith('/portal/classes');
-      if (isAcademicRoute && !['Admin', 'Registrar'].includes(role)) {
+      if (isAcademicRoute && !['Admin', 'Sub-Admin', 'Registrar'].includes(role)) {
         return NextResponse.redirect(new URL('/portal/dashboard', request.url));
       }
 
       // 2. Registrar Restrictions (Cannot access Financials)
-      if (path.startsWith('/portal/financials') && !['Admin', 'Cashier'].includes(role)) {
+      if (path.startsWith('/portal/financials') && !['Admin', 'Sub-Admin', 'Cashier'].includes(role)) {
         return NextResponse.redirect(new URL('/portal/dashboard', request.url));
       }
 
       // 3. Admin-Only Restrictions
-      if (path.startsWith('/portal/system') && role !== 'Admin') {
+      if (path.startsWith('/portal/system') && !['Admin', 'Sub-Admin'].includes(role)) {
         return NextResponse.redirect(new URL('/portal/dashboard', request.url));
       }
 
+      // 4. Account Management: Admin only
       if (path.startsWith('/portal/accounts') && role !== 'Admin') {
         return NextResponse.redirect(new URL('/portal/dashboard', request.url));
       }

@@ -272,23 +272,17 @@ export default function App() {
 
     const fetchStudentBreakdowns = async () => {
       try {
-        const entries = await Promise.all(
-          students.map(async (student) => {
-            const lrn = String(student.learnersReferenceNumber || '').trim();
-            const id = lrn && lrn.toUpperCase() !== 'TBA' ? lrn : student._id;
-            const response = await fetch(`/api/financials/monthly/${id}`);
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-              return [String(student._id), null];
-            }
-
-            return [String(student._id), data.data || null];
-          })
-        );
+        const response = await fetch('/api/financials/monthly-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            students: students.map((s) => ({ _id: s._id, learnersReferenceNumber: s.learnersReferenceNumber })),
+          }),
+        });
+        const data = await response.json();
 
         if (!cancelled) {
-          setStudentBreakdowns(Object.fromEntries(entries));
+          setStudentBreakdowns(response.ok && data.success ? data.data : {});
         }
       } catch (error) {
         if (!cancelled) {

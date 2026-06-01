@@ -57,7 +57,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'All fields are required.' }, { status: 400 });
     }
 
-    if (!['Admin', 'Registrar', 'Cashier'].includes(role)) {
+    if (!['Admin', 'Sub-Admin', 'Registrar', 'Cashier'].includes(role)) {
       return NextResponse.json({ success: false, message: 'Invalid role.' }, { status: 400 });
     }
 

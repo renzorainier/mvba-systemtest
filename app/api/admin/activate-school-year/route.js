@@ -14,7 +14,7 @@ const isAdminRequest = (request) => {
     }
 
     const parsed = JSON.parse(token);
-    return parsed?.role === 'Admin';
+    return ['Admin', 'Sub-Admin'].includes(parsed?.role);
   } catch {
     return false;
   }

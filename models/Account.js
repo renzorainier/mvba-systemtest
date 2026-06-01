@@ -13,7 +13,7 @@ const AccountSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
   role: {
     type: String,
-    enum: ['Admin', 'Registrar', 'Cashier'], // Only these 3 roles allowed
+    enum: ['Admin', 'Sub-Admin', 'Registrar', 'Cashier'],
     required: true
   },
 
@@ -25,4 +25,6 @@ const AccountSchema = new mongoose.Schema({
   recoveryCodeUsedAt: { type: Date, default: null },
 });
 
-export default mongoose.models.Account || mongoose.model('Account', AccountSchema);
+// Delete the cached model so schema changes (e.g. enum updates) take effect on hot-reload
+delete mongoose.models.Account;
+export default mongoose.model('Account', AccountSchema);
