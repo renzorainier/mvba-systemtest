@@ -20,37 +20,9 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
 
-    // Atomic: only matches when discountApplied is not yet true, preventing double-application.
-    const student = await Student.findOneAndUpdate(
-      { _id: id, discountApplied: { $ne: true } },
-      [
-        {
-          $set: {
-            discountApplied: true,
-            totalEstimatedCost: { $round: [{ $multiply: ['$totalEstimatedCost', 0.95] }, 0] },
-            remainingBalance: {
-              $max: [
-                0,
-                {
-                  $round: [
-                    {
-                      $subtract: [
-                        { $round: [{ $multiply: ['$totalEstimatedCost', 0.95] }, 0] },
-                        { $subtract: ['$totalEstimatedCost', '$remainingBalance'] },
-                      ],
-                    },
-                    0,
-                  ],
-                },
-              ],
-            },
-          },
-        },
-      ],
-      { new: true, runValidators: true }
-    );
+    const existing = await Student.findOne({ _id: id, discountApplied: { $ne: true } }).lean();
 
-    if (!student) {
+    if (!existing) {
       const exists = await Student.exists({ _id: id });
       if (!exists) {
         return NextResponse.json({ success: false, error: 'Student not found' }, { status: 404 });
@@ -58,8 +30,20 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: 'Discount has already been applied to this student.' }, { status: 409 });
     }
 
+    const originalCost = existing.totalEstimatedCost ?? 0;
+    const amountPaid = Math.max(0, originalCost - (existing.remainingBalance ?? 0));
+    const discountedCost = Math.round(originalCost * 0.95);
+    const newBalance = Math.max(0, discountedCost - amountPaid);
+
+    const student = await Student.findByIdAndUpdate(
+      id,
+      { $set: { discountApplied: true, totalEstimatedCost: discountedCost, remainingBalance: newBalance } },
+      { new: true }
+    );
+
     return NextResponse.json({ success: true, data: student }, { status: 200 });
   } catch (error) {
+    console.error('[discount] unexpected error:', error);
     return NextResponse.json({ success: false, error: 'An unexpected error occurred.' }, { status: 500 });
   }
 }
