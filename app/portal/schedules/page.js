@@ -381,10 +381,6 @@ export default function ScheduleManagement() {
           <div className="animate-fade-in">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
               <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-                  <CalendarDays size={14} />
-                  Timetable Builder
-                </div>
                 <h1 className="text-3xl font-black tracking-tight text-slate-950">Schedule Management</h1>
                 <p className="mt-1 text-sm text-slate-600">Build and manage class schedules and time slot assignments.</p>
               </div>

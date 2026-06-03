@@ -225,6 +225,11 @@ export async function POST(request) {
         profilePictureUrl = `/api/download-file/${fileId}`;
       }
 
+      const preuploadedProfilePictureId = formData.get('preuploadedProfilePictureId');
+      if (!profilePictureFile && preuploadedProfilePictureId) {
+        profilePictureUrl = `/api/download-file/${preuploadedProfilePictureId}`;
+      }
+
       try {
         const bucket = await getGridFSBucket();
         for (let i = 0; i < 10; i++) {
