@@ -27,6 +27,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
   const [serverClock, setServerClock] = useState('');
   const idleLogoutTimerRef = useRef(null);
   const idleWarningTimerRef = useRef(null);
+  const showIdleWarningRef = useRef(false);
   const isAdmin = userRole === 'Admin' || userRole === 'Sub-Admin';
   const IDLE_WARNING_DELAY_MS = 15 * 60 * 1000;
   const IDLE_LOGOUT_GRACE_MS = 60 * 1000;
@@ -92,6 +93,10 @@ export default function Sidebar({ userRole = 'Admin' }) {
   }, [clearIdleTimers, handleLogout, isAdmin, IDLE_LOGOUT_GRACE_MS, IDLE_WARNING_DELAY_MS]);
 
   useEffect(() => {
+    showIdleWarningRef.current = showIdleWarning;
+  }, [showIdleWarning]);
+
+  useEffect(() => {
     if (!isAdmin) {
       clearIdleTimers();
       return undefined;
@@ -100,7 +105,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
     const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
     const resetIdleTimer = () => {
-      if (showIdleWarning) {
+      if (showIdleWarningRef.current) {
         return;
       }
 
@@ -115,7 +120,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
       activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
       clearIdleTimers();
     };
-  }, [clearIdleTimers, isAdmin, scheduleIdleLogout, showIdleWarning]);
+  }, [clearIdleTimers, isAdmin, scheduleIdleLogout]);
 
   const staySignedIn = () => {
     setShowIdleWarning(false);

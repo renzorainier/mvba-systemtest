@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import SystemSettings from '@/models/SystemSettings';
 import Student from '@/models/Student';
@@ -93,20 +92,10 @@ export async function POST(request) {
 
     // The academic structure (curricula, grade-level curricula, sections, schedules) is carried
     // forward from the active year so it can be tweaked rather than rebuilt. Student-level data
-    // (students, enrollments, financials) starts fresh. Done in one transaction so a partial
-    // copy can never leave a half-seeded draft.
-    let seeded = { curriculumCount: 0, gradeLevelCurriculumCount: 0, sectionCount: 0, scheduleCount: 0 };
-    const session = await mongoose.startSession();
-
-    try {
-      await session.withTransaction(async () => {
-        seeded = await seedDraftFromActiveYear(currentSchoolYear, draftSchoolYear, session);
-        settings.draftSchoolYear = draftSchoolYear;
-        await settings.save({ session });
-      });
-    } finally {
-      session.endSession();
-    }
+    // (students, enrollments, financials) starts fresh.
+    const seeded = await seedDraftFromActiveYear(currentSchoolYear, draftSchoolYear);
+    settings.draftSchoolYear = draftSchoolYear;
+    await settings.save();
 
     return NextResponse.json(
       { success: true, data: { draftSchoolYear, currentSchoolYear, carriedOver: seeded } },
@@ -145,26 +134,18 @@ export async function DELETE(request) {
       );
     }
 
-    const session = await mongoose.startSession();
+    // Purge every live row tagged with the draft year across all collections.
+    await Student.deleteMany({ schoolYear: draftSchoolYear });
+    await Financial.deleteMany({ schoolYear: draftSchoolYear });
+    await Schedule.deleteMany({ schoolYear: draftSchoolYear });
+    await ClassAssignment.deleteMany({ schoolYear: draftSchoolYear });
+    await Section.deleteMany({ schoolYear: draftSchoolYear });
+    await Enrollment.deleteMany({ schoolYear: draftSchoolYear });
+    await Curriculum.deleteMany({ schoolYear: draftSchoolYear });
+    await GradeLevelCurriculum.deleteMany({ school_year_id: draftSchoolYear });
 
-    try {
-      await session.withTransaction(async () => {
-        // Purge every live row tagged with the draft year across all collections.
-        await Student.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await Financial.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await Schedule.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await ClassAssignment.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await Section.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await Enrollment.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await Curriculum.deleteMany({ schoolYear: draftSchoolYear }).session(session);
-        await GradeLevelCurriculum.deleteMany({ school_year_id: draftSchoolYear }).session(session);
-
-        settings.draftSchoolYear = null;
-        await settings.save({ session });
-      });
-    } finally {
-      session.endSession();
-    }
+    settings.draftSchoolYear = null;
+    await settings.save();
 
     const response = NextResponse.json(
       { success: true, data: { discardedSchoolYear: draftSchoolYear } },
