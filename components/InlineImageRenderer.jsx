@@ -6,6 +6,40 @@ export default function InlineImageRenderer({ item }) {
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
 
+  const renderInlineLinks = (text) => {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+
+      const label = match[1];
+      const href = match[2];
+
+      parts.push(
+        <a
+          key={`${match.index}-${href}`}
+          href={href}
+          className="font-medium text-blue-700 underline decoration-blue-300 decoration-2 underline-offset-2 hover:text-blue-900"
+        >
+          {label}
+        </a>,
+      );
+
+      lastIndex = linkRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts;
+  };
+
   const body = item.body || "";
   const regex = /\[\[IMG_(\d+)\]\]/g;
   const parts = [];
@@ -54,7 +88,7 @@ export default function InlineImageRenderer({ item }) {
         if (part.type === "text") {
           return (
             <p key={partIndex} className="mt-2 max-w-3xl whitespace-pre-line text-sm leading-6 text-slate-600">
-              {part.text}
+              {renderInlineLinks(part.text)}
             </p>
           );
         }
