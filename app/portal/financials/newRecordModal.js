@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import FileUpload from '@/components/FileUpload';
 import { FieldError, fieldBorder } from '@/components/FieldError';
+import { validateName } from '@/lib/validation';
 
 export default function AddNewRecord({ open, onClose, isHistorical = false }) {
   const todayIso = new Date().toISOString().slice(0, 10)
@@ -131,7 +132,8 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
       if (!formData.paymentMethod) errors.paymentMethod = 'Payment method is required.'
       if (!formData.referenceNumber.trim()) errors.referenceNumber = 'Reference number is required.'
       if (!formData.status) errors.status = 'Status is required.'
-      if (!formData.receivedBy.trim()) errors.receivedBy = 'Received by is required.'
+      const receivedByError = validateName(formData.receivedBy, 'Received by')
+      if (receivedByError) errors.receivedBy = receivedByError
 
       const amountPaid = Number(formData.amountPaid)
       if (!formData.amountPaid) {

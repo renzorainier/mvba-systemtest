@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import { FieldError, fieldBorder } from '@/components/FieldError'
+import { validateName, validateEmail, validatePhone, sanitizePhone } from '@/lib/validation'
 
 export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHistorical = false }) {
     const [formData, setFormData] = useState({
@@ -55,13 +56,15 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
 
         try {
             const errors = {};
-            if (!formData.firstName.trim()) errors.firstName = 'First name is required.';
-            if (!formData.lastName.trim()) errors.lastName = 'Last name is required.';
-            if (!formData.email.trim()) errors.email = 'Email is required.';
-            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Enter a valid email address.';
-            if (!formData.phoneNumber.trim()) errors.phoneNumber = 'Phone number is required.';
+            errors.firstName = validateName(formData.firstName, 'First name');
+            errors.lastName = validateName(formData.lastName, 'Last name');
+            errors.middleName = validateName(formData.middleName, 'Middle name', { required: false });
+            errors.email = validateEmail(formData.email);
+            errors.phoneNumber = validatePhone(formData.phoneNumber);
             if (!formData.teacherId.trim()) errors.teacherId = 'Teacher ID is required.';
             if (!formData.hireDate) errors.hireDate = 'Hire date is required.';
+
+            Object.keys(errors).forEach((key) => { if (!errors[key]) delete errors[key]; });
 
             if (Object.keys(errors).length > 0) {
                 setFieldErrors(errors);
@@ -176,10 +179,12 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
                                                 <input
                                                     type="tel"
-                                                    placeholder="Phone number"
+                                                    inputMode="numeric"
+                                                    placeholder="e.g. 09171234567"
+                                                    maxLength={11}
                                                     className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.phoneNumber)}`}
                                                     value={formData.phoneNumber}
-                                                    onChange={(e) => setField('phoneNumber', e.target.value)}
+                                                    onChange={(e) => setField('phoneNumber', sanitizePhone(e.target.value))}
                                                     disabled={loading}
                                                 />
                                                 <FieldError message={fieldErrors.phoneNumber} />
@@ -192,11 +197,12 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <input
                                                     type="text"
                                                     placeholder="Middle name"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.middleName)}`}
                                                     value={formData.middleName}
-                                                    onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                                                    onChange={(e) => setField('middleName', e.target.value)}
                                                     disabled={loading}
                                                 />
+                                                <FieldError message={fieldErrors.middleName} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Teacher ID *</label>

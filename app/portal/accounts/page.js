@@ -14,6 +14,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { FieldError } from '@/components/FieldError';
+import { validateName } from '@/lib/validation';
 
 const ROLE_COLORS = {
   Admin: 'bg-purple-100 text-purple-800',
@@ -94,7 +95,8 @@ function CreateAccountModal({ onClose, onCreated }) {
 
   const validate = () => {
     const errors = {};
-    if (!form.fullName.trim()) errors.fullName = 'Full name is required.';
+    const nameError = validateName(form.fullName, 'Full name');
+    if (nameError) errors.fullName = nameError;
     if (!form.username.trim()) errors.username = 'Username is required.';
     if (!form.role) errors.role = 'Role is required.';
     if (!form.password) errors.password = 'Password is required.';

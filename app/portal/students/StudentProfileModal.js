@@ -5,6 +5,7 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/re
 import { X, Upload, Save, Edit2, Archive } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
 import { FieldError } from '@/components/FieldError';
+import { validateName, validatePhone, sanitizePhone } from '@/lib/validation';
 
 const GRADE_LEVEL_OPTIONS = [
   'Kinder 1',
@@ -201,9 +202,12 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       return;
     }
 
+    // Guardian contact: keep it strictly numeric, max 11 digits.
+    const nextValue = name === 'parentGuardianContactNumber' ? sanitizePhone(value) : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: nextValue,
     }));
     setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
   };
@@ -322,10 +326,16 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
     try {
       // Validate required fields
       const errors = {};
-      if (!formData.firstName.trim()) errors.firstName = 'First name is required.';
-      if (!formData.lastName.trim()) errors.lastName = 'Last name is required.';
+      errors.firstName = validateName(formData.firstName, 'First name');
+      errors.lastName = validateName(formData.lastName, 'Last name');
+      errors.middleName = validateName(formData.middleName, 'Middle name', { required: false });
       if (!formData.gender) errors.gender = 'Gender is required.';
       if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required.';
+      errors.parentGuardianName = validateName(formData.parentGuardianName, 'Guardian name', { required: false });
+      errors.parentGuardianRelationship = validateName(formData.parentGuardianRelationship, 'Relationship', { required: false });
+      errors.parentGuardianContactNumber = validatePhone(formData.parentGuardianContactNumber, { required: false });
+
+      Object.keys(errors).forEach((key) => { if (!errors[key]) delete errors[key]; });
 
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
@@ -617,8 +627,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.middleName}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.middleName ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.middleName} />
                   </div>
 
                   {/* Gender */}
@@ -753,8 +764,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.parentGuardianName}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.parentGuardianName ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.parentGuardianName} />
                   </div>
 
                   {/* Relationship */}
@@ -768,8 +780,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.parentGuardianRelationship}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.parentGuardianRelationship ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.parentGuardianRelationship} />
                   </div>
 
                   {/* Contact Number */}
@@ -779,12 +792,16 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                     </label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={11}
+                      placeholder="e.g. 09171234567"
                       name="parentGuardianContactNumber"
                       value={formData.parentGuardianContactNumber}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.parentGuardianContactNumber ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.parentGuardianContactNumber} />
                   </div>
                 </div>
               </div>
