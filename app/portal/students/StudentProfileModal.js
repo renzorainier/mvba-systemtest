@@ -461,9 +461,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       <DialogBackdrop className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="fixed inset-0 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-lg bg-white shadow-xl transition-all">
+          <DialogPanel className="flex max-h-[90vh] w-full max-w-4xl transform flex-col overflow-hidden rounded-lg bg-white shadow-xl transition-all">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
+            <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
               <DialogTitle className="text-lg font-bold text-white">
                 {student ? (isEditing ? 'Edit Student Profile' : 'Student Profile') : 'Add New Student'}
               </DialogTitle>
@@ -476,7 +476,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Alert Messages */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -860,7 +860,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
             </div>
 
             {/* Footer / Action Buttons */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="flex-shrink-0 bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
               {student && !isEditing && (
                 <button
                   onClick={handleArchive}
