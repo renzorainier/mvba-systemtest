@@ -103,7 +103,10 @@ export default function HelpManualBrowser({ sections, isAdmin }) {
 
           <div className="mt-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Contents</p>
-            <nav aria-label="User manual sections" className="space-y-2">
+            <nav
+              aria-label="User manual sections"
+              className="max-h-[calc(100vh-14rem)] space-y-2 overflow-y-auto pr-2"
+            >
               {filteredSections.map((section, index) => (
                 <details key={section.id} className="group border-b border-slate-200 pb-2" open={index === 0}>
                   <summary className="cursor-pointer list-none py-1 outline-none transition hover:text-slate-950">
@@ -126,6 +129,7 @@ export default function HelpManualBrowser({ sections, isAdmin }) {
                   </div>
                 </details>
               ))}
+              <p className="mt-3 text-xs text-slate-500">Quick Tip: If an image looks small, click it to view a larger version.</p>
             </nav>
 
             {!isAdmin && (
