@@ -508,6 +508,7 @@ export default function CurriculumsPage() {
                   <input
                     type="date"
                     value={formData.effective_start_date}
+                    max={formData.effective_end_date || undefined}
                     onChange={(e) => setField('effective_start_date', e.target.value)}
                     className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.effective_start_date)}`}
                   />
@@ -518,6 +519,7 @@ export default function CurriculumsPage() {
                   <input
                     type="date"
                     value={formData.effective_end_date}
+                    min={formData.effective_start_date || undefined}
                     onChange={(e) => setField('effective_end_date', e.target.value)}
                     className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.effective_end_date)}`}
                   />
