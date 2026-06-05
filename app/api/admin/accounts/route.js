@@ -38,7 +38,7 @@ export async function GET(request) {
       recoveryCodeUsedAt: a.recoveryCodeUsedAt,
     }));
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data, currentUserName: user.name });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

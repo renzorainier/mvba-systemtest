@@ -206,6 +206,7 @@ function CreateAccountModal({ onClose, onCreated }) {
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState([]);
+  const [currentUserName, setCurrentUserName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [generatingId, setGeneratingId] = useState(null);
@@ -220,6 +221,7 @@ export default function AccountsPage() {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load accounts.');
       setAccounts(data.data);
+      setCurrentUserName(data.currentUserName || '');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -323,9 +325,13 @@ export default function AccountsPage() {
                 {accounts.map((account) => {
                   const codeConfig = CODE_STATUS_CONFIG[account.recoveryCodeStatus] || CODE_STATUS_CONFIG.none;
                   const StatusIcon = codeConfig.icon;
+                  const isSelf = account.fullName === currentUserName;
                   return (
                     <tr key={account._id} className="bg-white hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-4 font-semibold text-slate-900">{account.fullName}</td>
+                      <td className="px-5 py-4 font-semibold text-slate-900">
+                        {account.fullName}
+                        {isSelf && <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">You</span>}
+                      </td>
                       <td className="px-5 py-4 font-mono text-slate-600">{account.username}</td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${ROLE_COLORS[account.role] || 'bg-gray-100 text-gray-700'}`}>
@@ -363,8 +369,9 @@ export default function AccountsPage() {
                           <button
                             type="button"
                             onClick={() => toggleActive(account)}
-                            disabled={togglingId === account._id}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-wait ${
+                            disabled={togglingId === account._id || (isSelf && account.isActive)}
+                            title={isSelf && account.isActive ? 'You cannot deactivate your own account' : undefined}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                               account.isActive
                                 ? 'border-red-200 text-red-700 hover:bg-red-50'
                                 : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'

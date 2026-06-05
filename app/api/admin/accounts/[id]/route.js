@@ -20,6 +20,9 @@ export async function PATCH(request, { params }) {
     }
 
     if (typeof isActive === 'boolean') {
+      if (isActive === false && account.fullName === user.name) {
+        return NextResponse.json({ success: false, message: 'You cannot deactivate your own account.' }, { status: 403 });
+      }
       account.isActive = isActive;
     }
 
