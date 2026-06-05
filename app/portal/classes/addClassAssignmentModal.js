@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
+import { FieldError, fieldBorder } from '@/components/FieldError';
 
 const emptyForm = {
   sectionId: '',
@@ -17,8 +18,15 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const setField = (key, value, extra = {}) => {
+    setFormData((prev) => ({ ...prev, [key]: value, ...extra }));
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  };
 
   useEffect(() => {
+    setFieldErrors({});
     if (editingAssignment) {
       setFormData({
         sectionId: editingAssignment.section?._id || editingAssignment.section || '',
@@ -102,13 +110,23 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
     setError('');
 
     try {
-      if (!formData.sectionId || !formData.teacherId || !formData.scheduleId) {
-        setError('Please select a section, teacher, and schedule');
-        return;
+      const errors = {};
+      if (!formData.sectionId) errors.sectionId = 'Section is required.';
+      if (!formData.teacherId) errors.teacherId = 'Teacher is required.';
+      if (!formData.scheduleId) errors.scheduleId = 'Schedule is required.';
+
+      if (
+        !errors.scheduleId &&
+        selectedSection &&
+        selectedSchedule &&
+        String(selectedSection.gradeLevel || '').trim() !== String(selectedSchedule.gradeLevel || '').trim()
+      ) {
+        errors.scheduleId = 'Section and schedule must have the same grade level.';
       }
 
-      if (selectedSection && selectedSchedule && String(selectedSection.gradeLevel || '').trim() !== String(selectedSchedule.gradeLevel || '').trim()) {
-        setError('Section and schedule must have the same grade level');
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        setLoading(false);
         return;
       }
 
@@ -171,9 +189,9 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                       <label className="block text-sm font-medium text-gray-700">Section *</label>
                       <select
                         value={formData.sectionId}
-                        onChange={(e) => setFormData({ ...formData, sectionId: e.target.value, scheduleId: '' })}
+                        onChange={(e) => setField('sectionId', e.target.value, { scheduleId: '' })}
                         disabled={loading || loadingOptions}
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className={`mt-1 w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.sectionId)}`}
                       >
                         <option value="">Select a section</option>
                         {sections.map((section) => (
@@ -182,15 +200,16 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                           </option>
                         ))}
                       </select>
+                      <FieldError message={fieldErrors.sectionId} />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Teacher *</label>
                       <select
                         value={formData.teacherId}
-                        onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
+                        onChange={(e) => setField('teacherId', e.target.value)}
                         disabled={loading || loadingOptions}
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className={`mt-1 w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.teacherId)}`}
                       >
                         <option value="">Select a teacher</option>
                         {teachers.map((teacher) => (
@@ -199,15 +218,16 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                           </option>
                         ))}
                       </select>
+                      <FieldError message={fieldErrors.teacherId} />
                     </div>
 
                     <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-gray-700">Schedule *</label>
                       <select
                         value={formData.scheduleId}
-                        onChange={(e) => setFormData({ ...formData, scheduleId: e.target.value })}
+                        onChange={(e) => setField('scheduleId', e.target.value)}
                         disabled={loading || loadingOptions}
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className={`mt-1 w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.scheduleId)}`}
                       >
                         <option value="">{selectedSection?.gradeLevel ? `Select a schedule for ${selectedSection.gradeLevel}` : 'Select a schedule'}</option>
                         {visibleSchedules.map((schedule) => (
@@ -216,6 +236,7 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                           </option>
                         ))}
                       </select>
+                      <FieldError message={fieldErrors.scheduleId} />
                       {selectedSection && (
                         <p className="mt-2 text-xs text-gray-500">
                           Showing schedules for <span className="font-medium text-gray-700">{selectedSection.gradeLevel}</span>

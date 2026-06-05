@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSchoolYearContext } from '@/components/SchoolYearContext'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+import { FieldError, fieldBorder } from '@/components/FieldError'
 
 export default function AddSectionsModal({ isOpen, onClose, editingSection, isHistorical = false }) {
     const gradeLevel = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
@@ -20,8 +21,14 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
     const [curriculumOptions, setCurriculumOptions] = useState([]);
     const [loadingCurriculums, setLoadingCurriculums] = useState(false);
+
+    const setField = (key, value) => {
+        setFormData((prev) => ({ ...prev, [key]: value }));
+        setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+    };
 
     // Auto-generate section ID based on grade level, section name, and school year
     const generateSectionId = (grade, name, year) => {
@@ -53,6 +60,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
 
     // Populate form when editing
     useEffect(() => {
+        setFieldErrors({});
         if (editingSection) {
             setFormData({
                 sectionName: editingSection.sectionName || '',
@@ -134,9 +142,14 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
         setError('')
 
         // Validation check
-        if (!formData.sectionName || !formData.sectionId || !formData.gradeLevel ||
-            !formData.schoolYear || !formData.glCurriculumId || !formData.roomNumber) {
-            setError('Please fill in all required fields.');
+        const errors = {};
+        if (!formData.sectionName.trim()) errors.sectionName = 'Section name is required.';
+        if (!formData.gradeLevel) errors.gradeLevel = 'Grade level is required.';
+        if (!formData.glCurriculumId) errors.glCurriculumId = 'Grade-level curriculum is required.';
+        if (!formData.roomNumber.trim()) errors.roomNumber = 'Room number is required.';
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
             setLoading(false);
             return;
         }
@@ -214,11 +227,12 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Einstein"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.sectionName)}`}
                                                     value={formData.sectionName}
-                                                    onChange={(e) => setFormData({ ...formData, sectionName: e.target.value })}
+                                                    onChange={(e) => setField('sectionName', e.target.value)}
                                                     disabled={loading || isHistorical}
                                                 />
+                                                <FieldError message={fieldErrors.sectionName} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Section ID (Auto-generated) *</label>
@@ -236,15 +250,16 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
                                                 <select
-                                                    value={formData.gradeLevel} // FIXED: Now uses formData directly
-                                                    onChange={(e) => setFormData({ ...formData, gradeLevel: e.target.value })} // FIXED: Updates formData directly
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                    value={formData.gradeLevel}
+                                                    onChange={(e) => setField('gradeLevel', e.target.value)}
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 bg-white ${fieldBorder(fieldErrors.gradeLevel)}`}
                                                     disabled={loading || isHistorical}
                                                 >
                                                     {/* FIXED: Added a default empty option so the user HAS to click it */}
-                                                    <option value="">Select a Grade...</option> 
+                                                    <option value="">Select a Grade...</option>
                                                     {gradeLevel.map(g => <option key={g} value={g}>{g}</option>)}
                                                 </select>
+                                                <FieldError message={fieldErrors.gradeLevel} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">School Year *</label>
@@ -264,8 +279,8 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                 <label className="block text-sm font-medium text-gray-700">Grade-Level Curriculum *</label>
                                                 <select
                                                     value={formData.glCurriculumId}
-                                                    onChange={(e) => setFormData({ ...formData, glCurriculumId: e.target.value })}
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                    onChange={(e) => setField('glCurriculumId', e.target.value)}
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 bg-white ${fieldBorder(fieldErrors.glCurriculumId)}`}
                                                     disabled={loading || loadingCurriculums || !formData.gradeLevel || !formData.schoolYear}
                                                 >
                                                     <option value="">
@@ -285,6 +300,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                         );
                                                     })}
                                                 </select>
+                                                <FieldError message={fieldErrors.glCurriculumId} />
                                                 {formData.gradeLevel && formData.schoolYear && (
                                                     <p className="mt-1 text-xs text-gray-500">
                                                         Available curriculum assignments for {formData.gradeLevel} in {formData.schoolYear}.
@@ -300,11 +316,12 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Rm-305"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.roomNumber)}`}
                                                     value={formData.roomNumber}
-                                                    onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
+                                                    onChange={(e) => setField('roomNumber', e.target.value)}
                                                     disabled={loading || isHistorical}
                                                 />
+                                                <FieldError message={fieldErrors.roomNumber} />
                                             </div>
                                         </div>
                                     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LibraryBig, Plus, Search, PencilLine, Trash2, Save, X } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
+import { FieldError, fieldBorder } from '@/components/FieldError';
 
 const gradeLevels = ['Kinder 1', 'Kinder 2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
@@ -25,6 +26,12 @@ export default function CurriculumAssignmentsPage() {
   const [editingId, setEditingId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const setField = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  };
 
   const fetchData = async () => {
     try {
@@ -70,6 +77,7 @@ export default function CurriculumAssignmentsPage() {
     setEditingId(null);
     setFormData(emptyForm);
     setError('');
+    setFieldErrors({});
   };
 
   const openNewForm = () => {
@@ -113,8 +121,12 @@ export default function CurriculumAssignmentsPage() {
       setSaving(true);
       setError('');
 
-      if (!formData.grade_level || !formData.curriculum_id) {
-        setError('Grade level and curriculum are required');
+      const errors = {};
+      if (!formData.grade_level) errors.grade_level = 'Grade level is required.';
+      if (!formData.curriculum_id) errors.curriculum_id = 'Curriculum is required.';
+
+      setFieldErrors(errors);
+      if (Object.keys(errors).length > 0) {
         return;
       }
 
@@ -305,21 +317,22 @@ export default function CurriculumAssignmentsPage() {
                     <label className="block text-sm font-medium text-slate-700">Grade Level *</label>
                     <select
                       value={formData.grade_level}
-                      onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      onChange={(e) => setField('grade_level', e.target.value)}
+                      className={`mt-1 w-full rounded-xl border bg-white px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.grade_level)}`}
                     >
                       <option value="">Select grade level</option>
                       {gradeLevels.map((gradeLevel) => (
                         <option key={gradeLevel} value={gradeLevel}>{gradeLevel}</option>
                       ))}
                     </select>
+                    <FieldError message={fieldErrors.grade_level} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Curriculum *</label>
                     <select
                       value={formData.curriculum_id}
-                      onChange={(e) => setFormData({ ...formData, curriculum_id: e.target.value })}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      onChange={(e) => setField('curriculum_id', e.target.value)}
+                      className={`mt-1 w-full rounded-xl border bg-white px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.curriculum_id)}`}
                     >
                       <option value="">Select curriculum</option>
                       {curriculums.map((curriculum) => (
@@ -328,6 +341,7 @@ export default function CurriculumAssignmentsPage() {
                         </option>
                       ))}
                     </select>
+                    <FieldError message={fieldErrors.curriculum_id} />
                   </div>
                   <div className="md:col-span-2">
                     <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">

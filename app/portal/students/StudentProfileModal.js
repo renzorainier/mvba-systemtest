@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X, Upload, Save, Edit2, Archive } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
+import { FieldError } from '@/components/FieldError';
 
 const GRADE_LEVEL_OPTIONS = [
   'Kinder 1',
@@ -78,6 +79,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
   const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [fileIdsToRemove, setFileIdsToRemove] = useState([]);
   const fileInputRef = useRef(null);
 
@@ -149,6 +151,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       setIsEditing(false);
       setError('');
       setSuccess('');
+      setFieldErrors({});
     } else if (open) {
       setFormData(createEmptyFormData());
       setDocumentSlots(createEmptyDocumentSlots());
@@ -158,6 +161,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       setIsEditing(true);
       setError('');
       setSuccess('');
+      setFieldErrors({});
     }
   }, [student, open]);
 
@@ -201,6 +205,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
       ...prev,
       [name]: value,
     }));
+    setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
   };
 
   const handleProfilePictureChange = (e) => {
@@ -316,8 +321,14 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
 
     try {
       // Validate required fields
-      if (!formData.firstName || !formData.lastName || !formData.gender || !formData.dateOfBirth) {
-        setError('Please fill in all required fields');
+      const errors = {};
+      if (!formData.firstName.trim()) errors.firstName = 'First name is required.';
+      if (!formData.lastName.trim()) errors.lastName = 'Last name is required.';
+      if (!formData.gender) errors.gender = 'Gender is required.';
+      if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required.';
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         setLoading(false);
         return;
       }
@@ -574,8 +585,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.firstName}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.firstName ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.firstName} />
                   </div>
 
                   {/* Last Name */}
@@ -589,8 +601,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.lastName}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.lastName ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.lastName} />
                   </div>
 
                   {/* Middle Name */}
@@ -618,12 +631,13 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.gender}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.gender ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     >
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                     </select>
+                    <FieldError message={fieldErrors.gender} />
                   </div>
 
                   {/* Date of Birth */}
@@ -637,8 +651,9 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 disabled:text-gray-500 focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${fieldErrors.dateOfBirth ? 'border-red-400 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
+                    <FieldError message={fieldErrors.dateOfBirth} />
                   </div>
 
                   {/* Grade Level */}
@@ -875,7 +890,7 @@ export default function StudentProfileModal({ open, onClose, student, onStudentU
               ) : (
                 <>
                   <button
-                    onClick={() => setIsEditing(false)}
+                    onClick={() => { setIsEditing(false); setFieldErrors({}); }}
                     disabled={loading}
                     className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >

@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { FieldError } from '@/components/FieldError';
 
 const ROLE_COLORS = {
   Admin: 'bg-purple-100 text-purple-800',
@@ -84,12 +85,32 @@ function CreateAccountModal({ onClose, onCreated }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const updateField = (key, value) => {
+    setForm((p) => ({ ...p, [key]: value }));
+    setFieldErrors((p) => (p[key] ? { ...p, [key]: undefined } : p));
+  };
+
+  const validate = () => {
+    const errors = {};
+    if (!form.fullName.trim()) errors.fullName = 'Full name is required.';
+    if (!form.username.trim()) errors.username = 'Username is required.';
+    if (!form.role) errors.role = 'Role is required.';
+    if (!form.password) errors.password = 'Password is required.';
+    else if (form.password.length < 8) errors.password = 'Password must be at least 8 characters.';
+    if (!form.confirm) errors.confirm = 'Please confirm the password.';
+    else if (form.password !== form.confirm) errors.confirm = 'Passwords do not match.';
+    return errors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (form.password !== form.confirm) { setError('Passwords do not match.'); return; }
-    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+
+    const errors = validate();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setLoading(true);
     try {
@@ -102,6 +123,8 @@ function CreateAccountModal({ onClose, onCreated }) {
       if (res.ok && data.success) {
         onCreated(data.data);
         onClose();
+      } else if (res.status === 409) {
+        setFieldErrors((p) => ({ ...p, username: data.message || 'Username already taken.' }));
       } else {
         setError(data.message || 'Failed to create account.');
       }
@@ -111,6 +134,11 @@ function CreateAccountModal({ onClose, onCreated }) {
       setLoading(false);
     }
   };
+
+  const inputClass = (hasError) =>
+    `w-full rounded-xl border bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:bg-white ${
+      hasError ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'
+    }`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -131,59 +159,60 @@ function CreateAccountModal({ onClose, onCreated }) {
             <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Full Name</label>
             <input
               type="text"
-              required
               value={form.fullName}
-              onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
+              onChange={(e) => updateField('fullName', e.target.value)}
+              className={inputClass(fieldErrors.fullName)}
             />
+            <FieldError message={fieldErrors.fullName} />
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Username</label>
             <input
               type="text"
-              required
               value={form.username}
-              onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
+              onChange={(e) => updateField('username', e.target.value)}
+              className={inputClass(fieldErrors.username)}
             />
+            <FieldError message={fieldErrors.username} />
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Role</label>
             <select
               value={form.role}
-              onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
+              onChange={(e) => updateField('role', e.target.value)}
+              className={inputClass(fieldErrors.role)}
             >
               <option value="Admin">Admin</option>
               <option value="Sub-Admin">Sub-Admin</option>
               <option value="Registrar">Registrar</option>
               <option value="Cashier">Cashier</option>
             </select>
+            <FieldError message={fieldErrors.role} />
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 value={form.password}
-                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-11 text-sm text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
+                onChange={(e) => updateField('password', e.target.value)}
+                className={`${inputClass(fieldErrors.password)} pr-11`}
               />
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <FieldError message={fieldErrors.password} />
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Confirm Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
-              required
               value={form.confirm}
-              onChange={(e) => setForm((p) => ({ ...p, confirm: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
+              onChange={(e) => updateField('confirm', e.target.value)}
+              className={inputClass(fieldErrors.confirm)}
             />
+            <FieldError message={fieldErrors.confirm} />
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+import { FieldError, fieldBorder } from '@/components/FieldError'
 
 export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHistorical = false }) {
     const [formData, setFormData] = useState({
@@ -15,9 +16,16 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
+
+    const setField = (key, value) => {
+        setFormData((prev) => ({ ...prev, [key]: value }));
+        setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+    };
 
     // Populate form when editing
     useEffect(() => {
+        setFieldErrors({});
         if (editingTeacher) {
             setFormData({
                 firstName: editingTeacher.firstName || '',
@@ -46,8 +54,17 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
         setError('')
 
         try {
-            if (!formData.firstName || !formData.lastName || !formData.email || !formData.hireDate || !formData.phoneNumber || !formData.teacherId) {
-                setError('Please fill in all required fields.');
+            const errors = {};
+            if (!formData.firstName.trim()) errors.firstName = 'First name is required.';
+            if (!formData.lastName.trim()) errors.lastName = 'Last name is required.';
+            if (!formData.email.trim()) errors.email = 'Email is required.';
+            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Enter a valid email address.';
+            if (!formData.phoneNumber.trim()) errors.phoneNumber = 'Phone number is required.';
+            if (!formData.teacherId.trim()) errors.teacherId = 'Teacher ID is required.';
+            if (!formData.hireDate) errors.hireDate = 'Hire date is required.';
+
+            if (Object.keys(errors).length > 0) {
+                setFieldErrors(errors);
                 setLoading(false);
                 return;
             }
@@ -121,22 +138,24 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <input
                                                     type="text"
                                                     placeholder="First name"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.firstName)}`}
                                                     value={formData.firstName}
-                                                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                                    onChange={(e) => setField('firstName', e.target.value)}
                                                     disabled={loading}
                                                 />
+                                                <FieldError message={fieldErrors.firstName} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Last Name *</label>
                                                 <input
                                                     type="text"
                                                     placeholder="Last name"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.lastName)}`}
                                                     value={formData.lastName}
-                                                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                                    onChange={(e) => setField('lastName', e.target.value)}
                                                     disabled={loading}
                                                 />
+                                                <FieldError message={fieldErrors.lastName} />
                                             </div>
                                         </div>
 
@@ -146,22 +165,24 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <input
                                                     type="email"
                                                     placeholder="Email"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.email)}`}
                                                     value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    onChange={(e) => setField('email', e.target.value)}
                                                     disabled={loading}
                                                 />
+                                                <FieldError message={fieldErrors.email} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
                                                 <input
                                                     type="tel"
                                                     placeholder="Phone number"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.phoneNumber)}`}
                                                     value={formData.phoneNumber}
-                                                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                                    onChange={(e) => setField('phoneNumber', e.target.value)}
                                                     disabled={loading}
                                                 />
+                                                <FieldError message={fieldErrors.phoneNumber} />
                                             </div>
                                         </div>
 
@@ -182,11 +203,12 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <input
                                                     type="text"
                                                     placeholder="Teacher ID"
-                                                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.teacherId)}`}
                                                     value={formData.teacherId}
-                                                    onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
+                                                    onChange={(e) => setField('teacherId', e.target.value)}
                                                     disabled={loading}
                                                 />
+                                                <FieldError message={fieldErrors.teacherId} />
                                             </div>
                                         </div>
 
@@ -194,11 +216,12 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                             <label className="block text-sm font-medium text-gray-700">Hire Date *</label>
                                             <input
                                                 type="date"
-                                                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.hireDate)}`}
                                                 value={formData.hireDate}
-                                                onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                                                onChange={(e) => setField('hireDate', e.target.value)}
                                                 disabled={loading}
                                             />
+                                            <FieldError message={fieldErrors.hireDate} />
                                         </div>
                                     </div>
                                 </div>

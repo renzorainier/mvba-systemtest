@@ -10,8 +10,9 @@ import {
   MoreVertical,
   Trash2,
   Save,
-  Wand2 
+  Wand2
 } from 'lucide-react';
+import { FieldError, fieldBorder } from '@/components/FieldError';
 
 export default function ScheduleManagement() {
   const [viewMode, setViewMode] = useState('list'); 
@@ -28,6 +29,7 @@ export default function ScheduleManagement() {
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('Kinder 1'); // Updated default grade
   
   const [availableSubjects, setAvailableSubjects] = useState(['Math', 'Science', 'English', 'History', 'PE', 'Arts', 'Computer']);
@@ -89,11 +91,13 @@ export default function ScheduleManagement() {
     setCurrentScheduleCode('');
     setEditingScheduleId(null);
     setError('');
+    setNameError('');
     setViewMode('editor');
   };
 
   // Load an existing schedule into the editor to view/edit it
   const handleViewSchedule = (schedule) => {
+    setNameError('');
     setCurrentScheduleName(schedule.name);
     setSelectedGrade(schedule.gradeLevel);
     setScheduleItems(schedule.items || []);
@@ -280,8 +284,8 @@ export default function ScheduleManagement() {
 
   // --- SAVE TO MONGODB ---
   const handleSaveSchedule = async () => {
-    if (!currentScheduleName) {
-      setError("Schedule name is required");
+    if (!currentScheduleName.trim()) {
+      setNameError('Schedule name is required.');
       return;
     }
 
@@ -537,13 +541,14 @@ export default function ScheduleManagement() {
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="col-span-1 md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Name *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={currentScheduleName}
-                  onChange={(e) => setCurrentScheduleName(e.target.value)}
-                  placeholder="e.g. Kinder 1 - Morning Set A" 
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => { setCurrentScheduleName(e.target.value); setNameError(''); }}
+                  placeholder="e.g. Kinder 1 - Morning Set A"
+                  className={`w-full border rounded-md p-2 focus:ring-1 ${fieldBorder(nameError)}`}
                 />
+                <FieldError message={nameError} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level *</label>

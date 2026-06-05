@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Plus, Search, PencilLine, Trash2, Save, X } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
+import { FieldError, fieldBorder } from '@/components/FieldError';
 
 const emptyForm = {
   curriculum_id: '',
@@ -27,6 +28,12 @@ export default function CurriculumsPage() {
   const [editingId, setEditingId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const setField = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  };
 
   const fetchCurriculums = async () => {
     try {
@@ -251,6 +258,7 @@ export default function CurriculumsPage() {
     setEditingId(null);
     setFormData(emptyForm);
     setError('');
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
@@ -259,6 +267,7 @@ export default function CurriculumsPage() {
     setEditingId(null);
     setFormData(emptyForm);
     setError('');
+    setFieldErrors({});
   };
 
   const handleSave = async () => {
@@ -270,8 +279,20 @@ export default function CurriculumsPage() {
       setSaving(true);
       setError('');
 
-      if (!formData.curriculum_name || !formData.effective_start_date || !formData.effective_end_date) {
-        setError('Curriculum name and effective dates are required');
+      const errors = {};
+      if (!formData.curriculum_name.trim()) errors.curriculum_name = 'Curriculum name is required.';
+      if (!formData.effective_start_date) errors.effective_start_date = 'Effective start date is required.';
+      if (!formData.effective_end_date) errors.effective_end_date = 'Effective end date is required.';
+      if (
+        formData.effective_start_date &&
+        formData.effective_end_date &&
+        formData.effective_end_date < formData.effective_start_date
+      ) {
+        errors.effective_end_date = 'End date must be on or after the start date.';
+      }
+
+      setFieldErrors(errors);
+      if (Object.keys(errors).length > 0) {
         return;
       }
 
@@ -466,10 +487,11 @@ export default function CurriculumsPage() {
                   <input
                     type="text"
                     value={formData.curriculum_name}
-                    onChange={(e) => setFormData({ ...formData, curriculum_name: e.target.value })}
+                    onChange={(e) => setField('curriculum_name', e.target.value)}
                     placeholder="e.g. Competency-Based Basic Curriculum"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.curriculum_name)}`}
                   />
+                  <FieldError message={fieldErrors.curriculum_name} />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700">Description</label>
@@ -486,18 +508,20 @@ export default function CurriculumsPage() {
                   <input
                     type="date"
                     value={formData.effective_start_date}
-                    onChange={(e) => setFormData({ ...formData, effective_start_date: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => setField('effective_start_date', e.target.value)}
+                    className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.effective_start_date)}`}
                   />
+                  <FieldError message={fieldErrors.effective_start_date} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Effective End *</label>
                   <input
                     type="date"
                     value={formData.effective_end_date}
-                    onChange={(e) => setFormData({ ...formData, effective_end_date: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => setField('effective_end_date', e.target.value)}
+                    className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.effective_end_date)}`}
                   />
+                  <FieldError message={fieldErrors.effective_end_date} />
                 </div>
               </div>
 

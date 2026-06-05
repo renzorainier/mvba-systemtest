@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import FileUpload from '@/components/FileUpload';
+import { FieldError, fieldBorder } from '@/components/FieldError';
 
 export default function AddNewRecord({ open, onClose, isHistorical = false }) {
   const todayIso = new Date().toISOString().slice(0, 10)
@@ -23,7 +24,16 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
   const [showStudentSuggestions, setShowStudentSuggestions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [selectedFile, setSelectedFile] = useState(null)
+
+  const setField = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }))
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev))
+  }
+
+  const clearFieldError = (key) =>
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev))
 
   useEffect(() => {
     if (!open) {
@@ -65,6 +75,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
       remarks: '',
       receivedBy: '',
     })
+    setFieldErrors({})
   }, [open])
 
   const filteredStudents = useMemo(() => {
@@ -101,6 +112,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
     }))
     setStudentQuery(`${student.learnersReferenceNumber} - ${student.firstName} ${student.lastName}`)
     setShowStudentSuggestions(false)
+    clearFieldError('studentId')
   }
 
   const handleSubmit = async () => {
@@ -113,21 +125,25 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
     
     try {
       // Validate required fields
-      if (!formData.studentId || !formData.amountPaid || !formData.dateOfPayment || !formData.paymentMethod || !formData.referenceNumber || !formData.status || !formData.receivedBy) {
-        setError('Please fill in all required fields')
-        setLoading(false)
-        return
-      }
+      const errors = {}
+      if (!formData.studentId) errors.studentId = 'Please select a student.'
+      if (!formData.dateOfPayment) errors.dateOfPayment = 'Date of payment is required.'
+      if (!formData.paymentMethod) errors.paymentMethod = 'Payment method is required.'
+      if (!formData.referenceNumber.trim()) errors.referenceNumber = 'Reference number is required.'
+      if (!formData.status) errors.status = 'Status is required.'
+      if (!formData.receivedBy.trim()) errors.receivedBy = 'Received by is required.'
 
       const amountPaid = Number(formData.amountPaid)
-      if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
-        setError('Please enter a valid payment amount')
-        setLoading(false)
-        return
+      if (!formData.amountPaid) {
+        errors.amountPaid = 'Amount paid is required.'
+      } else if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
+        errors.amountPaid = 'Please enter a valid payment amount.'
+      } else if (amountPaid > selectedStudentBalance) {
+        errors.amountPaid = `Amount cannot exceed the remaining balance of ₱${selectedStudentBalance}.`
       }
 
-      if (amountPaid > selectedStudentBalance) {
-        setError(`Payment amount cannot exceed the student's remaining balance of ${selectedStudentBalance}`)
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors)
         setLoading(false)
         return
       }
@@ -239,7 +255,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                         <input
                           type="text"
                           placeholder="Search LRN or name"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.studentId)}`}
                           value={studentQuery}
                           onChange={(e) => {
                             setStudentQuery(e.target.value)
@@ -249,6 +265,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                           onFocus={() => setShowStudentSuggestions(true)}
                           disabled={loading}
                         />
+                        <FieldError message={fieldErrors.studentId} />
                         {showStudentSuggestions && filteredStudents.length > 0 && (
                           <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                             {filteredStudents.map((student) => (
@@ -279,14 +296,15 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                         <input
                           type="number"
                           placeholder="0.00"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.amountPaid)}`}
                           value={formData.amountPaid}
-                          onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
+                          onChange={(e) => setField('amountPaid', e.target.value)}
                           disabled={loading}
                           step="0.01"
                           min="0"
                           max={selectedStudentBalance > 0 ? selectedStudentBalance : undefined}
                         />
+                        <FieldError message={fieldErrors.amountPaid} />
                         {selectedStudent && (
                           <p className="mt-1 text-xs text-gray-500">
                             Remaining balance: ₱{selectedStudentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -297,11 +315,12 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                         <label className="block text-sm font-medium text-gray-700">Date of Payment *</label>
                         <input
                           type="date"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.dateOfPayment)}`}
                           value={formData.dateOfPayment}
-                          onChange={(e) => setFormData({ ...formData, dateOfPayment: e.target.value })}
+                          onChange={(e) => setField('dateOfPayment', e.target.value)}
                           disabled={loading}
                         />
+                        <FieldError message={fieldErrors.dateOfPayment} />
                       </div>
                     </div>
 
@@ -309,9 +328,9 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Payment Method *</label>
                         <select
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.paymentMethod)}`}
                           value={formData.paymentMethod}
-                          onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                          onChange={(e) => setField('paymentMethod', e.target.value)}
                           disabled={loading}
                         >
                           <option value="">Select payment method</option>
@@ -320,17 +339,19 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                           <option value="Bank Transfer">Bank Transfer</option>
                           <option value="Online Payment">Online Payment</option>
                         </select>
+                        <FieldError message={fieldErrors.paymentMethod} />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Reference Number *</label>
                         <input
                           type="text"
                           placeholder="e.g., CHK-12345"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.referenceNumber)}`}
                           value={formData.referenceNumber}
-                          onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })}
+                          onChange={(e) => setField('referenceNumber', e.target.value)}
                           disabled={loading}
                         />
+                        <FieldError message={fieldErrors.referenceNumber} />
                       </div>
                     </div>
 
@@ -338,9 +359,9 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Status *</label>
                         <select
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.status)}`}
                           value={formData.status}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          onChange={(e) => setField('status', e.target.value)}
                           disabled={loading}
                         >
                           <option value="Pending">Pending</option>
@@ -348,17 +369,19 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                           <option value="Failed">Failed</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
+                        <FieldError message={fieldErrors.status} />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Received By *</label>
                         <input
                           type="text"
                           placeholder="Name of receiver"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.receivedBy)}`}
                           value={formData.receivedBy}
-                          onChange={(e) => setFormData({ ...formData, receivedBy: e.target.value })}
+                          onChange={(e) => setField('receivedBy', e.target.value)}
                           disabled={loading}
                         />
+                        <FieldError message={fieldErrors.receivedBy} />
                       </div>
                     </div>
 

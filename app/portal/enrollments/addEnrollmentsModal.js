@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
+import { FieldError, fieldBorder } from '@/components/FieldError';
 import {
   Dialog,
   DialogBackdrop,
@@ -53,6 +54,10 @@ export default function AddEnrollmentsModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const clearFieldError = (key) =>
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
 
   // Resolve selected student by DB _id only. Do not rely on learnersReferenceNumber
   // for grade/section resolution to avoid ambiguous LRN matches.
@@ -93,6 +98,7 @@ export default function AddEnrollmentsModal({
     }));
     setStudentQuery(`${student.learnersReferenceNumber || 'TBA'} - ${student.firstName || ''} ${student.lastName || ''}`.trim());
     setShowStudentSuggestions(false);
+    clearFieldError('student');
   };
 
   // Populate form when editing
@@ -118,6 +124,7 @@ export default function AddEnrollmentsModal({
       });
     }
     setShowStudentSuggestions(false);
+    setFieldErrors({});
   }, [editingEnrollment, open]);
 
   useEffect(() => {
@@ -225,12 +232,13 @@ export default function AddEnrollmentsModal({
 
     try {
       // Validate required fields
-      if (
-        !formData.learnersReferenceNumber ||
-        !formData.enrollmentDate ||
-        !formData.status
-      ) {
-        setError("Please fill in all required fields");
+      const errors = {};
+      if (!formData.studentId && !formData.learnersReferenceNumber) errors.student = 'Please select a student.';
+      if (!formData.enrollmentDate) errors.enrollmentDate = 'Enrollment date is required.';
+      if (!formData.status) errors.status = 'Status is required.';
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         setLoading(false);
         return;
       }
@@ -358,7 +366,7 @@ export default function AddEnrollmentsModal({
                         <input
                           type="text"
                           placeholder="Search student by name or LRN"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.student)}`}
                           value={studentQuery}
                           onChange={(e) => {
                             setStudentQuery(e.target.value);
@@ -368,11 +376,13 @@ export default function AddEnrollmentsModal({
                               learnersReferenceNumber: '',
                               sectionId: 'TBA',
                             }));
+                            clearFieldError('student');
                             setShowStudentSuggestions(true);
                           }}
                           onFocus={() => setShowStudentSuggestions(true)}
                           disabled={loading || students.length === 0}
                         />
+                        <FieldError message={fieldErrors.student} />
                         {showStudentSuggestions && filteredStudents.length > 0 && (
                           <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                             {filteredStudents.map((student) => (
@@ -465,16 +475,18 @@ export default function AddEnrollmentsModal({
                         </label>
                         <input
                           type="date"
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.enrollmentDate)}`}
                           value={formData.enrollmentDate}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setFormData({
                               ...formData,
                               enrollmentDate: e.target.value,
-                            })
-                          }
+                            });
+                            clearFieldError('enrollmentDate');
+                          }}
                           disabled={loading}
                         />
+                        <FieldError message={fieldErrors.enrollmentDate} />
                       </div>
                     </div>
 
@@ -483,11 +495,12 @@ export default function AddEnrollmentsModal({
                         Status *
                       </label>
                       <select
-                        className={`mt-1 w-full px-3 py-2 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${getStatusStyles(formData.status)}`}
+                        className={`mt-1 w-full px-3 py-2 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldErrors.status ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : getStatusStyles(formData.status)}`}
                         value={formData.status}
-                        onChange={(e) =>
-                          setFormData({ ...formData, status: e.target.value })
-                        }
+                        onChange={(e) => {
+                          setFormData({ ...formData, status: e.target.value });
+                          clearFieldError('status');
+                        }}
                         disabled={loading || isHistorical}
                       >
                         <option value="">Select status</option>
@@ -498,6 +511,7 @@ export default function AddEnrollmentsModal({
                         <option value="Dropped">Dropped</option>
                         <option value="Failed">Failed</option>
                       </select>
+                      <FieldError message={fieldErrors.status} />
                     </div>
                   </div>
                 </div>
