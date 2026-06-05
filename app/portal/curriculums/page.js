@@ -279,8 +279,15 @@ export default function CurriculumsPage() {
       setSaving(true);
       setError('');
 
+      const subjectCount = String(formData.subjectsText || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean).length;
+
       const errors = {};
       if (!formData.curriculum_name.trim()) errors.curriculum_name = 'Curriculum name is required.';
+      if (subjectCount === 0) errors.subjectsText = 'Subjects are required.';
+      else if (subjectCount < 3) errors.subjectsText = 'Please add at least 3 subjects.';
       if (!formData.effective_start_date) errors.effective_start_date = 'Effective start date is required.';
       if (!formData.effective_end_date) errors.effective_end_date = 'Effective end date is required.';
       if (
@@ -462,15 +469,16 @@ export default function CurriculumsPage() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700">Subjects</label>
-                  <small className="text-xs text-slate-500">Add comma-separated subject names or provide objects.</small>
+                  <label className="block text-sm font-medium text-slate-700">Subjects <span className="text-red-600">*</span></label>
+                  <small className="text-xs text-slate-500">Add at least 3 comma-separated subject names.</small>
                   <textarea
                     value={formData.subjectsText || ''}
-                    onChange={(e) => setFormData({ ...formData, subjectsText: e.target.value })}
+                    onChange={(e) => setField('subjectsText', e.target.value)}
                     rows={2}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 w-full rounded-xl border px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.subjectsText)}`}
                     placeholder="e.g. Math, Science, English"
                   />
+                  <FieldError message={fieldErrors.subjectsText} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Curriculum Code</label>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import FileUpload from '@/components/FileUpload';
 import { FieldError, fieldBorder } from '@/components/FieldError';
-import { validateName } from '@/lib/validation';
+import { validateName, sanitizeDecimal } from '@/lib/validation';
 
 export default function AddNewRecord({ open, onClose, isHistorical = false }) {
   const todayIso = new Date().toISOString().slice(0, 10)
@@ -300,8 +300,9 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                           placeholder="0.00"
                           className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.amountPaid)}`}
                           value={formData.amountPaid}
-                          onChange={(e) => setField('amountPaid', e.target.value)}
+                          onChange={(e) => setField('amountPaid', sanitizeDecimal(e.target.value))}
                           disabled={loading}
+                          inputMode="decimal"
                           step="0.01"
                           min="0"
                           max={selectedStudentBalance > 0 ? selectedStudentBalance : undefined}

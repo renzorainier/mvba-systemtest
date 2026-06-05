@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Save, School, Users, CheckCircle2, Archive } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
+import { sanitizeDecimal } from '@/lib/validation';
 
 const PASSING_GWA = 75;
 
@@ -223,9 +224,20 @@ export default function AcademicsPage() {
   }, [sectionEnrollments, sectionsForGrade, selectedGradeLevel, selectedSectionId]);
 
   const handleGwaChange = (studentId, value) => {
+    // Keep the GWA within 0–100. Negatives are already impossible because the
+    // input is sanitized to digits/decimal only; here we cap the upper bound.
+    let next = value;
+    if (next !== '') {
+      const numeric = Number(next);
+      if (Number.isFinite(numeric)) {
+        if (numeric > 100) next = '100';
+        else if (numeric < 0) next = '0';
+      }
+    }
+
     setGwaDrafts((previous) => ({
       ...previous,
-      [toKey(studentId)]: value,
+      [toKey(studentId)]: next,
     }));
   };
 
@@ -409,8 +421,9 @@ export default function AcademicsPage() {
                               min="0"
                               max="100"
                               step="0.01"
+                              inputMode="decimal"
                               value={currentValue}
-                              onChange={(event) => handleGwaChange(student._id, event.target.value)}
+                              onChange={(event) => handleGwaChange(student._id, sanitizeDecimal(event.target.value))}
                               disabled={isHistorical || isDraft}
                               placeholder="0.00"
                               className="w-28 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-100"

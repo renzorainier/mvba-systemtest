@@ -8,6 +8,7 @@ import {
   normalizeTuitionPlans,
 } from "@/lib/tuition-settings";
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
+import { sanitizeDecimal } from '@/lib/validation';
 
 const formatPhp = (value) => {
   return new Intl.NumberFormat("en-PH", {
@@ -183,7 +184,8 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
             type="number"
             min="0"
             value={plan.amountDueBeforeSchool}
-            onChange={(e) => onChange(index, "amountDueBeforeSchool", e.target.value)}
+            onChange={(e) => onChange(index, "amountDueBeforeSchool", sanitizeDecimal(e.target.value))}
+            inputMode="decimal"
             disabled={!isEditing}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-600"
           />
@@ -205,7 +207,8 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
             type="number"
             min="0"
             value={plan.monthlyPaymentCount}
-            onChange={(e) => onChange(index, "monthlyPaymentCount", e.target.value)}
+            onChange={(e) => onChange(index, "monthlyPaymentCount", sanitizeDecimal(e.target.value))}
+            inputMode="decimal"
             disabled={!isEditing}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white disabled:bg-slate-100 disabled:text-slate-600"
           />
@@ -261,8 +264,9 @@ const TuitionPlanCard = ({ plan, index, isEditing, onChange, onRemove, onAddLine
                 type="number"
                 min="0"
                 value={item.amount}
-                onChange={(e) => onChange(index, "lineItem", e.target.value, lineIndex, "amount")}
+                onChange={(e) => onChange(index, "lineItem", sanitizeDecimal(e.target.value), lineIndex, "amount")}
                 disabled={!isEditing}
+                inputMode="decimal"
                 placeholder="Amount"
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 disabled:bg-slate-100 disabled:text-slate-600"
               />
