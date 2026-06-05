@@ -146,6 +146,7 @@ export default function Sidebar({ userRole = 'Admin' }) {
 
     {
       title: 'Academics',
+      icon: BookOpen,
       children: [
         { name: 'Curriculum Management', href: '/portal/curriculums', icon: BookOpen, allowedRoles: ['Admin', 'Sub-Admin', 'Registrar'] },
         { name: 'Grade Curriculums', href: '/portal/curriculum-assignments', icon: LibraryBig, allowedRoles: ['Admin', 'Sub-Admin', 'Registrar'] },
@@ -154,9 +155,10 @@ export default function Sidebar({ userRole = 'Admin' }) {
         { name: 'Class Assignments', href: '/portal/classes', icon: Layers3, allowedRoles: ['Admin', 'Sub-Admin', 'Registrar'] },
       ],
     },
-    
+
     {
       title: 'Enrollment & Students',
+      icon: Users,
       children: [
         { name: 'Student Management', href: '/portal/students', icon: Users, allowedRoles: ['Admin', 'Sub-Admin', 'Registrar'] },
         { name: 'Enrollments/Admission', href: '/portal/enrollments', icon: Users, allowedRoles: ['Admin', 'Sub-Admin', 'Registrar'] },
@@ -167,20 +169,24 @@ export default function Sidebar({ userRole = 'Admin' }) {
 
     {
       title: 'Faculty',
+      icon: GraduationCap,
       children: [
         { name: 'Teacher Management', href: '/portal/teachers', icon: GraduationCap, allowedRoles: ['Admin', 'Sub-Admin', 'Registrar'] },
       ],
     },
 
     {
-      title: null,
-      items: [
+      title: 'Financials',
+      icon: Wallet,
+      children: [
         { name: 'Financials', href: '/portal/financials', icon: Wallet, allowedRoles: ['Admin', 'Sub-Admin', 'Cashier'] },
       ],
     },
 
     {
       title: 'Administration & Support',
+      icon: Settings,
+      titleClassName: 'text-sm',
       children: [
         { name: 'Account Management', href: '/portal/accounts', icon: UserCog, allowedRoles: ['Admin'] },
         { name: 'System Settings', href: '/portal/system', icon: Settings, allowedRoles: ['Admin', 'Sub-Admin'] },
@@ -189,11 +195,16 @@ export default function Sidebar({ userRole = 'Admin' }) {
     },
   ];
 
-  function GroupHeader({ title, active, onClickToggle, isOpen }) {
+  function GroupHeader({ title, Icon, titleClassName, active, onClickToggle, isOpen }) {
     return (
       <button type="button" onClick={onClickToggle} className={`w-full flex items-center justify-between gap-4 py-3 px-3 rounded-md transition-all duration-200 ${active ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}>
         <div className="flex items-center gap-4">
-          <span className="text-base font-medium">{title}</span>
+          {Icon && (
+            <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+              <Icon size={22} className={active ? 'text-blue-700' : 'text-gray-500'} />
+            </div>
+          )}
+          <span className={`${titleClassName || 'text-base'} font-medium`}>{title}</span>
         </div>
         <div className={`text-gray-400 transition-transform duration-150 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -254,6 +265,8 @@ export default function Sidebar({ userRole = 'Admin' }) {
                 <div key={gi} className="group relative">
                   <GroupHeader
                     title={group.title}
+                    Icon={group.icon}
+                    titleClassName={group.titleClassName}
                     active={groupActive}
                     isOpen={!!openGroups[gi]}
                     onClickToggle={() => {
