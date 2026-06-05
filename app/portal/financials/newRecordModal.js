@@ -253,7 +253,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                   <div className="mt-4">
                     <div className="grid grid-cols-1 gap-4 mb-4">
                       <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700">LRN *</label>
+                        <label className="block text-sm font-medium text-gray-700">LRN <span className="text-red-600">*</span></label>
                         <input
                           type="text"
                           placeholder="Search LRN or name"
@@ -294,7 +294,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Amount Paid (₱) *</label>
+                        <label className="block text-sm font-medium text-gray-700">Amount Paid (₱) <span className="text-red-600">*</span></label>
                         <input
                           type="number"
                           placeholder="0.00"
@@ -314,7 +314,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                         )}
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Date of Payment *</label>
+                        <label className="block text-sm font-medium text-gray-700">Date of Payment <span className="text-red-600">*</span></label>
                         <input
                           type="date"
                           className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.dateOfPayment)}`}
@@ -328,7 +328,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Payment Method *</label>
+                        <label className="block text-sm font-medium text-gray-700">Payment Method <span className="text-red-600">*</span></label>
                         <select
                           className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.paymentMethod)}`}
                           value={formData.paymentMethod}
@@ -344,7 +344,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                         <FieldError message={fieldErrors.paymentMethod} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Reference Number *</label>
+                        <label className="block text-sm font-medium text-gray-700">Reference Number <span className="text-red-600">*</span></label>
                         <input
                           type="text"
                           placeholder="e.g., CHK-12345"
@@ -359,7 +359,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Status *</label>
+                        <label className="block text-sm font-medium text-gray-700">Status <span className="text-red-600">*</span></label>
                         <select
                           className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.status)}`}
                           value={formData.status}
@@ -374,7 +374,7 @@ export default function AddNewRecord({ open, onClose, isHistorical = false }) {
                         <FieldError message={fieldErrors.status} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Received By *</label>
+                        <label className="block text-sm font-medium text-gray-700">Received By <span className="text-red-600">*</span></label>
                         <input
                           type="text"
                           placeholder="Name of receiver"

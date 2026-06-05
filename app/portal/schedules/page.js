@@ -540,7 +540,7 @@ export default function ScheduleManagement() {
 
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="col-span-1 md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Name <span className="text-red-600">*</span></label>
                 <input
                   type="text"
                   value={currentScheduleName}
@@ -551,7 +551,7 @@ export default function ScheduleManagement() {
                 <FieldError message={nameError} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level <span className="text-red-600">*</span></label>
                 <select 
                   value={selectedGrade}
                   onChange={(e) => setSelectedGrade(e.target.value)}

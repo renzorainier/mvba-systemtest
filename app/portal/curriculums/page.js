@@ -483,7 +483,7 @@ export default function CurriculumsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Curriculum Name *</label>
+                  <label className="block text-sm font-medium text-slate-700">Curriculum Name <span className="text-red-600">*</span></label>
                   <input
                     type="text"
                     value={formData.curriculum_name}
@@ -504,7 +504,7 @@ export default function CurriculumsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Effective Start *</label>
+                  <label className="block text-sm font-medium text-slate-700">Effective Start <span className="text-red-600">*</span></label>
                   <input
                     type="date"
                     value={formData.effective_start_date}
@@ -515,7 +515,7 @@ export default function CurriculumsPage() {
                   <FieldError message={fieldErrors.effective_start_date} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Effective End *</label>
+                  <label className="block text-sm font-medium text-slate-700">Effective End <span className="text-red-600">*</span></label>
                   <input
                     type="date"
                     value={formData.effective_end_date}

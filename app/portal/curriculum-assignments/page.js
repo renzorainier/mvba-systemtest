@@ -303,7 +303,7 @@ export default function CurriculumAssignmentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">School Year *</label>
+                    <label className="block text-sm font-medium text-slate-700">School Year <span className="text-red-600">*</span></label>
                     <input
                       type="text"
                       value={selectedSchoolYear || formData.school_year_id}
@@ -314,7 +314,7 @@ export default function CurriculumAssignmentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Grade Level *</label>
+                    <label className="block text-sm font-medium text-slate-700">Grade Level <span className="text-red-600">*</span></label>
                     <select
                       value={formData.grade_level}
                       onChange={(e) => setField('grade_level', e.target.value)}
@@ -328,7 +328,7 @@ export default function CurriculumAssignmentsPage() {
                     <FieldError message={fieldErrors.grade_level} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Curriculum *</label>
+                    <label className="block text-sm font-medium text-slate-700">Curriculum <span className="text-red-600">*</span></label>
                     <select
                       value={formData.curriculum_id}
                       onChange={(e) => setField('curriculum_id', e.target.value)}

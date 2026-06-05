@@ -186,7 +186,7 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
 
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Section *</label>
+                      <label className="block text-sm font-medium text-gray-700">Section <span className="text-red-600">*</span></label>
                       <select
                         value={formData.sectionId}
                         onChange={(e) => setField('sectionId', e.target.value, { scheduleId: '' })}
@@ -204,7 +204,7 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Teacher *</label>
+                      <label className="block text-sm font-medium text-gray-700">Teacher <span className="text-red-600">*</span></label>
                       <select
                         value={formData.teacherId}
                         onChange={(e) => setField('teacherId', e.target.value)}
@@ -222,7 +222,7 @@ export default function AddClassAssignmentModal({ open, onClose, editingAssignme
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">Schedule *</label>
+                      <label className="block text-sm font-medium text-gray-700">Schedule <span className="text-red-600">*</span></label>
                       <select
                         value={formData.scheduleId}
                         onChange={(e) => setField('scheduleId', e.target.value)}

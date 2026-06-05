@@ -137,7 +137,7 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                     <div className="mt-4">
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">First Name *</label>
+                                                <label className="block text-sm font-medium text-gray-700">First Name <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     placeholder="First name"
@@ -149,7 +149,7 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <FieldError message={fieldErrors.firstName} />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Last Name *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Last Name <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     placeholder="Last name"
@@ -164,7 +164,7 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
 
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Email *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Email <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="email"
                                                     placeholder="Email"
@@ -176,7 +176,7 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <FieldError message={fieldErrors.email} />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Phone Number <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="tel"
                                                     inputMode="numeric"
@@ -205,7 +205,7 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                                 <FieldError message={fieldErrors.middleName} />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Teacher ID *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Teacher ID <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     placeholder="Teacher ID"
@@ -219,7 +219,7 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
                                         </div>
 
                                         <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700">Hire Date *</label>
+                                            <label className="block text-sm font-medium text-gray-700">Hire Date <span className="text-red-600">*</span></label>
                                             <input
                                                 type="date"
                                                 className={`mt-1 w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldBorder(fieldErrors.hireDate)}`}

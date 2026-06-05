@@ -223,7 +223,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                         {/* Row 1: Section Name & Section ID */}
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Section Name *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Section Name <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Einstein"
@@ -235,7 +235,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                 <FieldError message={fieldErrors.sectionName} />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Section ID (Auto-generated) *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Section ID (Auto-generated) <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-gray-100 focus:outline-none"
@@ -248,7 +248,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                         {/* Row 2: Grade Level & School Year */}
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Grade Level *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Grade Level <span className="text-red-600">*</span></label>
                                                 <select
                                                     value={formData.gradeLevel}
                                                     onChange={(e) => setField('gradeLevel', e.target.value)}
@@ -262,7 +262,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                                 <FieldError message={fieldErrors.gradeLevel} />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">School Year *</label>
+                                                <label className="block text-sm font-medium text-gray-700">School Year <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. 2025-2026"
@@ -276,7 +276,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
 
                                         <div className="grid grid-cols-1 gap-4 mb-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Grade-Level Curriculum *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Grade-Level Curriculum <span className="text-red-600">*</span></label>
                                                 <select
                                                     value={formData.glCurriculumId}
                                                     onChange={(e) => setField('glCurriculumId', e.target.value)}
@@ -312,7 +312,7 @@ export default function AddSectionsModal({ isOpen, onClose, editingSection, isHi
                                         {/* Row 3: Room Number */}
                                         <div className="grid grid-cols-1 gap-4 mb-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Room Number *</label>
+                                                <label className="block text-sm font-medium text-gray-700">Room Number <span className="text-red-600">*</span></label>
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Rm-305"

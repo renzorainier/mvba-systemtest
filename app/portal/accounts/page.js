@@ -158,7 +158,7 @@ function CreateAccountModal({ onClose, onCreated }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Full Name</label>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Full Name <span className="text-red-600">*</span></label>
             <input
               type="text"
               value={form.fullName}
@@ -168,7 +168,7 @@ function CreateAccountModal({ onClose, onCreated }) {
             <FieldError message={fieldErrors.fullName} />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Username</label>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Username <span className="text-red-600">*</span></label>
             <input
               type="text"
               value={form.username}
@@ -178,7 +178,7 @@ function CreateAccountModal({ onClose, onCreated }) {
             <FieldError message={fieldErrors.username} />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Role</label>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Role <span className="text-red-600">*</span></label>
             <select
               value={form.role}
               onChange={(e) => updateField('role', e.target.value)}
@@ -192,7 +192,7 @@ function CreateAccountModal({ onClose, onCreated }) {
             <FieldError message={fieldErrors.role} />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Password</label>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Password <span className="text-red-600">*</span></label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -207,7 +207,7 @@ function CreateAccountModal({ onClose, onCreated }) {
             <FieldError message={fieldErrors.password} />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Confirm Password</label>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Confirm Password <span className="text-red-600">*</span></label>
             <input
               type={showPassword ? 'text' : 'password'}
               value={form.confirm}

@@ -361,7 +361,7 @@ export default function AddEnrollmentsModal({
                       {/* Student Dropdown */}
                       <div className="relative">
                         <label className="block text-sm font-medium text-gray-700">
-                          Student *
+                          Student <span className="text-red-600">*</span>
                         </label>
                         <input
                           type="text"
@@ -418,7 +418,7 @@ export default function AddEnrollmentsModal({
                       {/* Section Dropdown */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
-                          Section *
+                          Section <span className="text-red-600">*</span>
                         </label>
                         <select
                           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -458,7 +458,7 @@ export default function AddEnrollmentsModal({
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
-                            School Year *
+                            School Year <span className="text-red-600">*</span>
                           </label>
                           <input
                             type="text"
@@ -471,7 +471,7 @@ export default function AddEnrollmentsModal({
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
-                          Enrollment Date *
+                          Enrollment Date <span className="text-red-600">*</span>
                         </label>
                         <input
                           type="date"
@@ -492,7 +492,7 @@ export default function AddEnrollmentsModal({
 
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700">
-                        Status *
+                        Status <span className="text-red-600">*</span>
                       </label>
                       <select
                         className={`mt-1 w-full px-3 py-2 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-1 ${fieldErrors.status ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : getStatusStyles(formData.status)}`}
