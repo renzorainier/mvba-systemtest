@@ -299,12 +299,6 @@ export default function Sidebar({ userRole = 'Admin' }) {
       </nav>
 
       <div className="p-4 border-t border-gray-100">
-        {['Admin', 'Sub-Admin'].includes(userRole) && (
-          <Link href="/portal/rollover" className={`mb-3 flex items-center gap-3 w-full text-left py-3 px-3 rounded-md transition-all font-medium ${pathname.startsWith('/portal/rollover') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-            <Archive size={22} />
-            <span className="text-base">School Year Transition</span>
-          </Link>
-        )}
         <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left py-3 px-3 text-red-500 hover:bg-red-50 rounded-md transition-all font-medium">
           <LogOut size={22} />
           <span className="text-base">Log Out</span>
