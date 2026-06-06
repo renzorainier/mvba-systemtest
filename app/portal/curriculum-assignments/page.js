@@ -357,7 +357,7 @@ export default function CurriculumAssignmentsPage() {
                   <div className="md:col-span-2 rounded-2xl bg-slate-50 p-5 text-sm text-slate-700">
                     <div className="font-medium text-slate-900">Preview</div>
                     <div className="mt-2 space-y-1 text-slate-600">
-                      <div>School Year: {formData.school_year_id || 'Not set'}</div>
+                      <div>School Year: {selectedSchoolYear || formData.school_year_id || 'Not set'}</div>
                       <div>Grade Level: {formData.grade_level || 'Not set'}</div>
                       <div>Curriculum: {selectedCurriculum ? `${selectedCurriculum.curriculum_name} (${selectedCurriculum.curriculum_id})` : 'Not selected'}</div>
                     </div>
