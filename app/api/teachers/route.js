@@ -37,6 +37,14 @@ export async function POST(request) {
         const teacher = await Teacher.create(teacherData);
         return NextResponse.json({ success: true, data: teacher }, { status: 201 });
     } catch (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern || {})[0];
+            const label = field === 'teacherId' ? 'Teacher ID' : field === 'email' ? 'email' : field;
+            return NextResponse.json(
+                { success: false, message: `A teacher with this ${label || 'value'} already exists.` },
+                { status: 409 }
+            );
+        }
+        return NextResponse.json({ success: false, message: error.message, error: error.message }, { status: 500 });
     }
 }

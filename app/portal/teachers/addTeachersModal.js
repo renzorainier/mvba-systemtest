@@ -87,6 +87,8 @@ export default function AddTeachersModal({ isOpen, onClose, editingTeacher, isHi
 
             if (!response.ok) {
                 setError(data.message || 'An error occurred while saving the teacher.');
+                setLoading(false);
+                return;
             }
 
             setFormData({
