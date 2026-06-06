@@ -164,7 +164,10 @@ export async function POST(request) {
         const enrollmentData = {
             enrollmentId: body.enrollmentId || `E-${Date.now()}`,
             learnersReferenceNumber: body.learnersReferenceNumber,
-            studentId: body.studentId ? String(body.studentId) : undefined,
+            // Always stamp the canonical studentId (ObjectId). It is the only reliable
+            // per-student key — the 'TBA' LRN is shared, so archiving/restoring must never
+            // rely on it alone. Prefer the resolved student over the raw body value.
+            studentId: resolvedStudent ? String(resolvedStudent._id) : (body.studentId ? String(body.studentId) : undefined),
             sectionId: body.sectionId,
             enrollmentDate: body.enrollmentDate,
             schoolYear: selectedSchoolYear,
