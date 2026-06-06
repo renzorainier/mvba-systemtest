@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Student from '@/models/Student';
 import ArchivedStudent from '@/models/ArchivedStudent';
-import SystemSettings from '@/models/SystemSettings';
+import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
+import ArchivedGradeLevelCurriculum from '@/models/ArchivedGradeLevelCurriculum';
 import { getSchoolYearContext, getNextSchoolYear } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
 
 const isAdminRequest = (request) => {
   try {
@@ -29,13 +28,15 @@ export async function GET(request) {
 
     await dbConnect();
 
-    const { currentSchoolYear, selectedSchoolYear } = await getSchoolYearContext(request);
+    const { currentSchoolYear, selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
     const activeYear = selectedSchoolYear || currentSchoolYear;
-    const currentSettings = await SystemSettings.findOne({ key: SETTINGS_KEY }).lean();
     const nextYearId = getNextSchoolYear(activeYear) || getNextSchoolYear(currentSchoolYear) || '';
     const sourceStudents = activeYear === currentSchoolYear
       ? await Student.find({}).sort({ lastName: 1, firstName: 1 }).lean()
       : await ArchivedStudent.find({ schoolYear: activeYear }).sort({ lastName: 1, firstName: 1 }).lean();
+    const availableGradeLevelCurriculums = isHistorical
+      ? await ArchivedGradeLevelCurriculum.find({ schoolYear: activeYear }).lean()
+      : await GradeLevelCurriculum.find({ school_year_id: activeYear }).lean();
 
     return NextResponse.json(
       {
@@ -45,7 +46,7 @@ export async function GET(request) {
           currentSchoolYear,
           nextYearId,
           students: sourceStudents,
-          availableGradeLevelCurriculums: Array.isArray(currentSettings?.gradeLevelCurriculums) ? currentSettings.gradeLevelCurriculums : [],
+          availableGradeLevelCurriculums,
         },
       },
       { status: 200 }

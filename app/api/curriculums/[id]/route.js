@@ -1,26 +1,8 @@
 import dbConnect from '@/lib/mongodb';
-import mongoose from 'mongoose';
 import Curriculum from '@/models/Curriculum';
-import SystemSettings from '@/models/SystemSettings';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-  const collection = SystemSettings.collection;
-  let settings = await collection.findOne({ key: SETTINGS_KEY });
-  if (!settings) {
-    await collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $setOnInsert: { curriculums: [], gradeLevelCurriculums: [] } },
-      { upsert: true }
-    );
-    settings = await collection.findOne({ key: SETTINGS_KEY });
-  }
-  return settings;
-};
 
 export async function PUT(request, { params }) {
   try {
@@ -82,28 +64,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: true, data: byId }, { status: 200 });
     }
 
-    // Fallback: update embedded curriculum inside SystemSettings
-    const settings = await ensureSettings();
-    const arrayFilter = [{ 'elem._id': new mongoose.Types.ObjectId(id) }];
-    const updateFields = {
-      'curriculums.$[elem].curriculum_id': body.curriculum_id || `CUR-${Date.now()}`,
-      'curriculums.$[elem].schoolYear': selectedSchoolYear,
-      'curriculums.$[elem].curriculum_name': body.curriculum_name,
-      'curriculums.$[elem].description': body.description || '',
-      'curriculums.$[elem].effective_start_date': body.effective_start_date,
-      'curriculums.$[elem].effective_end_date': body.effective_end_date,
-      'curriculums.$[elem].subjects': subjects.map(s => ({ _id: new mongoose.Types.ObjectId(), ...s })),
-    };
-
-    const result = await SystemSettings.collection.updateOne({ key: SETTINGS_KEY }, { $set: updateFields }, { arrayFilters: arrayFilter });
-    if (result.matchedCount === 0 && result.modifiedCount === 0) {
-      return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
-    }
-
-    // Return updated doc from settings
-    const refreshed = await ensureSettings();
-    const updated = (refreshed.curriculums || []).find((c) => String(c._id) === String(id));
-    return NextResponse.json({ success: true, data: updated }, { status: 200 });
+    return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -123,29 +84,8 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, error: 'Curriculum is assigned to a grade level and cannot be deleted' }, { status: 409 });
     }
 
-    // Prevent deletion if referenced in SystemSettings.gradeLevelCurriculums (embedded)
-    const settings = await ensureSettings();
-    const embeddedRefExists = Array.isArray(settings.gradeLevelCurriculums)
-      ? settings.gradeLevelCurriculums.some((assignment) => String(assignment.curriculum_id || '') === String(id))
-      : false;
-
-    if (embeddedRefExists) {
-      return NextResponse.json({ success: false, error: 'Curriculum is assigned to a grade level and cannot be deleted' }, { status: 409 });
-    }
-
-    // Try deleting from dedicated collection
     const deleted = await Curriculum.findByIdAndDelete(id);
-    if (deleted) {
-      return NextResponse.json({ success: true }, { status: 200 });
-    }
-
-    // Fallback: remove from SystemSettings.curriculums
-    const pullResult = await SystemSettings.collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $pull: { curriculums: { _id: new mongoose.Types.ObjectId(id) } } }
-    );
-
-    if (pullResult.modifiedCount === 0) {
+    if (!deleted) {
       return NextResponse.json({ success: false, error: 'Curriculum not found' }, { status: 404 });
     }
 

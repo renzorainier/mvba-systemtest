@@ -1,5 +1,4 @@
 import dbConnect from '@/lib/mongodb';
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import Curriculum from '@/models/Curriculum';
 import Section from '@/models/Section';
@@ -7,25 +6,6 @@ import Enrollment from '@/models/Enrollment';
 import ClassAssignment from '@/models/ClassAssignment';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-  const collection = SystemSettings.collection;
-  let settings = await collection.findOne({ key: SETTINGS_KEY });
-  if (!settings) {
-    await collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
-      { upsert: true }
-    );
-    settings = await collection.findOne({ key: SETTINGS_KEY });
-  }
-
-  settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
-  settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
-  return settings;
-};
 
 const serializeCurriculum = (curriculum) => {
   if (!curriculum) {
@@ -42,7 +22,7 @@ const serializeCurriculum = (curriculum) => {
   };
 };
 
-const buildSectionPayload = async (section, settings) => {
+const buildSectionPayload = async (section) => {
   const sectionData = section?.toObject ? section.toObject() : section;
   const sectionAssignmentId = String(sectionData.glCurriculumId || '').trim();
 
@@ -55,10 +35,6 @@ const buildSectionPayload = async (section, settings) => {
     }
   }
 
-  if (!assignment) {
-    assignment = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionAssignmentId || String(item.gl_curriculum_id || '') === sectionAssignmentId) || null;
-  }
-
   let curriculum = null;
   const assignmentCurriculumId = assignment ? String(assignment.curriculum_id || '').trim() : '';
 
@@ -68,10 +44,6 @@ const buildSectionPayload = async (section, settings) => {
     } catch (error) {
       curriculum = null;
     }
-  }
-
-  if (!curriculum && assignmentCurriculumId) {
-    curriculum = (settings.curriculums || []).find((item) => String(item._id) === assignmentCurriculumId || String(item.curriculum_id || '') === assignmentCurriculumId) || null;
   }
 
   const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
@@ -116,7 +88,7 @@ export async function PUT(request, { params }) {
         return NextResponse.json({ success: false, error: 'Section name, grade level, school year, curriculum, and room number are required' }, { status: 400 });
       }
 
-      // Prefer grade-level assignments stored in the dedicated collection
+      // Grade-level assignments live only in the dedicated collection
       let gradeLevelCurriculum = null;
       if (sectionData.glCurriculumId) {
         try {
@@ -126,17 +98,9 @@ export async function PUT(request, { params }) {
         }
       }
 
-      // Fallback to legacy SystemSettings entries
-      if (!gradeLevelCurriculum) {
-        const settings = await ensureSettings();
-        gradeLevelCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(sectionData.glCurriculumId));
-      }
-
       if (!gradeLevelCurriculum) {
         return NextResponse.json({ success: false, error: 'Selected grade-level curriculum not found' }, { status: 404 });
       }
-
-      const settings = await ensureSettings();
 
       if (String(gradeLevelCurriculum.school_year_id || '').trim() !== String(sectionData.schoolYear || '').trim() || String(gradeLevelCurriculum.grade_level || '').trim() !== String(sectionData.gradeLevel || '').trim()) {
         return NextResponse.json({ success: false, error: 'Selected curriculum does not match the section school year and grade level' }, { status: 400 });
@@ -148,7 +112,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Section not found' }, { status: 404 });
     }
     
-    return NextResponse.json({ success: true, data: await buildSectionPayload(section, settings) }, { status: 200 });
+    return NextResponse.json({ success: true, data: await buildSectionPayload(section) }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

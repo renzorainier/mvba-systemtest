@@ -1,6 +1,5 @@
 import dbConnect from '@/lib/mongodb';
 import ClassAssignment from '@/models/ClassAssignment';
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
@@ -9,25 +8,6 @@ import ArchivedClassAssignment from '@/models/ArchivedClassAssignment';
 import Curriculum from '@/models/Curriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext, buildLiveYearFilter, getStampYear } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-  const collection = SystemSettings.collection;
-  let settings = await collection.findOne({ key: SETTINGS_KEY });
-  if (!settings) {
-    await collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
-      { upsert: true }
-    );
-    settings = await collection.findOne({ key: SETTINGS_KEY });
-  }
-
-  settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
-  settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
-  return settings;
-};
 
 const resolveCurriculumAssignmentId = (value) => {
   if (!value) return '';
@@ -51,14 +31,13 @@ const resolveCurriculumAssignmentId = (value) => {
   return String(value);
 };
 
-const enrichAssignment = async (assignment, settings, selectedSchoolYear) => {
+const enrichAssignment = async (assignment, selectedSchoolYear) => {
   const section = assignment.section?.toObject ? assignment.section.toObject() : assignment.section;
 
   let assignmentLink = null;
   let curriculum = null;
 
   if (section?.glCurriculumId) {
-    // Try DB year-scoped GradeLevelCurriculum first
     const dbGl = await GradeLevelCurriculum.findOne({
       $or: [{ _id: section.glCurriculumId }, { gl_curriculum_id: section.glCurriculumId }],
     }).lean();
@@ -68,16 +47,6 @@ const enrichAssignment = async (assignment, settings, selectedSchoolYear) => {
       if (dbGl.curriculum_id) {
         curriculum = await Curriculum.findById(dbGl.curriculum_id).lean();
       }
-    }
-  }
-
-  if (!assignmentLink) {
-    assignmentLink = section?.glCurriculumId
-      ? (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId))
-      : null;
-
-    if (assignmentLink) {
-      curriculum = (settings.curriculums || []).find((item) => String(item._id) === String(assignmentLink.curriculum_id)) || null;
     }
   }
 
@@ -119,14 +88,13 @@ export async function GET(request) {
     await dbConnect();
     const context = await getSchoolYearContext(request);
     const { selectedSchoolYear, isHistorical } = context;
-    const settings = await ensureSettings();
     if (isHistorical) {
       const assignments = await ArchivedClassAssignment.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
       return NextResponse.json({ success: true, data: assignments }, { status: 200 });
     }
 
     const assignments = await buildAssignmentQuery(buildLiveYearFilter(context));
-    const enriched = await Promise.all(assignments.map((assignment) => enrichAssignment(assignment, settings, selectedSchoolYear)));
+    const enriched = await Promise.all(assignments.map((assignment) => enrichAssignment(assignment, selectedSchoolYear)));
     return NextResponse.json({ success: true, data: enriched }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -171,10 +139,9 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Section and schedule must have the same grade level' }, { status: 400 });
     }
 
-    const settings = await ensureSettings();
     const sectionCurriculumId = resolveCurriculumAssignmentId(section.glCurriculumId);
 
-    // Prefer year-scoped grade-level curriculum documents in the DB, fallback to legacy settings
+    // Grade-level curriculum documents live only in the dedicated collection
     const selectedSchoolYear = schoolYearAccess.context?.selectedSchoolYear || '';
     let sectionCurriculum = null;
 
@@ -189,10 +156,6 @@ export async function POST(request) {
       if (dbGl) {
         sectionCurriculum = dbGl;
       }
-    }
-
-    if (!sectionCurriculum) {
-      sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
     }
 
     if (!sectionCurriculum) {
@@ -234,7 +197,7 @@ export async function POST(request) {
       .populate('teacher')
       .populate('schedule');
 
-    return NextResponse.json({ success: true, data: enrichAssignment(populatedAssignment, settings) }, { status: 201 });
+    return NextResponse.json({ success: true, data: await enrichAssignment(populatedAssignment, selectedSchoolYear) }, { status: 201 });
   } catch (error) {
     if (error?.code === 11000) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });

@@ -1,5 +1,4 @@
 import dbConnect from "@/lib/mongodb";
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from "@/models/SystemSettings";
 import GradeLevelCurriculum from "@/models/GradeLevelCurriculum";
 import ArchivedGradeLevelCurriculum from "@/models/ArchivedGradeLevelCurriculum";
 import Curriculum from "@/models/Curriculum";
@@ -9,25 +8,6 @@ import ArchivedSection from "@/models/ArchivedSection";
 import { NextResponse } from "next/server";
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from "@/lib/school-year";
 import { randomUUID } from "crypto";
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-    const collection = SystemSettings.collection;
-    let settings = await collection.findOne({ key: SETTINGS_KEY });
-    if (!settings) {
-        await collection.updateOne(
-            { key: SETTINGS_KEY },
-            { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
-            { upsert: true }
-        );
-        settings = await collection.findOne({ key: SETTINGS_KEY });
-    }
-
-    settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
-    settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
-    return settings;
-};
 
 const findCurriculumForSchoolYear = async (schoolYear, curriculumId) => {
     const normalizedSchoolYear = String(schoolYear || '').trim();
@@ -61,7 +41,7 @@ const findCurriculumForSchoolYear = async (schoolYear, curriculumId) => {
     }).lean();
 };
 
-const findGradeLevelCurriculumForSection = async (sectionAssignmentId, schoolYear, settings) => {
+const findGradeLevelCurriculumForSection = async (sectionAssignmentId, schoolYear) => {
     const normalizedAssignmentId = String(sectionAssignmentId || '').trim();
     const normalizedSchoolYear = String(schoolYear || '').trim();
 
@@ -87,15 +67,10 @@ const findGradeLevelCurriculumForSection = async (sectionAssignmentId, schoolYea
         return yearMatch;
     }
 
-    const archivedYearMatch = await ArchivedGradeLevelCurriculum.findOne({
+    return ArchivedGradeLevelCurriculum.findOne({
         school_year_id: normalizedSchoolYear,
         $or: [{ _id: normalizedAssignmentId }, { gl_curriculum_id: normalizedAssignmentId }],
     }).lean();
-    if (archivedYearMatch) {
-        return archivedYearMatch;
-    }
-
-    return (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === normalizedAssignmentId || String(item.gl_curriculum_id || '') === normalizedAssignmentId) || null;
 };
 
     const serializeCurriculum = (curriculum) => {
@@ -113,21 +88,17 @@ const findGradeLevelCurriculumForSection = async (sectionAssignmentId, schoolYea
         };
     };
 
-    const buildSectionPayload = async (section, settings) => {
+    const buildSectionPayload = async (section) => {
         const sectionData = section?.toObject ? section.toObject() : section;
         const sectionAssignmentId = String(sectionData.glCurriculumId || '').trim();
 
-            const assignment = await findGradeLevelCurriculumForSection(sectionAssignmentId, sectionData.schoolYear, settings);
+            const assignment = await findGradeLevelCurriculumForSection(sectionAssignmentId, sectionData.schoolYear);
 
         let curriculum = null;
         const assignmentCurriculumId = assignment ? String(assignment.curriculum_id || '').trim() : '';
 
         if (assignmentCurriculumId) {
                 curriculum = await findCurriculumForSchoolYear(sectionData.schoolYear, assignmentCurriculumId);
-
-                if (!curriculum) {
-                    curriculum = (settings.curriculums || []).find((item) => String(item._id) === assignmentCurriculumId || String(item.curriculum_id || '') === assignmentCurriculumId) || null;
-                }
         }
 
         const assignmentData = assignment?.toObject ? assignment.toObject() : assignment;
@@ -148,11 +119,10 @@ export async function GET(request) {
     try {
         await dbConnect();
                 const { selectedSchoolYear, isHistorical } = await getSchoolYearContext(request);
-                const settings = await ensureSettings();
                 const sections = isHistorical
                     ? await ArchivedSection.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 })
                     : await Section.find({ schoolYear: selectedSchoolYear }).sort({ createdAt: -1 });
-                return NextResponse.json({ success: true, data: await Promise.all(sections.map((section) => buildSectionPayload(section, settings))) }, { status: 200 });
+                return NextResponse.json({ success: true, data: await Promise.all(sections.map((section) => buildSectionPayload(section))) }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
@@ -181,8 +151,6 @@ export async function POST(request) {
             sectionId: body.sectionId || `S-${randomUUID()}`,
         };
 
-        const settings = await ensureSettings();
-
         if (!sectionData.sectionName || !sectionData.gradeLevel || !sectionData.schoolYear || !sectionData.glCurriculumId || !sectionData.roomNumber) {
             return NextResponse.json({ success: false, error: 'Section name, grade level, school year, curriculum, and room number are required' }, { status: 400 });
         }
@@ -196,12 +164,6 @@ export async function POST(request) {
         }
 
         if (!gradeLevelCurriculum) {
-            gradeLevelCurriculum = (settings.gradeLevelCurriculums || []).find(
-                (item) => String(item._id) === String(sectionData.glCurriculumId) || String(item.gl_curriculum_id || '') === String(sectionData.glCurriculumId)
-            );
-        }
-
-        if (!gradeLevelCurriculum) {
             return NextResponse.json({ success: false, error: 'Selected grade-level curriculum not found' }, { status: 404 });
         }
 
@@ -210,7 +172,7 @@ export async function POST(request) {
         }
 
         const section = await Section.create(sectionData);
-        return NextResponse.json({ success: true, data: await buildSectionPayload(section, settings) }, { status: 201 });
+        return NextResponse.json({ success: true, data: await buildSectionPayload(section) }, { status: 201 });
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

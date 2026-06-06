@@ -1,26 +1,8 @@
 import dbConnect from '@/lib/mongodb';
-import mongoose from 'mongoose';
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Curriculum from '@/models/Curriculum';
 import ArchivedCurriculum from '@/models/ArchivedCurriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear, getSchoolYearContext } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-  const collection = SystemSettings.collection;
-  let settings = await collection.findOne({ key: SETTINGS_KEY });
-  if (!settings) {
-    await collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
-      { upsert: true }
-    );
-    settings = await collection.findOne({ key: SETTINGS_KEY });
-  }
-  return settings;
-};
 
 export async function GET(request) {
   try {
@@ -50,12 +32,7 @@ export async function GET(request) {
       return NextResponse.json({ success: true, data: legacyCollection }, { status: 200 });
     }
 
-    const settings = await ensureSettings();
-    const settingsCurriculums = Array.isArray(settings?.curriculums) ? [...settings.curriculums] : [];
-    const yearScopedSettings = settingsCurriculums.filter((curriculum) => String(curriculum.schoolYear || '').trim() === String(selectedSchoolYear).trim());
-    const legacySettings = settingsCurriculums.filter((curriculum) => !curriculum.schoolYear);
-    const curriculums = (yearScopedSettings.length > 0 ? yearScopedSettings : legacySettings).reverse();
-    return NextResponse.json({ success: true, data: curriculums }, { status: 200 });
+    return NextResponse.json({ success: true, data: [] }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

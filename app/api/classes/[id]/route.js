@@ -1,31 +1,12 @@
 import dbConnect from '@/lib/mongodb';
 import ClassAssignment from '@/models/ClassAssignment';
-import SystemSettings, { DEFAULT_SETTINGS_PAYLOAD } from '@/models/SystemSettings';
 import Section from '@/models/Section';
 import Teacher from '@/models/Teachers';
 import Schedule from '@/models/Schedule';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
+import Curriculum from '@/models/Curriculum';
 import { NextResponse } from 'next/server';
 import { ensureWriteAllowedForSchoolYear } from '@/lib/school-year';
-
-const SETTINGS_KEY = 'tuition-breakdown';
-
-const ensureSettings = async () => {
-  const collection = SystemSettings.collection;
-  let settings = await collection.findOne({ key: SETTINGS_KEY });
-  if (!settings) {
-    await collection.updateOne(
-      { key: SETTINGS_KEY },
-      { $setOnInsert: { ...DEFAULT_SETTINGS_PAYLOAD, curriculums: [], gradeLevelCurriculums: [] } },
-      { upsert: true }
-    );
-    settings = await collection.findOne({ key: SETTINGS_KEY });
-  }
-
-  settings.curriculums = Array.isArray(settings.curriculums) ? settings.curriculums : [];
-  settings.gradeLevelCurriculums = Array.isArray(settings.gradeLevelCurriculums) ? settings.gradeLevelCurriculums : [];
-  return settings;
-};
 
 const resolveCurriculumAssignmentId = (value) => {
   if (!value) return '';
@@ -45,14 +26,24 @@ const resolveCurriculumAssignmentId = (value) => {
   return String(value);
 };
 
-const enrichAssignment = (assignment, settings) => {
+const enrichAssignment = async (assignment, selectedSchoolYear) => {
   const section = assignment.section?.toObject ? assignment.section.toObject() : assignment.section;
-  const assignmentLink = section?.glCurriculumId
-    ? (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === String(section.glCurriculumId))
-    : null;
-  const curriculum = assignmentLink
-    ? (settings.curriculums || []).find((item) => String(item._id) === String(assignmentLink.curriculum_id))
-    : null;
+
+  let assignmentLink = null;
+  let curriculum = null;
+
+  if (section?.glCurriculumId) {
+    const dbGl = await GradeLevelCurriculum.findOne({
+      $or: [{ _id: section.glCurriculumId }, { gl_curriculum_id: section.glCurriculumId }],
+    }).lean();
+
+    if (dbGl && String(dbGl.school_year_id || '').trim() === String(selectedSchoolYear || '').trim()) {
+      assignmentLink = dbGl;
+      if (dbGl.curriculum_id) {
+        curriculum = await Curriculum.findById(dbGl.curriculum_id).lean();
+      }
+    }
+  }
 
   return {
     ...assignment.toObject(),
@@ -133,10 +124,9 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Section and schedule must have the same grade level' }, { status: 400 });
     }
 
-    const settings = await ensureSettings();
     const sectionCurriculumId = resolveCurriculumAssignmentId(section.glCurriculumId);
 
-    // Prefer DB year-scoped grade-level curriculum, fallback to legacy settings
+    // Grade-level curriculum documents live only in the dedicated collection
     const selectedSchoolYear = schoolYearAccess.context?.selectedSchoolYear || '';
     let sectionCurriculum = null;
 
@@ -151,10 +141,6 @@ export async function PUT(request, { params }) {
       if (dbGl) {
         sectionCurriculum = dbGl;
       }
-    }
-
-    if (!sectionCurriculum) {
-      sectionCurriculum = (settings.gradeLevelCurriculums || []).find((item) => String(item._id) === sectionCurriculumId);
     }
 
     if (!sectionCurriculum) {
@@ -191,7 +177,7 @@ export async function PUT(request, { params }) {
     );
 
     const populatedAssignment = await getPopulatedAssignment(assignment._id);
-    return NextResponse.json({ success: true, data: enrichAssignment(populatedAssignment, settings) }, { status: 200 });
+    return NextResponse.json({ success: true, data: await enrichAssignment(populatedAssignment, selectedSchoolYear) }, { status: 200 });
   } catch (error) {
     if (error?.code === 11000) {
       return NextResponse.json({ success: false, error: 'This section already has a class assignment' }, { status: 409 });
