@@ -17,7 +17,7 @@ const ids = { s1:new ObjectId(), s2:new ObjectId(), s3:new ObjectId(), s4:new Ob
 await db.collection('system_settings').insertOne({
   key:'tuition-breakdown', title:'t', currency:'PHP',
   currentSchoolYear:'2025-2026', draftSchoolYear:'2026-2027',
-  tuitionPlans:[], breakdown:[], curriculums:[], gradeLevelCurriculums:[],
+  tuitionPlans:[], breakdown:[],
 });
 
 const baseStu = { gender:'Male', dateOfBirth:d('2018-01-01'), address:'Addr', admissionDate:d('2024-06-01'), totalEstimatedCost:0, remainingBalance:0 };
