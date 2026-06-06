@@ -10,6 +10,10 @@ const FinancialSchema = new mongoose.Schema({
     receivedBy: { type: String, required: [true, "Receiver's name is required"] },
     paymentId: { type: String, required: [true, "Payment ID is required"] },
     studentId: { type: String, required: [true, "Student ID is required"] },
+    // Snapshot of student identity so payments still resolve a name after the
+    // student is archived (the Student document is removed on archive).
+    studentName: { type: String, required: false },
+    learnersReferenceNumber: { type: String, required: false },
     schoolYear: { type: String, default: null, index: true },
     // GridFS file references
     documents: {

@@ -373,7 +373,7 @@ export default function Financials() {
                           {record.paymentId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                          {record.studentName || record.studentId}
+                          {record.studentName || record.learnersReferenceNumber || record.studentId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold text-green-600">
                           ₱{record.amountPaid.toLocaleString()}

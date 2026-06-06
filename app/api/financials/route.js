@@ -58,6 +58,26 @@ export async function GET(request) {
         ])
     );
 
+    // Resolve the LRN from the student id (ObjectId) so the UI never has to fall
+    // back to showing a raw ObjectId.
+    const lrnById = new Map(
+      students
+        .filter((student) => isResolvableLrn(student.learnersReferenceNumber))
+        .map((student) => [
+          String(student._id),
+          normalizeLearnersReferenceNumber(student.learnersReferenceNumber),
+        ])
+    );
+
+    const lrnBySourceId = new Map(
+      students
+        .filter((student) => student.sourceStudentId && isResolvableLrn(student.learnersReferenceNumber))
+        .map((student) => [
+          String(student.sourceStudentId),
+          normalizeLearnersReferenceNumber(student.learnersReferenceNumber),
+        ])
+    );
+
     const enrichedFinancials = financials.map((record) => {
       const key = String(record.studentId || '');
       // Prefer lookup by DB id (authoritative). Only fall back to LRN when it is resolvable —
@@ -65,12 +85,17 @@ export async function GET(request) {
       const studentName = record.studentName
         || studentById.get(key)
         || studentBySourceId.get(key)
-        || (isResolvableLrn(key) ? studentByLrn.get(normalizeLearnersReferenceNumber(key)) : undefined)
-        || record.studentId;
+        || (isResolvableLrn(key) ? studentByLrn.get(normalizeLearnersReferenceNumber(key)) : undefined);
+
+      const learnersReferenceNumber = record.learnersReferenceNumber
+        || lrnById.get(key)
+        || lrnBySourceId.get(key)
+        || (isResolvableLrn(key) ? normalizeLearnersReferenceNumber(key) : undefined);
 
       return {
         ...record,
-        studentName,
+        studentName: studentName || learnersReferenceNumber || record.studentId,
+        learnersReferenceNumber: learnersReferenceNumber || record.learnersReferenceNumber || '',
       };
     });
 
