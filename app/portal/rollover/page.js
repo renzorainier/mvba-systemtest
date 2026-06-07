@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRightLeft, CheckCircle2, FilePlus2, LogIn, RotateCw, School, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, FilePlus2, GraduationCap, LogIn, RotateCw, School, Trash2, TrendingUp, TriangleAlert, Undo2, Users } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 
 export default function SchoolYearTransitionPage() {
@@ -12,6 +12,8 @@ export default function SchoolYearTransitionPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [status, setStatus] = useState({ currentSchoolYear: '', draftSchoolYear: null, exists: false, nextSchoolYear: '' });
+  const [preview, setPreview] = useState({ promoted: [], repeating: [], graduated: [], totalCount: 0 });
+  const [previewLoading, setPreviewLoading] = useState(true);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -31,9 +33,28 @@ export default function SchoolYearTransitionPage() {
     }
   }, []);
 
+  const loadPreview = useCallback(async () => {
+    try {
+      setPreviewLoading(true);
+      const response = await fetch('/api/admin/rollover-preview');
+      const payload = await response.json();
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Failed to load roll over preview');
+      }
+
+      setPreview(payload.data);
+    } catch (previewError) {
+      setError((current) => current || previewError.message || 'Failed to load roll over preview');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadStatus();
-  }, [loadStatus]);
+    loadPreview();
+  }, [loadStatus, loadPreview]);
 
   const handleCreateDraft = async () => {
     try {
@@ -124,6 +145,7 @@ export default function SchoolYearTransitionPage() {
         `${r.conflictCount ? `, ${r.conflictCount} skipped (already in draft)` : ''}.`
       );
       await loadStatus();
+      await loadPreview();
       router.refresh();
     } catch (executeError) {
       setError(executeError.message || 'Failed to execute roll over');
@@ -170,7 +192,7 @@ export default function SchoolYearTransitionPage() {
   const activeYear = status.currentSchoolYear || currentSchoolYear || 'Loading...';
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.08),_transparent_35%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <div className="mx-auto max-w-5xl px-4 py-6 lg:px-10">
         <div className="mb-8 flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-700">Admin Tool</p>
@@ -285,7 +307,92 @@ export default function SchoolYearTransitionPage() {
               : 'Create a draft school year first to enable roll over.'}
           </p>
         </div>
+
+        {/* Student outcome preview — who gets promoted, repeated, or graduated on roll over */}
+        <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-white p-6">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <Users size={14} />
+            Student Outcomes on Roll Over
+          </div>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600">
+            Based on each student&apos;s current grade level and GWA, here is how the {activeYear} roster will be
+            migrated. Students with a GWA of 75 or higher advance a grade; Grade 6 passers graduate; everyone
+            else repeats their grade.
+          </p>
+
+          {previewLoading ? (
+            <p className="mt-5 text-sm text-slate-500">Loading student outcomes…</p>
+          ) : (
+            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <StudentOutcomeColumn
+                title="Promoted"
+                icon={<TrendingUp size={16} />}
+                accent="emerald"
+                students={preview.promoted}
+                emptyText="No students are advancing a grade."
+                renderMeta={(student) => student.nextGradeLevel ? `${student.gradeLevel} → ${student.nextGradeLevel}` : student.gradeLevel}
+              />
+              <StudentOutcomeColumn
+                title="Repeating"
+                icon={<Undo2 size={16} />}
+                accent="amber"
+                students={preview.repeating}
+                emptyText="No students are repeating a grade."
+                renderMeta={(student) => `${student.gradeLevel} (repeats)`}
+              />
+              <StudentOutcomeColumn
+                title="Graduating"
+                icon={<GraduationCap size={16} />}
+                accent="indigo"
+                students={preview.graduated}
+                emptyText="No students are graduating this year."
+                renderMeta={(student) => `${student.gradeLevel} → Graduate`}
+              />
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+const ACCENTS = {
+  emerald: { header: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
+  amber: { header: 'text-amber-700', badge: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+  indigo: { header: 'text-indigo-700', badge: 'bg-indigo-50 text-indigo-700', dot: 'bg-indigo-500' },
+};
+
+function StudentOutcomeColumn({ title, icon, accent, students, emptyText, renderMeta }) {
+  const theme = ACCENTS[accent] || ACCENTS.emerald;
+
+  return (
+    <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+      <div className="flex items-center justify-between">
+        <div className={`flex items-center gap-2 text-sm font-semibold ${theme.header}`}>
+          {icon}
+          {title}
+        </div>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${theme.badge}`}>{students.length}</span>
+      </div>
+
+      {students.length === 0 ? (
+        <p className="mt-3 text-xs text-slate-400">{emptyText}</p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {students.map((student) => (
+            <li key={student.id} className="rounded-xl bg-white px-3 py-2 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
+                <span className="truncate text-sm font-medium text-slate-800">{student.name}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between pl-3.5 text-xs text-slate-500">
+                <span>{renderMeta(student)}</span>
+                <span>GWA {student.gwa ?? '—'}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
