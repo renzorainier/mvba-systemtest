@@ -162,7 +162,6 @@ export default function CurriculumsPage() {
               <div class="meta">
                 <div><strong>Curriculum ID:</strong> ${escapeHtml(curriculum.curriculum_id || '—')}</div>
                 <div><strong>School Year:</strong> ${escapeHtml(curriculum.schoolYear || '—')}</div>
-                <div><strong>Record ID:</strong> ${escapeHtml(curriculum._id || '—')}</div>
               </div>
             </div>
 

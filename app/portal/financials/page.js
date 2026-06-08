@@ -149,7 +149,7 @@ export default function Financials() {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Receipt ${record.paymentId}</title>
+        <title>Receipt</title>
         <style>
           /* Print as landscape and place two receipts side-by-side (half-width each) */
           @page { size: letter landscape; margin: 8mm; }
@@ -182,8 +182,7 @@ export default function Financials() {
               </div>
               <div style="text-align:right">
                 <div class="badge">${record.status || 'Completed'}</div>
-                <div style="margin-top:6px;">Receipt No: <strong>#${record.paymentId}</strong></div>
-                <div>Date: ${new Date(record.dateOfPayment).toLocaleDateString()}</div>
+                <div style="margin-top:6px;">Date: ${new Date(record.dateOfPayment).toLocaleDateString()}</div>
               </div>
             </div>
 
@@ -191,7 +190,7 @@ export default function Financials() {
               <div class="box">
                 <div class="label">Received From</div>
                 <div style="font-weight:700; margin-top:6px">${record.studentName || ''}</div>
-                <div style="color:#475569; margin-top:4px">LRN: ${record.learnersReferenceNumber || record.studentId || ''}</div>
+                <div style="color:#475569; margin-top:4px">LRN: ${record.learnersReferenceNumber || ''}</div>
               </div>
               <div class="box">
                 <div class="label">Payment Details</div>
@@ -235,8 +234,7 @@ export default function Financials() {
               </div>
               <div style="text-align:right">
                 <div class="badge">${record.status || 'Completed'}</div>
-                <div style="margin-top:6px;">Receipt No: <strong>#${record.paymentId}</strong></div>
-                <div>Date: ${new Date(record.dateOfPayment).toLocaleDateString()}</div>
+                <div style="margin-top:6px;">Date: ${new Date(record.dateOfPayment).toLocaleDateString()}</div>
               </div>
             </div>
 
@@ -244,7 +242,7 @@ export default function Financials() {
               <div class="box">
                 <div class="label">Received From</div>
                 <div style="font-weight:700; margin-top:6px">${record.studentName || ''}</div>
-                <div style="color:#475569; margin-top:4px">LRN: ${record.learnersReferenceNumber || record.studentId || ''}</div>
+                <div style="color:#475569; margin-top:4px">LRN: ${record.learnersReferenceNumber || ''}</div>
               </div>
               <div class="box">
                 <div class="label">Payment Details</div>
