@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import AddNewRecord from "../financials/newRecordModal";
 import FileViewer from "@/components/FileViewer";
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
+import PrintPreview from '@/components/PrintPreview';
 
 export default function Financials() {
   const { isHistorical } = useSchoolYearContext();
@@ -24,6 +25,7 @@ export default function Financials() {
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [schoolName, setSchoolName] = useState('');
   const [schoolAddress, setSchoolAddress] = useState('');
+  const [printHtml, setPrintHtml] = useState(null);
 
   const statusOptions = ['Pending', 'Completed', 'Failed', 'Cancelled'];
 
@@ -282,16 +284,7 @@ export default function Financials() {
       </html>
     `;
 
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.open();
-    w.document.write(receiptHtml);
-    w.document.close();
-    w.focus();
-    // Give the new window a short moment to render before printing
-    setTimeout(() => {
-      try { w.print(); } catch (e) { console.error('Print failed', e); }
-    }, 500);
+    setPrintHtml(receiptHtml);
   }
 
   const closeViewer = () => {
@@ -307,6 +300,7 @@ export default function Financials() {
 
   return (
     <>
+      <PrintPreview html={printHtml} onClose={() => setPrintHtml(null)} />
       <div className="min-h-screen bg-white font-sans text-slate-800 p-4">
         {/* Header Section */}
         <div className="max-w-7xl mx-auto mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

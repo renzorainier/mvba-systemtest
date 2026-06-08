@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Plus, Search, PencilLine, Trash2, Save, X } from 'lucide-react';
 import { useSchoolYearContext } from '@/components/SchoolYearContext';
 import { FieldError, fieldBorder } from '@/components/FieldError';
+import PrintPreview from '@/components/PrintPreview';
 
 const emptyForm = {
   curriculum_id: '',
@@ -29,6 +30,7 @@ export default function CurriculumsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [printHtml, setPrintHtml] = useState(null);
 
   const setField = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -95,11 +97,6 @@ export default function CurriculumsPage() {
   const printCurriculum = (curriculum) => {
     const subjects = formatSubjects(curriculum);
     const subjectColumns = subjects.length > 6 ? 2 : 1;
-    const printWindow = window.open('', '_blank');
-
-    if (!printWindow) {
-      return;
-    }
 
     const subjectRows = subjects.length > 0
       ? subjects.map((subject, index) => `
@@ -216,18 +213,7 @@ export default function CurriculumsPage() {
       </html>
     `;
 
-    printWindow.document.open();
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
-
-    setTimeout(() => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-      } catch (printError) {
-        console.error('Print failed', printError);
-      }
-    }, 500);
+    setPrintHtml(receiptHtml);
   };
 
   const startEdit = (curriculum) => {
@@ -358,6 +344,7 @@ export default function CurriculumsPage() {
 
   return (
     <div className="min-h-screen bg-white p-4 text-slate-800">
+      <PrintPreview html={printHtml} onClose={() => setPrintHtml(null)} />
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

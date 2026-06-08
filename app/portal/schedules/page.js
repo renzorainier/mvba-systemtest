@@ -13,6 +13,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { FieldError, fieldBorder } from '@/components/FieldError';
+import PrintPreview from '@/components/PrintPreview';
 
 export default function ScheduleManagement() {
   const [viewMode, setViewMode] = useState('list'); 
@@ -26,6 +27,7 @@ export default function ScheduleManagement() {
   const [editingScheduleId, setEditingScheduleId] = useState(null);
   const [currentScheduleCode, setCurrentScheduleCode] = useState('');
   const [deletingScheduleId, setDeletingScheduleId] = useState(null);
+  const [printHtml, setPrintHtml] = useState(null);
 
   // --- EDITOR STATE ---
   const [currentScheduleName, setCurrentScheduleName] = useState('');
@@ -268,13 +270,7 @@ export default function ScheduleManagement() {
       </html>
     `;
 
-    const w = window.open('','_blank');
-    if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(()=>{ try{ w.print(); }catch(e){console.error(e)} }, 400);
+    setPrintHtml(html);
   }
 
   const escapeHtml = (str) => {
@@ -378,6 +374,7 @@ export default function ScheduleManagement() {
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-slate-800">
+      <PrintPreview html={printHtml} onClose={() => setPrintHtml(null)} />
       <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
         
         {/* VIEW 1: SCHEDULE LIST */}
