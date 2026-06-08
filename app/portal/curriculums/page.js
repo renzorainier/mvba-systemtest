@@ -69,14 +69,14 @@ export default function CurriculumsPage() {
   const formatSubjects = (curriculum) => {
     if (Array.isArray(curriculum.subjects) && curriculum.subjects.length > 0) {
       return curriculum.subjects
-        .map((subject, index) => {
+        .map((subject) => {
           if (typeof subject === 'string') {
             return subject.trim();
           }
 
           const subjectName = String(subject?.subject_name || '').trim();
           const subjectCode = String(subject?.code || '').trim();
-          return `${index + 1}. ${subjectName}${subjectCode ? ` (${subjectCode})` : ''}`.trim();
+          return `${subjectName}${subjectCode ? ` (${subjectCode})` : ''}`.trim();
         })
         .filter(Boolean);
     }
