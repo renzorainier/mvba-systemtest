@@ -619,6 +619,15 @@ export default function SystemSettingsPage() {
             <p className="mt-2 text-xs leading-5 text-slate-500">
               Promote students and prepare the next school year from here.
             </p>
+            <Link
+              href="/portal/system/backup"
+              className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Backup &amp; Restore
+            </Link>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Export, import, and schedule automatic backups of all data.
+            </p>
           </div>
         </div>
 

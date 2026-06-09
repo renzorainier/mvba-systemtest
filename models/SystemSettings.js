@@ -52,6 +52,15 @@ const SystemSettingsSchema = new mongoose.Schema(
     draftSchoolYear: { type: String, default: null },
       tuitionPlans: { type: [TuitionPlanSchema], default: createDefaultTuitionPlans },
       breakdown: { type: [BreakdownItemSchema], default: [] },
+
+    // Automatic backup schedule + last-run bookkeeping (see lib/backup-runner.mjs)
+    backupFrequency: { type: String, enum: ['off', 'weekly', 'monthly'], default: 'weekly' },
+    backupRetention: { type: Number, default: 8, min: 1, max: 60 },
+    lastBackupAt: { type: Date, default: null },
+    lastBackupStatus: { type: String, default: null },
+    lastBackupError: { type: String, default: null },
+    lastBackupSize: { type: Number, default: null },
+    lastBackupFile: { type: String, default: null },
   },
   {
     timestamps: true,
