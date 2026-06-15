@@ -75,8 +75,7 @@ const sections = [
         Step 5: Click the "+ Add New Enrollment" button to open the enrollment form. Fill out the required fields and click the "Add Enrollment" button save. After saving the student's enrollment information, the section and status can be edited later if needed.[[IMG_3]]
         After completing step 5, the student is finally enrolled. Once a student is added to the system, his/her records can all be managed throughout the portal, including his/her documents, tuition balance, payment records, and GWA.
 
-        See also: [Section 2.2: Updating student information and records](#update-student-info)
-        `,
+        See also: [Section 2.2: Updating student information and records](#update-student-info) for instructions on how to update a student's information and records after enrollment.`,
         images: [
           "/manual-section-2-1-step-1.png",
           "/manual-section-2-1-step-2.png",
@@ -136,45 +135,40 @@ const sections = [
         Creating a new curriculum:
 
         Step 1: Navigate to the Curriculum Management page under the Academics section.[[IMG_0]]
-        Step 2: Click the "+ New Curriculum" button to open the curriculum form.[[IMG_1]]
-        Step 3: Fill out the subjects by their name, separated by commas. For example, if the curriculum has three subjects: Math, Science, and English, enter "Math, Science, English" in the subjects field. After filling out the required fields, click the "Save Curriculum" button to add the new curriculum to the system.[[IMG_2]]
-        Step 4: After creating a curriculum, it can be edited or deleted later by clicking on the "Edit" or "Delete" buttons in the curriculum list.
-        Tip: If you cannot find the curriculum you want to edit, use the search bar to filter the list by curriculum name or ID.[[IMG_3]]
+        Step 2: Click the "+ New Curriculum" button to open the curriculum form.
         
-
+        Step 3: Fill out the subjects by their name, separated by commas. For example, if the curriculum has three subjects: Math, Science, and English, enter "Math, Science, English" in the subjects field. After filling out the required fields, click the "Save Curriculum" button to add the new curriculum to the system.[[IMG_1]]
+        Step 4: After creating a curriculum, it can be edited or deleted later by clicking on the "Edit" or "Delete" buttons in the curriculum list.
+        Tip: If you cannot find the curriculum you want to edit, use the search bar to filter the list by curriculum name or ID.[[IMG_2]]
         Assigning a grade level to a curriculum:
 
-        Step 5: Navigate to the Grade Curriculums page under the Academics section.[[IMG_4]]
-        Step 6: Click the "+ New Assignment" button to open the assignment form. Select the curriculum and grade level to assign them together. Click "Save Assignment" to complete the process. After creating a curriculum assignment, it can be edited or deleted later by clicking on the "Edit" or "Delete" buttons in the curriculum assignment list.[[IMG_5]][[IMG_6]]
+        Step 5: Navigate to the Grade Curriculums page under the Academics section.[[IMG_3]]
+        Step 6: Click the "+ New Assignment" button to open the assignment form. Select the curriculum and grade level to assign them together. Click "Save Assignment" to complete the process. After creating a curriculum assignment, it can be edited or deleted later by clicking on the "Edit" or "Delete" buttons in the curriculum assignment list.[[IMG_4]][[IMG_5]]
         Tip: A curriculum can be assigned to multiple grade levels if needed. For example, if a curriculum is used for both Grade 1 and Grade 2, simply create two separate assignments for each grade level with the same curriculum.
         
         After completing these steps, the curriculum will now be assigned to the grade level, and students enrolled in that grade level will follow the defined curriculum for their classes.
         
-        Next steps: [Section 2.4: Creating sections and schedules](#create-sections-schedules)`,
+        Next steps: [Section 2.4: Creating sections and schedules](#create-sections-schedules) for further instructions on setting up classes and schedules before enrolling a student.`,
         images: [
           "/manual-section-2-3-step-1.png",
-          "/manual-section-2-3-step-2.png",
           "/manual-section-2-3-step-3.png",
           "/manual-section-2-3-step-4.png",
           "/manual-section-2-3-step-5.png",
-          "/manual-section-2-3-step-6-1.png",
-          "/manual-section-2-3-step-6-2.png",
+          "/manual-section-2-3-step-6.png",
         ],
         captions: [
           "Curriculum Management page in the sidebar",
-          "",
-          "Curriculum form",
-          "",
+          "Adding a new curriculum record",
+          "Edit, print, or delete curriculum records",
           "Grade Curriculums page in the sidebar",
-          "pic: grade cur page with New assignment button highlighted",
-          "Assign curriculum to a grade level (pic: form example)",
+          "Assign curriculum to a grade level",
         ],
         imageSizes: [
           "25%",
           { width: "80%", maxHeight: "480px" },
           { width: "80%", maxHeight: "480px" },
-          { width: "80%", maxHeight: "480px" },
-          { width: "80%", maxHeight: "480px" },
+          "25%",
+          "50%",
           { width: "80%", maxHeight: "480px" },
           { width: "80%", maxHeight: "480px" },
         ],
@@ -192,46 +186,49 @@ const sections = [
         Creating a schedule:
         Step 1: Navigate to the Schedule Management page under the Academics section.
         [[IMG_0]]
-        
         Step 2: Click the "+ Create New Schedule" button to open the schedule editor page. Name the schedule and create a timetable of the subjects. After finishing the timetable, click the "Save Schedule" button.
-        [[IMG_1]][]
-        [[IMG_2]][Image: Schedule Editor Page, key fields highlighted]
-        [[IMG_3]][Image: Schedule Management Page, key fields highlighted]
+        [[IMG_1]]
         Step 3: After creating a schedule, you can edit or delete the schedule timetable later by clicking on the "Edit" or "Delete" buttons.
-
         Tip: If you cannot find the schedule you want to edit, use the search bar to filter the list by schedule name or ID.
-
         Creating a section:
         Step 1: Navigate to the Section Management page under the Academics section.
-        [[IMG_0]][Image: Sidebar, Section Management highlighted]
-        
+        [[IMG_2]]
         Step 2: Click the "+ Add New Section" button to open the section form. Fill in the required information and click "Add Section".
-        [[IMG_1]][Image: Section Management Page, new section button highlighted]
-        [[IMG_2]][Image: Section form modal]
-        
+        [[IMG_3]]
         Step 3: After creating a section, the list of enrolled students in that section can be viewed by clicking the button in the "students" column. You can edit or delete the section information later by clicking on the "Edit" or "Delete" buttons.
-        [[IMG_3]][Image: Section Management Page, key fields highlighted]
-
         Tip: If you cannot find the section you want to edit, use the search bar to filter the list by section name or ID.
-        
         Assigning a schedule to a section:
         Step 1: Navigate to the Class Assignments page under the Academics section.
-        [[IMG_0]][Image: Sidebar, Class Assignments highlighted]
-
+        [[IMG_4]]
         Step 2: Click the "+ New Assignment" button. Select the schedule, section, and teacher to assign them together. Click "Save Assignment" to complete the process. After creating a class assignment, it can be edited or deleted later by clicking on the "Edit" or "Delete" buttons.
-        [[IMG_1]][Image: Class Assignments Page, new assignment button highlighted]
-        
+        [[IMG_5]]
         Tip: A schedule can be assigned to multiple sections if needed. For example, if a schedule is used for both Section A and Section B, simply create two separate assignments for each section with the same schedule.
         
         After completing these steps, the section will now have a schedule assigned to it, and students enrolled in that section will follow the defined timetable for their classes.`,
         images: [
-          "manual-section-2-4-step-1.png",
-          "manual-section-2-4-step-2.png",
-          "manual-section-2-4-step-3.png",
-          "manual-section-2-4-step-4.png",
+          "/manual-section-2-4-1-step-1.png",
+          "/manual-section-2-4-1-step-2.png",
+          "/manual-section-2-4-2-step-1.png",
+          "/manual-section-2-4-2-step-2.png",
+          "/manual-section-2-4-3-step-1.png",
+          "/manual-section-2-4-3-step-2.png",
         ],
-        captions: ["Image: Sidebar, Schedule Management highlighted", "Image: Schedule Management Page, create schedule button highlighted"],
-        imageSizes: [],
+        captions: [
+          "Schedule Management page in the sidebar",
+          "Schedule editor page with sample timetable",
+          "Section Management page in the sidebar",
+          "Adding a new section",
+          "Class Assignments page in the sidebar",
+          "Adding a new class assignment",
+        ],
+        imageSizes: [
+          "25%",
+          { width: "80%", maxHeight: "480px" },
+          "25%",
+          "50%",
+          "25%",
+          "50%",
+        ],
       },
       {
         id: "manage-teachers",
@@ -239,16 +236,23 @@ const sections = [
         title: "Managing teachers",
         body: `This section outlines the steps for managing teachers in the system, including adding new teachers and updating teacher information.
         
-        Step 1: Navigate to the Teacher Management page under the Academics section.[[IMG_0]]
-        Step 2: Click the "+ Add New Teacher" button to open the teacher form. Fill out the required fields (marked with a red asterisk) and any additional information as needed. Once all necessary information is entered, click the "Create Teacher" button to add the new teacher to the system. The new teacher will now be added to the system and can be found in the teacher list.
+        Step 1: Navigate to the Teacher Management page under the Faculty section.[[IMG_0]]
+        Step 2: Click the "+ Add New Teacher" button to open the teacher form. Fill out the required fields (marked with a red asterisk) and any additional information as needed. Once all necessary information is entered, click the "Create Teacher" button to add the new teacher to the system. The new teacher will now be added to the system and can be found in the teacher list.[[IMG_1]]
         Step 3: After creating a teacher, you can edit or delete the teacher information later by clicking on the "Edit" or "Delete" buttons in the teacher list.
-        Tip: If you cannot find the teacher you want to edit, use the search bar to filter the list by teacher name or ID.[[IMG_1]]
+        Tip: If you cannot find the teacher you want to edit, use the search bar to filter the list by teacher name or ID.
         
         After adding teachers to the system, they can be assigned to sections and subjects in the Class Assignments page under the Academics section.
         
-        See also: [Section 2.4: Class Assignments](#create-sections-schedules).`,
-        images: ["/manual-section-2-5-step-1.png", "/manual-section-2-5-step-2.png"],
-        captions: ["Teacher Management page in the sidebar", "Teacher Management Page with key sections highlighted"],
+        See also: [Section 2.4: Creating Sections and Schedules](#create-sections-schedules) for assigning teachers to classes.`,
+        images: [
+          "/manual-section-2-5-step-1.png",
+          "/manual-section-2-5-step-2.png",
+        ],
+        captions: [
+          "Teacher Management page in the sidebar",
+          "Adding a new teacher",
+        ],
+        imageSizes: ["25%", "50%"],
       },
       {
         id: "record-tuition-payments",
@@ -260,29 +264,101 @@ const sections = [
         
         Quick process summary: Record new payment -> Fill out payment details -> Save payment record -> (Optional) Print receipt
 
-        Step 1: Navigate to the Financials page.
+        Step 1: Navigate to the Financials page.[[IMG_0]]
         Step 2: Click the "+ Record New Payment" button to open the payment form.
-        Step 3: Fill out the required fields (marked with a red asterisk) and any additional information as needed. Once all necessary information is entered, click the "Record Payment" button to save. The new payment will now be added to the system and can be found in the payment list along with a printable receipt.`,
+        Step 3: Fill out the required fields (marked with a red asterisk) and any additional information as needed. Once all necessary information is entered, click the "Record Payment" button to save. The new payment will now be added to the system and can be found in the payment list along with a printable receipt.[[IMG_1]]
+        Upon recording a payment, the student's financial records will be updated to reflect the new transaction. This includes adjustments to the total payments made, outstanding balance, and any relevant financial reports. It is important to ensure that all payment details are accurately entered to maintain correct financial records for each student.
+        
+        See also: [Section 2.9: Printing records](#print-records) for instructions on how to print payment receipts and other financial documents.`,
+        images: [
+          "/manual-section-2-6-step-1.png",
+          "/manual-section-2-6-step-2.png",
+        ],
+        captions: [
+          "Financials page in the sidebar",
+          "Adding a new payment record",
+        ],
+        imageSizes: ["25%", { width: "80%", maxHeight: "480px" }],
+      },
+      {
+        id: "adding-discounts",
+        number: "2.7",
+        title: "Adding discounts to student accounts",
+        body: `This section outlines the steps to add discounts to a student's account in order to reduce their tuition fees.
+        
+        Step 1: Navigate to the Student Management page under the Enrollments & Students section.[[IMG_0]]
+        Step 2: Click the "5% Discount" button. A confirmation dialog will appear, click "Ok" to apply the discount.
+        
+        Upon applying a discount, the student's outstanding balance will be automatically updated to reflect the new transaction.
+        `,
+        images: [
+          "/manual-section-2-7-step-1.png",
+          "/manual-section-2-7-step-2.png",
+        ],
+        captions: [
+          "Student Management page in the sidebar",
+          "Discount buttons",
+        ],
+        imageSizes: ["25%", { width: "80%", maxHeight: "480px" }],
       },
       {
         id: "encode-gwa",
-        number: "2.7",
+        number: "2.8",
         title: "Encoding student GWA (general weighted average)",
-        body: "Note where to enter GWA values, required reference data, and when updates should be reviewed.",
+        body: `This section outlines the steps to encode a student's General Weighted Average (GWA) in the system, which is used as a basis for promotion when transitioning to the next school year.
+        
+        Quick process summary: Search for student -> Enter GWA -> Save GWA record
+        
+        Step 1: Navigate to the Enrollments/Admission page under the Enrollments & Students section.[[IMG_0]]
+        Step 2: Select a grade level and section (highlighted green) to view the class roster. Upon selecting a specific section, the page will display a list of students and their GWA.[[IMG_1]]
+        Step 3: Enter the GWA and click the "Save section grades" button to save your changes.
+        
+        After saving, the student's GWA will now be recorded in the system. Students with a passing grade will be automatically promoted to the next grade level upon a school year rollover. It is important to ensure that the GWA is accurately entered for each student, as it may affect their promotion status.
+        
+        See also: [Section 4.3: Transitioning to the next school year](#school-year-transition) for instructions on how to transition to the next school year for the automatic migration of relevant records.`,
+        images: [
+          "/manual-section-2-8-step-1.png",
+          "/manual-section-2-8-step-2.png",
+        ],
+        captions: [
+          "Enrollments/Admission Page in the sidebar",
+          "Filter by grade level and section to view students and GWA records",
+        ],
+        imageSizes: ["25%", { width: "80%", maxHeight: "480px" }],
       },
       {
         id: "print-records",
-        number: "2.8",
+        number: "2.9",
         title: "Printing records (reports, forms, etc.)",
-        body: `Various records can be printed out for viewing or offline use, such as payment receipts, student lists, and enrollment reports. This section outlines the steps to access and print these records from the portal.
-
-        Quick process summary: Navigate to the relevant page -> Use filters/search to find the record -> Click the print button/icon -> Follow browser print dialog instructions`,
+        body: `The system can generate printable documents of records for viewing or offline use, such as payment receipts, curriculum subjects, and schedule timetables. This section outlines the steps to access and print these records from the portal.
+        
+        The following records can be printed from the system:
+        1. Payment Receipts: After recording a payment, a printable receipt will be available in the payment list. To print the receipt, simply click the "Receipt" button to the corresponding payment record.[[IMG_0]]
+        2. Curriculum Subjects: To print the list of subjects under a specific curriculum, navigate to the Curriculum Management page under the Academics section. Find the curriculum you want to print and click the "Print" button.[[IMG_1]]
+        3. Schedule Timetables: To print the timetable for a specific schedule, navigate to the Schedule Management page under the Academics section. Find the schedule you want to print and click the three dots to open the schedule editor. A print button can be found at the top-right corner of the editor.[[IMG_2]]
+        After clicking the corresponding print button for the record you wish to print, a print preview will open, where you can press the "Print" button at the top-right corner of the page to open the print dialog.`,
       },
       {
         id: "archive-students",
-        number: "2.9",
+        number: "2.10",
         title: "Archiving inactive students",
-        body: "Explain when archiving is appropriate, what data is preserved, and how to restore records if needed.",
+        body: `Archiving students who are no longer actively enrolled is essential for maintaining an organized student portal, while preserving historical records for reference. organizing the student database.  as those who have graduated, transferred, or withdrawn. This section outlines the steps to archive inactive students in the system, which helps keep the student management interface organized while preserving historical records for reference.
+        
+        Archiving a student:
+        Step 1: Navigate to the Student Management page under the Enrollments & Students section.[[IMG_0]]
+        Step 2: Click the student ID to open the student profile of the student you wish to archive.
+        Step 3: Press the archive button at the bottom of the form. A confirmation dialog will appear, click "Ok" to archive the student.[[IMG_1]]
+        
+        Restoring an archived student:
+        Step 1: Navigate to the Archived Students page under the Enrollments & Students section.[[IMG_2]]
+        Step 2: Find the archived student you wish to restore and click the restore button. A confirmation dialog will appear, click "Ok" to restore the student back to active status.`,
+        images: [
+          "/manual-section-2-10-step-1.png",
+          "/manual-section-2-10-step-3.png",
+          "/manual-section-2-10-step-1-2.png",
+        ],
+        captions: ["Student Management page in the sidebar", "Archive button in the student profile", "Archived Students page in the sidebar"],
+        imageSizes: ["30%", { width: "60%", maxHeight: "480px" }, "30%"],
       },
     ],
   },
@@ -302,21 +378,34 @@ const sections = [
         Note: Recovery codes are single-use and will expire after being used once. If you have already used a recovery code, you must request a new one from an admin user to reset your password again in the future.
 
         Step 2: On the login page, click the "Forgot Password?" link to initiate the password reset process.
-        [[IMG_0]]
+        
         Step 3: Enter the recovery code provided by the admin user and follow the prompts to create a new password for your account.
         [[IMG_1]]
         After successfully resetting your password, you can now log in to the portal using your new password. Please note that you cannot use the same recovery code twice. If you need to change your password again in the future, you must generate a new recovery code.
         
         Security Tip: Always have a valid recovery code available in case you forget your password. Contact an admin user to generate a new recovery code if needed. Keep your recovery codes secure and do not share them with unauthorized individuals.`,
-        images: ["/manual-section-3-1-step-2.png", "/manual-section-3-1-step-3.png"],
-        captions: ["The 'Forgot Password?' link on the login page.", "Enter the recovery code to set a new password."],
-        
+        images: [
+          "/manual-section-3-1-step-2.png",
+          "/manual-section-3-1-step-3.png",
+        ],
+        captions: [
+          "The 'Forgot Password?' link on the login page.",
+          "Enter the recovery code to set a new password.",
+        ],
+        imageSizes: ["50%", "40%"],
       },
       {
         id: "logging-out",
         number: "3.2",
         title: "Logging out",
-        body: "Document how to safely end a session, especially on shared devices.",
+        body: `To avoid unauthorized access to your account, it is important to log out of the portal when you are finished using it. To log out, click the "Log Out" link in the bottom-left corner of the page.
+        For added security, the system also has an automatic logout feature that will log you out after 15 minutes of inactivity. If you are logged out due to inactivity, simply log back in to continue using the portal.[[IMG_1]]`,
+        images: ["/manual-section-3-2-1.png", "/manual-section-3-2-2.png"],
+        captions: [
+          "The 'Log Out' button, located in the bottom-left corner of the page.",
+          "Inactivity notification.",
+        ],
+        imageSizes: ["25%", "50%"],
       },
     ],
   },
@@ -324,67 +413,176 @@ const sections = [
     id: "admin-operations",
     number: "4",
     title: "Administrator Operations",
-    description: "Visible only to administrator users.",
+    description: "Admin Features - Visible only to administrator users.",
     adminOnly: true,
     items: [
       {
-        id: "add-new-users",
+        id: "manage-users",
         number: "4.1",
-        title: "Adding new users",
-        body: "Document account creation, role assignment, access checks, and initial password handling.",
+        title: "Managing users",
+        body: `This section outlines the steps for managing user accounts in the system, including creating new users, deactivating existing users, and generating one-time recovery codes.
+
+        All user management actions can be performed in the Account Management page under the Administration and Support section. You can navigate to the page using the sidebar menu.[[IMG_0]]
+        Adding a new user:
+        Step 1: Click the "+ Create Account" button.
+        Step 2: Fill out the required fields (marked with a red asterisk) and click the "Create Account" button to add the new user to the system.[[IMG_1]]
+        Deactivating an existing user:
+        Step 1: Find the user you want to deactivate in the user list.
+        Step 2: Click the "Deactivate" button to flag the account as deactivated. Once a user is deactivated, they will no longer be able to log in to the portal. If you need to reactivate the user in the future, simply click the "Activate" button to restore their access.
+        
+        Generating a one-time recovery code:
+        Step 1: Find the user you want to generate a recovery code for in the user list.
+        Step 2: Click the "Generate Code" or "Regenerate" button to create a new one-time recovery code for that user. The generated recovery code will be displayed in a pop-up modal. Make sure to copy and provide the recovery code to the user, as it will only be shown once and cannot be retrieved again after closing the modal.
+        `,
+        images: [
+          "/manual-section-4-1-step-1.png",
+          "/manual-section-4-1-step-2.png",
+          "/manual-section-4-1-step-3.png",
+          "/manual-section-4-1-step-4.png",
+        ],
+        captions: [
+          "Account Management page in the sidebar",
+          "Creating a new user",
+          "Deactivating a user",
+          "Generating a recovery code",
+        ],
+        imageSizes: ["35%", "35%"],
       },
       {
         id: "configure-tuition-plans",
         number: "4.2",
         title: "Configuring tuition plans",
-        body: "Describe where tuition settings are maintained, what each field controls, and how changes affect billing.",
+        body: `This section outlines the steps to configure tuition plans for the school year, including creating new tuition plans, defining payment schedules, and assigning tuition plans to grade levels.
+        
+        All tuition configuration actions can be performed in the System Settings page under the Administration and Support section. You can navigate to the page using the sidebar menu.[[IMG_0]]
+        
+        Managing tuition plans:
+        Step 1: Click the "Edit Tuition Plans" button to start editing.
+        Step 2: When adding a new grade block, click the "Add Grade Block" button at the bottom of the page and enter all necessary information. When updating an existing grade block, simply update the fields.[[IMG_3]]
+        Step 3: After filing out the form, click the "Save Changes" button at the top of the page. A password confirmation prompt will appear to confirm the changes. Enter your password and click "Confirm" to finalize the changes.
+        `,
+        images: [
+          "/manual-settings-page.png",
+          "/manual-section-4-2-step-1.png",
+          "/manual-section-4-2-step-2-1.png",
+          "/manual-section-4-2-step-2-2.png",
+          "/manual-section-4-2-step-3.png",
+        ],
+        captions: [
+          "System Settings page in the sidebar",
+          "Editing tuition plans",
+          "Adding a new grade block",
+          "Sample tuition plan form",
+          "Saving changes to tuition plans",
+        ],
+        imageSizes: ["35%", "25%", "25%", "45%"],
       },
       {
         id: "school-year-transition",
         number: "4.3",
         title: "Transitioning to the next school year",
-        body: "Explain the rollover workflow, pre-checks, and validation steps before activating the next year.",
+        body: `This section outlines the steps to transition to the next school year, which includes rolling over student records.
+        
+        Step 1: Navigate to the System Settings page under the Administration and Support section.[[IMG_0]]
+        Step 2: Click the "Open School Year Rollover" button to open the school year transition page.[[IMG_2]]
+        Step 3: Click the "Execute Rollover" button to start the transition process. After the process is complete, you will be automatically redirected to the new school year dashboard.
+        `,
+        images: [
+          "/manual-settings-page.png",
+          "/manual-section-4-3-step-2.png",
+          "/manual-section-4-3-step-3.png",
+          "/manual-section-4-3-step-4.png",
+        ],
+        captions: [
+          "System Settings page in the sidebar",
+          "Opening the school year transition page",
+          "School year transition page, with summary of student outcomes",
+          "Executing the school year transition",
+        ],
+        imageSizes: ["35%", "25%", { width: "90%", maxHeight: "480px" }, "45%"],
+      },
+      {
+        id: "data-backup",
+        number: "4.5",
+        title: "Data backup and export",
+        body: `This section outlines the steps to create and restore backups of all data from the system, including creating manual backups, scheduling automatic backups, and restoring data from an exported backup of the system.
+       
+        Data and backup management features can be found in the System Settings page under the Administration and Support section. Click the "Backup & Restore" button to open the backup page.[[IMG_0]]
+        To create a manual backup, click the "Download file" to save a local copy. To save a copy directly to the server, click the "Back up to server now" button.
+        
+        To restore data from a backup, click the "Choose file" button to select the backup file, select a restore mode (Replace or Merge), then click the "Restore" button to start the restore process.
+        • Replace mode: This will replace all existing data in the system with the data from the backup file. Use this option if you want to completely overwrite the current data with the backup data.
+        • Merge mode: This will merge the data from the backup file with the existing data in the system. Use this option if you want to add the backup data to the current data without deleting any existing records.
+
+        To schedule automatic backups, select the frequency (Off, Biweekly, Monthly) and the amount of copies to keep, then click the "Save schedule" button to set up a backup schedule.
+        `,
+        images: [
+          "/manual-section-4-5-step-1-1.png",
+          "/manual-section-4-5-step-1-2.png",
+        ],
+        captions: [
+          "Navigating to the Backup & Restore page",
+          "Backup & Restore page",
+        ],
       },
     ],
   },
   {
     id: "troubleshooting",
     number: "5",
-    title: "Troubleshooting & Common Errors",
+    title: "Troubleshooting",
     description: "Use these notes to resolve the most common support issues.",
     items: [
       {
         id: "page-wont-load",
         number: "5.1",
-        title: "Page won’t load (clear cache, check browser)",
-        body: "Add browser refresh, cache clearing, and supported browser steps here.",
-      },
-      {
-        id: "session-expired",
-        number: "5.2",
-        title: "Session expired message",
-        body: "Describe what the message means, how to sign back in, and when to contact support.",
+        title: "Page won’t load",
+        body: `If a page appears blank, fails to render, or loads very slowly, try these steps in order:
+
+        1. Refresh the page: Press Ctrl+F5 (Windows) or Cmd+Shift+R (Mac) to force a full reload.
+        2. Clear browser cache: Open your browser settings and clear cached images and files, then reload.
+        3. Try a private/incognito window: This disables most extensions and cached state.
+        4. Supported browsers: Use the latest stable version of Chrome, Edge, or Firefox for the best compatibility.
+        5. Check network: Confirm you have a stable internet connection and no VPN or firewall is blocking requests.
+        6. Check the console: Open DevTools (F12) and look for errors. Take a screenshot or copy the error text when reaching out for technical help.`,
       },
       {
         id: "form-wont-save",
-        number: "5.3",
-        title: "Form won’t save (validation errors)",
-        body: "List validation checks, required fields, and how to interpret error messages.",
+        number: "5.2",
+        title: "Form won’t save",
+        body: `When a form fails to save, it may be caused by several factors. Check the following:
+
+        - Required fields: Fields marked with a red asterisk must be filled in.
+        - Field formats: Ensure emails, phone numbers, dates, and numeric fields match the expected format.
+        - Attachments: Make sure any attached files meet the size and type limits (see [Section 5.3: File upload](#file-upload-fails)).
+        - Special characters: Unsupported characters can sometimes cause errors. When encoding special symbols, try exploring for alternatives first.
+
+        Troubleshooting steps:
+        1. Fix the highlighted form errors and retry saving.
+        2. Open DevTools (F12) and check the Network tab for the failing request.Take a screenshot or copy the response body when reaching out for technical help.
+        3. Try logging in to a different browser or an incognito window.
+        `,
       },
       {
         id: "file-upload-fails",
-        number: "5.4",
+        number: "5.3",
         title: "File upload fails (size or type issues)",
-        body: `For problems with file uploads, consult this section for information on file size limits, supported formats, and step-by-step guide on troubleshooting.
-        
-        File formats: PDF, JPG, and PNG formats only.
-        File size: Files larger than 16MB are not supported.
-        
+        body: `For problems with file uploads, consult this section for information on supported formats, limits, and common workarounds.
+
+        Supported formats: PDF, JPG, PNG
+        Maximum file size: 16MB
+
         Q: I have a Microsoft Word (.doc or .docx) document I need to upload. What should I do?
-        A: Please convert your Word document to a PDF format before uploading. You can do this by opening the document in Microsoft Word and selecting "Save As" or "Export" and choosing PDF as the file format. Once you have the PDF version of your document, you can now upload it to the portal.
-        
+        A: Convert the document to PDF before uploading. In Microsoft Word choose "Save As" or "Export" → PDF. Most word processors offer the same export option.
+
         Q: My file is larger than 16MB, but I need to upload it. What are my options?
-        A: `,
+        A: Reduce the file size using an external tool or website. After reducing the size, try uploading again.
+        
+        Q: I tried uploading but received a "file type not allowed" error. What now?
+        A: Convert the file to PDF, JPG, or PNG if applicable.
+
+        Q: Uploads fail intermittently or time out.
+        A: Intermittent upload errors or timeouts are usually caused by an unstable network connection. Check your network connection and try uploading again.`
       },
     ],
   },
