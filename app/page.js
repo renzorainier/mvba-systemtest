@@ -117,7 +117,7 @@ export default function LoginPage() {
     <div className="min-h-screen w-full flex bg-gray-50 overflow-hidden font-sans">
       {/* Left Side - Login Form */}
       <div className="w-full md:w-5/12 lg:w-1/2 flex items-center justify-center lg:p-12 relative z-10">
-        
+
         {/* Subtle Background Decoration for Left Side */}
         <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-blue-100 rounded-full blur-[100px] opacity-40 pointer-events-none"></div>
 
@@ -207,7 +207,7 @@ export default function LoginPage() {
               </a>
             </div>
 
-            <button 
+            <button
               type="submit"
               disabled={isLoading}
               className="w-full bg-[#0E3B68] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#1a4d80] active:scale-[0.99] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
@@ -225,7 +225,7 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-          
+
           <div className="mt-8 text-center text-gray-400 text-sm">
             &copy; 2024 Metroview Baptist Academy. All rights reserved.
           </div>
@@ -233,27 +233,27 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Branding with Convex Curve Effect */}
-      <div 
+      <div
         className="hidden md:flex w-7/12 lg:w-1/2 bg-gradient-to-b from-[#1c4d85] via-[#0E3B68] to-[#061d36] flex-col items-center justify-center text-white p-12 relative shadow-2xl rounded-tl-[50px] rounded-bl-[50px]"
       >
         {/* Subtle texture/pattern overlay */}
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]"></div>
-        
+
         {/* Decorative glows */}
         <div className="absolute top-20 right-20 w-80 h-80 bg-blue-400 rounded-full blur-[120px] opacity-20"></div>
         <div className="absolute bottom-10 left-10 w-60 h-60 bg-blue-300 rounded-full blur-[100px] opacity-10"></div>
-        
+
         <div className="relative z-10 flex flex-col items-center justify-center text-center max-w-lg">
           {/* Logo Section */}
           <div className="w-48 h-48 mb-10 relative group">
             {/* Custom Glow Effect: Gradient from Gold to Cyan/Blue to match the logo */}
             <div className="absolute inset-[-10px] bg-gradient-to-tr from-yellow-400 via-yellow-200 to-cyan-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-            
+
             {/* Logo Container */}
             <div className="w-full h-full rounded-full bg-white shadow-2xl flex items-center justify-center relative overflow-hidden ring-4 ring-yellow-500/50">
-                <img 
-                  src="/logo.png" 
-                     alt="MVBA Logo" 
+                <img
+                  src="/logo.png"
+                     alt="MVBA Logo"
                   className="w-full h-full object-cover"
                 />
             </div>
