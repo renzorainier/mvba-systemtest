@@ -3,8 +3,27 @@ dotenv.config();
 import mongoose from 'mongoose';
 import { ObjectId } from 'mongodb';
 
-const base = process.env.MONGODB_URI;
-const testUri = base.replace('/mvba-database?', '/mvba-activation-test?');
+const rawMongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+const normalizeMongoUri = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  const trimmed = String(value).trim();
+
+  if (/^mongodb(?:\+srv)?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `mongodb://${trimmed}`;
+};
+
+const base = normalizeMongoUri(rawMongoUri);
+const testUri = base.includes('/mvba-database')
+  ? base.replace('/mvba-database', '/mvba-activation-test')
+  : `${base.replace(/\/?$/, '')}/mvba-activation-test`;
+
 await mongoose.connect(testUri);
 const db = mongoose.connection.db;
 

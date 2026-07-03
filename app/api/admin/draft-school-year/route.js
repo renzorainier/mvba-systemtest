@@ -11,7 +11,7 @@ import Enrollment from '@/models/Enrollment';
 import Curriculum from '@/models/Curriculum';
 import GradeLevelCurriculum from '@/models/GradeLevelCurriculum';
 import { SCHOOL_YEAR_COOKIE, getNextSchoolYear, isValidSchoolYear, normalizeSchoolYear, resolveDraftSchoolYear } from '@/lib/school-year';
-import { seedDraftFromActiveYear } from '@/lib/rollover-school-year';
+import { runSessionWork, seedDraftFromActiveYear } from '@/lib/rollover-school-year';
 
 const SETTINGS_KEY = 'tuition-breakdown';
 
@@ -99,7 +99,7 @@ export async function POST(request) {
     const session = await mongoose.startSession();
 
     try {
-      await session.withTransaction(async () => {
+      await runSessionWork(session, async () => {
         seeded = await seedDraftFromActiveYear(currentSchoolYear, draftSchoolYear, session);
         settings.draftSchoolYear = draftSchoolYear;
         await settings.save({ session });

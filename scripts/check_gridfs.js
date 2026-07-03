@@ -1,8 +1,25 @@
+require('dotenv').config();
 const { MongoClient, GridFSBucket } = require('mongodb');
-const MONGODB_URI = process.env.MONGODB_URI;
+const rawMongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+const normalizeMongoUri = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  const trimmed = String(value).trim();
+
+  if (/^mongodb(?:\+srv)?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `mongodb://${trimmed}`;
+};
+
+const MONGO_URI = normalizeMongoUri(rawMongoUri);
 
 async function testGridFS() {
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGO_URI);
   await client.connect();
   const db = client.db('mvba-database');
   const bucket = new GridFSBucket(db, { bucketName: 'school-files' });
